@@ -26,3 +26,11 @@
 | 4 | 建模師 | M0 美術方向、資產預算、章節 kit 規劃 | Completed | [M0-ART-001](M0-ART-001-晨線草原資產基線.md) | `docs(art): complete M0 chapter asset handoff` |
 | 5 | 工程師 | M0 Three.js Web 專案、CI、3D runtime、PWA 空殼 | Completed（CI workflow 待 ENG-10） | [M0-ENG-002](M0-ENG-002-Web專案基線待執行.md) | `工程(M0)：建立 Three.js 網頁技術基線` |
 | 6 | 測試人員 | M0 裝置矩陣、測試策略、Smoke 基線 | Completed（自動化）／Ready（實機） | [M0-QA-001](M0-QA-001-測試基線設計.md)、[M0-QA-002](M0-QA-002-Web自動化Smoke.md) | `測試(M0)：完成網頁自動化 Smoke 驗證` |
+
+## M1：核心灰盒
+
+| 順序 | 角色 | 工作包 | 狀態 | 紀錄 | Commit |
+| ---: | --- | --- | --- | --- | --- |
+| 1 | PM | 核心灰盒範圍與固定內容 | Completed | [M1-PM-001](M1-PM-001-核心灰盒範圍鎖定.md) | `PM(M1)：鎖定核心灰盒範圍` |
+| 2 | 工程師 | Run、輸入、Gate、戰鬥與灰盒 UI | Ready | — | — |
+| 3 | 測試人員 | M1 回歸與可用性驗收 | Ready | — | — |
