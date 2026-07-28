@@ -34,9 +34,7 @@ export class ThreeRuntime {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.setClearColor(new Color('#173b3a'));
     this.container.append(this.renderer.domElement);
-    // Third-person camera: 45° down toward the direction the runner travels (+Z).
-    this.camera.position.set(0, 8, -8);
-    this.camera.lookAt(0, 0, 0);
+    this.updateCamera(0);
     this.scene.add(this.playerMesh);
     this.scene.add(this.bossMesh);
     this.createRoad();
@@ -48,12 +46,16 @@ export class ThreeRuntime {
     const width = Math.max(this.container.clientWidth, 1);
     const height = Math.max(this.container.clientHeight, 1);
     this.camera.aspect = width / height;
+    // A short landscape viewport needs a wider vertical view; a tall phone can
+    // keep the runner larger while still reserving the lower gameplay area.
+    this.camera.fov = this.camera.aspect > 1 ? 62 : 52;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height, false);
   }
 
   public sync(snapshot: M1RunSnapshot): void {
     this.playerMesh.position.set(snapshot.player.x, 0.6, 0);
+    this.updateCamera(snapshot.player.x);
     this.syncGates(snapshot);
     this.syncEnemies(snapshot);
     this.syncArrows(snapshot);
@@ -86,6 +88,13 @@ export class ThreeRuntime {
       this.roadMeshes.push(segment);
       this.scene.add(segment);
     }
+  }
+
+  private updateCamera(playerX: number): void {
+    // Keep the runner in the lower third even on narrow portrait windows. The
+    // camera tracks laterally so moving to either edge cannot leave it offscreen.
+    this.camera.position.set(playerX * 0.75, 12, -6);
+    this.camera.lookAt(playerX * 0.45, 0, 6);
   }
 
   private syncBoss(snapshot: M1RunSnapshot): void {
