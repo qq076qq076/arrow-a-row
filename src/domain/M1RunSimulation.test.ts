@@ -46,4 +46,15 @@ describe('M1RunSimulation', () => {
     expect(simulation.snapshot().player.projectileCount).toBeGreaterThanOrEqual(3);
     expect(simulation.chooseReward('storm_bow')).toBe(false);
   });
+
+  it('restores an in-progress reward choice without replacing its candidates', () => {
+    const source = new M1RunSimulation();
+    source.start();
+    source.setTargetX(5);
+    for (let index = 0; index < 2500 && source.snapshot().phase === 'playing'; index += 1) source.tick(1 / 30);
+    const restored = new M1RunSimulation();
+    expect(restored.restore(source.snapshot())).toBe(true);
+    expect(restored.snapshot().phase).toBe('reward');
+    expect(restored.snapshot().rewardOptions).toEqual(source.snapshot().rewardOptions);
+  });
 });

@@ -43,6 +43,17 @@ export class M1RunSimulation {
       { groupId: 'g02', leftLabel: '箭傷 +25%', rightLabel: '回復 25 HP', z: 28, isChosen: false });
   }
 
+  /** Restores only data produced by snapshot(); cooldowns restart safely on resume. */
+  public restore(snapshot: M1RunSnapshot): boolean {
+    if (snapshot.phase !== 'playing' && snapshot.phase !== 'reward') return false;
+    this.phase = snapshot.phase; this.elapsedSeconds = snapshot.elapsedSeconds; this.distanceMeters = snapshot.distanceMeters; this.targetX = snapshot.player.x;
+    this.player = { ...snapshot.player }; this.attackCooldownSeconds = 0.1; this.nextArrowId = Math.max(1, ...snapshot.arrows.map((arrow) => arrow.id + 1)); this.earnedGold = snapshot.earnedGold; this.selectedReward = snapshot.selectedReward;
+    this.selectedGateIds.clear(); snapshot.selectedGateIds.forEach((id) => this.selectedGateIds.add(id)); this.enemies.splice(0, this.enemies.length, ...snapshot.enemies.map((enemy) => ({ ...enemy, attackCooldownSeconds: 0.5 }))); this.arrows.splice(0, this.arrows.length, ...snapshot.arrows.map((arrow) => ({ ...arrow })));
+    this.gates.splice(0, this.gates.length, ...snapshot.gates.map((gate) => ({ ...gate })));
+    this.boss = snapshot.boss === undefined ? undefined : { hp: snapshot.boss.hp, maxHp: snapshot.boss.maxHp, phase: snapshot.boss.phase, telegraphSeconds: snapshot.boss.telegraphSeconds, telegraphText: snapshot.boss.telegraphText, attackCooldownSeconds: 1, isDefeated: snapshot.boss.isDefeated };
+    return true;
+  }
+
   public setTargetX(targetX: number): void { this.targetX = Math.max(-PLAYER_MAX_X, Math.min(PLAYER_MAX_X, targetX)); }
   public chooseReward(rewardId: RewardId): boolean {
     if (this.phase !== 'reward' || this.selectedReward !== undefined || !REWARDS.includes(rewardId)) return false;
