@@ -44,3 +44,6 @@ button { font: inherit; }
 .main-menu button { min-height: 52px; min-width: min(100%, 320px); }
 .eyebrow { color: #f4c95d; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .unsupported-screen { display: grid; min-height: 100dvh; place-content: center; padding: 24px; text-align: center; }
+.run-progress { left: 0; position: absolute; right: 0; text-align: center; top: calc(env(safe-area-inset-top) + 76px); z-index: 1; }
+.gate-labels { bottom: calc(env(safe-area-inset-bottom) + 36px); display: flex; gap: 16px; left: 16px; position: absolute; right: 16px; z-index: 1; }
+.gate-labels p { background: rgb(9 29 29 / 82%); border: 2px solid #f4c95d; flex: 1; margin: 0; padding: 12px; text-align: center; }
