@@ -12,3 +12,15 @@ result.victory.ch01,第一道裂隙已修復。新的分支正在前方展開。
 menu.status.default,曙站正在等待下一位引線者。,Dawn Station awaits its next Threadbearer.,20,MainMenu,no_checkpoint,安定,true,主選單
 menu.status.resume,一段光軌仍在等待你。,A lightway still waits for you.,16,MainMenu,has_checkpoint,提醒,true,有 checkpoint
 error.save_failed,無法儲存進度，尚未扣除金幣。請重試。,Progress could not be saved. No gold was spent. Please try again.,28,Toast,save_failed,清楚,true,錯誤
+boss.moss_crown.attack.vine,藤刺正在瞄準！,Vines are taking aim!,12,BossHUD,boss_attack_vine,警示,true,Boss 預警
+boss.moss_crown.attack.roots,根鬚正在掃掠！,Roots are sweeping in!,12,BossHUD,boss_attack_roots,警示,true,Boss 預警
+boss.moss_crown.attack.wave,震波正在擴散！,A shockwave is spreading!,14,BossHUD,boss_attack_wave,警示,true,Boss 預警
+reward.storm_bow,風暴弓,Storm Bow,8,Reward,reward_card,鼓勵,true,箭數 +2
+reward.blade_nexus,刃環核心,Blade Nexus,8,Reward,reward_card,鼓勵,true,飛劍 Build
+reward.heartwood,心木護佑,Heartwood Guard,8,Reward,reward_card,鼓勵,true,生存 Build
+shop.title,永久強化,Permanent Upgrades,10,Shop,open_shop,安定,true,商店標題
+shop.health,曙光體魄,Dawn Vitality,8,Shop,upgrade_name,鼓勵,true,最大生命
+shop.damage,弓弦研磨,String Sharpening,8,Shop,upgrade_name,鼓勵,true,箭傷
+shop.fire_rate,迅捷弦律,Swift String,8,Shop,upgrade_name,鼓勵,true,攻速
+shop.purchase,購買（{cost} 金幣）,Buy ({cost} Gold),14,Shop,purchase,清楚,true,購買按鈕
+result.gold,獲得 {gold} 金幣,Gain {gold} Gold,14,Result,settlement,鼓勵,true,結算
