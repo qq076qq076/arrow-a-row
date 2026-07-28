@@ -1,0 +1,46 @@
+:root {
+  color: #f8f7ef;
+  background: #173b3a;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans TC", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body { margin: 0; min-width: 320px; min-height: 100dvh; }
+button { font: inherit; }
+
+.app-shell {
+  min-height: 100dvh;
+  overflow: hidden;
+  position: relative;
+  background: #173b3a;
+}
+
+.game-canvas { position: absolute; inset: 0; touch-action: none; }
+.game-canvas canvas { display: block; height: 100%; width: 100%; }
+
+.hud {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  padding: calc(env(safe-area-inset-top) + 16px) 16px 16px;
+  pointer-events: none;
+  position: relative;
+  z-index: 1;
+}
+
+.hud > * { pointer-events: auto; }
+.icon-button { min-height: 48px; min-width: 48px; }
+
+.main-menu {
+  bottom: calc(env(safe-area-inset-bottom) + 32px);
+  left: 24px;
+  position: absolute;
+  right: 24px;
+  text-align: center;
+  z-index: 1;
+}
+
+.main-menu button { min-height: 52px; min-width: min(100%, 320px); }
+.eyebrow { color: #f4c95d; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.unsupported-screen { display: grid; min-height: 100dvh; place-content: center; padding: 24px; text-align: center; }

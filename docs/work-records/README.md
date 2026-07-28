@@ -24,5 +24,5 @@
 | 2 | 遊戲世界觀規劃師 | M0 世界核心、章節 brief、術語與禁用清單 | Completed | [M0-WORLD-001](M0-WORLD-001-世界與第一章文案.md) | `docs(world): complete M0 narrative handoff` |
 | 3 | 介面設計師 | M0 資訊架構、直式 flow、安全區基線 | Completed | [M0-UI-001](M0-UI-001-資訊架構與直式線框.md) | `docs(ui): complete M0 mobile UX handoff` |
 | 4 | 建模師 | M0 美術方向、資產預算、章節 kit 規劃 | Completed | [M0-ART-001](M0-ART-001-晨線草原資產基線.md) | `docs(art): complete M0 chapter asset handoff` |
-| 5 | 工程師 | M0 Three.js Web 專案、CI、3D runtime、PWA 空殼 | Ready | [M0-ENG-002](M0-ENG-002-Web專案基線待執行.md) | — |
+| 5 | 工程師 | M0 Three.js Web 專案、CI、3D runtime、PWA 空殼 | Completed（CI workflow 待 ENG-10） | [M0-ENG-002](M0-ENG-002-Web專案基線待執行.md) | `工程(M0)：建立 Three.js 網頁技術基線` |
 | 6 | 測試人員 | M0 裝置矩陣、測試策略、Smoke 基線 | Completed（文件）／等待 Web build | [M0-QA-001](M0-QA-001-測試基線設計.md) | `docs(qa): complete M0 test design handoff` |

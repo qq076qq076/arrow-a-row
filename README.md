@@ -8,8 +8,8 @@
 
 - 階段：`M0 啟動與基線` 進行中。
 - 已完成：PM、世界觀規劃、UI、建模、QA 的文件化 M0 交接。
-- 工程狀態：`Ready`。技術路線已改為 Three.js + TypeScript + React + Vite；本機已有 Node.js 22 與 npm，可開始 Web／PWA 專案。
-- 真機 QA：測試設計需由「原生 Android build」改為「手機瀏覽器／PWA」Smoke，等待工程 Web build 後執行。
+- 工程狀態：`M0 完成`。已建立 Three.js + TypeScript + React + Vite 的 Web／PWA 基線，Vitest 3/3、Playwright 手機 viewport Smoke 2/2、production build 皆通過。
+- 真機 QA：等待 iOS Safari 與 Chrome Android 的實體裝置／PWA Smoke；Playwright viewport 不取代實機驗收。
 
 完整狀態與下一步請見：[工作交接紀錄索引](docs/work-records/README.md)。
 
