@@ -11,8 +11,9 @@ const RunCheckpointSchema = z.object({
 export type RunCheckpoint = z.infer<typeof RunCheckpointSchema>;
 
 const DATABASE_NAME = 'arrow-a-row';
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 const RUN_STORE = 'runCheckpoint';
+export const PROFILE_STORE = 'profile';
 const ACTIVE_RUN_KEY = 'active';
 
 export class RunCheckpointRepository {
@@ -51,6 +52,7 @@ export class RunCheckpointRepository {
       const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
       request.onupgradeneeded = () => {
         if (!request.result.objectStoreNames.contains(RUN_STORE)) request.result.createObjectStore(RUN_STORE);
+        if (!request.result.objectStoreNames.contains(PROFILE_STORE)) request.result.createObjectStore(PROFILE_STORE);
       };
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error ?? new Error('無法開啟 IndexedDB。'));

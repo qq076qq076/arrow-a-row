@@ -21,6 +21,7 @@ export class ThreeRuntime {
   private readonly camera = new PerspectiveCamera(45, 1, 0.1, 100);
   private readonly renderer: WebGLRenderer;
   private readonly playerMesh = new Mesh(new BoxGeometry(0.8, 1.2, 0.8), new MeshBasicMaterial({ color: '#f4c95d' }));
+  private readonly bossMesh = new Mesh(new BoxGeometry(2.4, 2.2, 1.4), new MeshBasicMaterial({ color: '#6ea65a' }));
   private readonly enemyMeshes = new Map<string, Mesh>();
   private readonly arrowMeshes = new Map<number, Mesh>();
   private readonly gateGroups = new Map<string, Group>();
@@ -33,6 +34,8 @@ export class ThreeRuntime {
     this.camera.position.set(0, 10, 10);
     this.camera.lookAt(0, 0, 13);
     this.scene.add(this.playerMesh);
+    this.scene.add(this.bossMesh);
+    this.bossMesh.visible = false;
     this.resize();
   }
 
@@ -49,6 +52,7 @@ export class ThreeRuntime {
     this.syncGates(snapshot);
     this.syncEnemies(snapshot);
     this.syncArrows(snapshot);
+    this.syncBoss(snapshot);
   }
 
   public render(): void {
@@ -58,6 +62,7 @@ export class ThreeRuntime {
   public dispose(): void {
     this.playerMesh.geometry.dispose();
     this.playerMesh.material.dispose();
+    this.disposeMesh(this.bossMesh);
     for (const mesh of this.enemyMeshes.values()) this.disposeMesh(mesh);
     for (const mesh of this.arrowMeshes.values()) this.disposeMesh(mesh);
     for (const group of this.gateGroups.values()) group.traverse((child) => {
@@ -65,6 +70,16 @@ export class ThreeRuntime {
     });
     this.renderer.dispose();
     this.renderer.domElement.remove();
+  }
+
+  private syncBoss(snapshot: M1RunSnapshot): void {
+    const boss = snapshot.boss;
+    this.bossMesh.visible = boss !== undefined && !boss.isDefeated;
+    if (boss === undefined || boss.isDefeated) return;
+    this.bossMesh.position.set(0, 1.1, 15);
+    const material = this.bossMesh.material as MeshBasicMaterial;
+    material.color.set(boss.telegraphSeconds > 0 ? '#f4c95d' : boss.phase === 2 ? '#b7774f' : '#6ea65a');
+    this.bossMesh.scale.setScalar(boss.telegraphSeconds > 0 ? 1.08 : 1);
   }
 
   private syncGates(snapshot: M1RunSnapshot): void {

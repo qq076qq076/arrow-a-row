@@ -42,6 +42,18 @@ button { font: inherit; }
 }
 
 .main-menu button { min-height: 52px; min-width: min(100%, 320px); }
+.main-menu button, .modal-card button { border: 0; border-radius: 12px; cursor: pointer; display: block; margin: 10px auto; padding: 14px 18px; }
+.main-menu button:not(.secondary), .modal-card button:not(.secondary) { background: #f4c95d; color: #173b3a; font-weight: 800; }
+.secondary { background: rgb(9 29 29 / 88%); border: 1px solid #d9e8d2 !important; color: #f8f7ef; }
+.modal-card { background: rgb(9 29 29 / 94%); border: 1px solid #f4c95d; border-radius: 20px; left: 16px; padding: 20px; position: absolute; right: 16px; text-align: center; top: 50%; transform: translateY(-50%); z-index: 2; }
+.modal-card button { min-height: 52px; width: min(100%, 360px); }
+.modal-card .selected { box-shadow: 0 0 0 3px #fff4ba; }
+.modal-card button:disabled { cursor: not-allowed; opacity: .45; }
+.shop-item { align-items: center; border-top: 1px solid #49645e; display: flex; gap: 8px; justify-content: space-between; padding: 10px 0; text-align: left; }
+.shop-item button { margin: 0; min-height: 48px; width: auto; }
+.boss-hud { left: 16px; position: absolute; right: 16px; text-align: center; top: calc(env(safe-area-inset-top) + 70px); z-index: 1; }
+.boss-hud progress { accent-color: #f4c95d; display: block; height: 16px; width: 100%; }
+.boss-hud p { background: #6f3d32; border-radius: 999px; margin: 8px auto; padding: 7px 12px; width: fit-content; }
 .eyebrow { color: #f4c95d; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .unsupported-screen { display: grid; min-height: 100dvh; place-content: center; padding: 24px; text-align: center; }
 .run-progress { left: 0; position: absolute; right: 0; text-align: center; top: calc(env(safe-area-inset-top) + 76px); z-index: 1; }

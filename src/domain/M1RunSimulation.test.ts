@@ -32,4 +32,18 @@ describe('M1RunSimulation', () => {
     }
     expect(first.snapshot()).toEqual(second.snapshot());
   });
+
+  it('reaches Boss reward and applies it exactly once', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start();
+    simulation.setTargetX(5);
+    for (let index = 0; index < 2500 && simulation.snapshot().phase === 'playing'; index += 1) simulation.tick(1 / 30);
+
+    expect(simulation.snapshot().phase).toBe('reward');
+    expect(simulation.snapshot().earnedGold).toBe(30);
+    expect(simulation.chooseReward('storm_bow')).toBe(true);
+    expect(simulation.snapshot().phase).toBe('complete');
+    expect(simulation.snapshot().player.projectileCount).toBeGreaterThanOrEqual(3);
+    expect(simulation.chooseReward('storm_bow')).toBe(false);
+  });
 });
