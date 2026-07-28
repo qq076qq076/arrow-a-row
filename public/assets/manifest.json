@@ -1,0 +1,45 @@
+{
+  "contentVersion": "0.2.0",
+  "assets": [
+    {
+      "id": "chr_seeker_a",
+      "kind": "procedural",
+      "renderer": "primitive-kit",
+      "preloadGroup": "shared-character",
+      "version": "m2-graybox-1",
+      "sockets": ["Root", "BowSocket", "SwordOrbitCenter", "HitPoint"]
+    },
+    {
+      "id": "enm_mist_runner_a",
+      "kind": "procedural",
+      "renderer": "primitive-kit",
+      "preloadGroup": "chapter-01",
+      "version": "m2-graybox-1",
+      "sockets": ["Root", "HitPoint"]
+    },
+    {
+      "id": "enm_reed_slinger_a",
+      "kind": "procedural",
+      "renderer": "primitive-kit",
+      "preloadGroup": "chapter-01",
+      "version": "m2-graybox-1",
+      "sockets": ["Root", "Muzzle", "HitPoint"]
+    },
+    {
+      "id": "bos_moss_crown_a",
+      "kind": "procedural",
+      "renderer": "primitive-kit",
+      "preloadGroup": "chapter-01",
+      "version": "m2-graybox-1",
+      "sockets": ["Root", "HitPoint", "Muzzle", "SummonPoint"]
+    },
+    {
+      "id": "env_meadow_path_straight_a",
+      "kind": "procedural",
+      "renderer": "primitive-kit",
+      "preloadGroup": "chapter-01",
+      "version": "m2-graybox-1",
+      "sockets": ["Root"]
+    }
+  ]
+}
