@@ -23,6 +23,6 @@
 | 1 | PM | M0 產品基線、範圍、風險與角色交接啟動 | Completed | [M0-PM-001](M0-PM-001-產品基線.md) | `docs(pm): record M0 product baseline handoff` |
 | 2 | 遊戲世界觀規劃師 | M0 世界核心、章節 brief、術語與禁用清單 | Completed | [M0-WORLD-001](M0-WORLD-001-世界與第一章文案.md) | `docs(world): complete M0 narrative handoff` |
 | 3 | 介面設計師 | M0 資訊架構、直式 flow、安全區基線 | Completed | [M0-UI-001](M0-UI-001-資訊架構與直式線框.md) | `docs(ui): complete M0 mobile UX handoff` |
-| 4 | 建模師 | M0 美術方向、資產預算、章節 kit 規劃 | Ready | — | — |
+| 4 | 建模師 | M0 美術方向、資產預算、章節 kit 規劃 | Completed | [M0-ART-001](M0-ART-001-晨線草原資產基線.md) | `docs(art): complete M0 chapter asset handoff` |
 | 5 | 工程師 | M0 Unity 專案、CI、asmdef、手機空殼 | Ready | — | — |
 | 6 | 測試人員 | M0 裝置矩陣、測試策略、Smoke 基線 | Ready | — | — |
