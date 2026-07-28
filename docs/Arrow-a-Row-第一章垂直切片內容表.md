@@ -178,4 +178,4 @@ Boss 在玩家 HP <20% 時不改變規則、不暗中降傷；只由既有 Gate�
 
 ## 10. 垂直切片完成定義
 
-只有在以下全數成立時，CH01 才能標記為 M2 完成：內容表已被資料化；所有 ID／文字／Prefab／Addressables 有效；固定 seed replay hash 一致；P0 測試全通；真機前後台／safe area／效能通過；第一章美術、音效與 UI 沒有 placeholder；PM、QA、工程與內容 owner 完成 Gate 審查。
+只有在以下全數成立時，CH01 才能標記為 M2 完成：內容表已被 JSON／CSV 資料化並經 schema 驗證；所有 ID／文字／GLB asset manifest 有效；固定 seed replay hash 一致；P0 測試全通；手機瀏覽器／PWA 前後台、safe area、WebGL 效能通過；第一章美術、音效與 UI 沒有 placeholder；PM、QA、工程與內容 owner 完成 Gate 審查。

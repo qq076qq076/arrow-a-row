@@ -8,8 +8,8 @@
 
 - 階段：`M0 啟動與基線` 進行中。
 - 已完成：PM、世界觀規劃、UI、建模、QA 的文件化 M0 交接。
-- 工程狀態：`Blocked`。目前環境未偵測到 Unity Editor，尚未能建立／驗證 Unity 6.3 LTS 專案與 Android debug build。
-- 真機 QA：測試設計完成，等待工程 build 後執行。
+- 工程狀態：`Ready`。技術路線已改為 Three.js + TypeScript + React + Vite；本機已有 Node.js 22 與 npm，可開始 Web／PWA 專案。
+- 真機 QA：測試設計需由「原生 Android build」改為「手機瀏覽器／PWA」Smoke，等待工程 Web build 後執行。
 
 完整狀態與下一步請見：[工作交接紀錄索引](docs/work-records/README.md)。
 
@@ -42,12 +42,11 @@
 
 工程 M0 需要：
 
-1. Unity Hub 與 Unity 6.3 LTS 的指定 patch。
-2. Android Build Support、Android SDK/NDK/OpenJDK、iOS Build Support。
-3. 可由終端機呼叫的 Unity batchmode 執行檔路徑。
-4. 系統／關卡／數值設計的具名 owner，負責核准後續 content 變更。
+1. Node.js 22 LTS 與 npm（目前環境已具備）。
+2. 系統／關卡／數值設計的具名 owner，負責核准後續 content 變更。
+3. 部署環境與網域／HTTPS 的 owner（M2 前可用 staging）。
 
-安裝／提供上述條件後，工程師依 M0-ENG-001 建立 Unity 專案、asmdef、Bootstrap/Shell/Run 場景、Addressables、Input System、最小測試與 Android debug build；QA 再執行 M0 Smoke。
+工程師依更新後的技術規範建立 Vite 專案、Three.js WebGL 2 runtime、React UI、IndexedDB、PWA、Vitest／Playwright；QA 再以 iOS Safari 與 Chrome Android 執行 M0 Smoke。
 
 ## 工作與提交規則
 

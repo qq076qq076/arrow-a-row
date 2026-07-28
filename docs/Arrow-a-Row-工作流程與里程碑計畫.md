@@ -13,7 +13,7 @@
 1. **先驗證風險，再擴張內容**：先做單手操作、戰鬥、存檔／前後台、低階機效能，再做三章完整內容。
 2. **規格單一來源**：需求以既有 GDD、UI、技術規範為準；衝突由 PM 發起決策紀錄後修正文檔。
 3. **每個交接有可驗收契約**：不是「檔案交了」就完成，而是接收者能在指定環境使用、QA 能測。
-4. **可回退、可重現**：內容 ID、seed、存檔版本、Git SHA、Unity／package 版本均需追蹤。
+4. **可回退、可重現**：內容 ID、seed、存檔版本、Git SHA、Node／package 版本與 asset manifest hash 均需追蹤。
 5. **手機真機優先**：Editor 可玩不代表完成；每個核心 milestone 都要在目標 Android／iPhone 上驗證。
 
 ## 2. 角色責任地圖（RACI）
@@ -26,7 +26,7 @@ R=執行、A=最終負責、C=諮詢、I=知會。
 | 玩法、數值、關卡需求 | A | C | C | I | R（可行性） | C |
 | 世界觀、命名、敘事文案 | A | R | C | C | I | C |
 | 使用流程與視覺系統 | A | C | R | C | C | C |
-| 3D 資產／動畫／Prefab | I | C | C | R | C | C |
+| 3D 資產／動畫／Web 資產包 | I | C | C | R | C | C |
 | 客戶端、資料、平台、工具 | I | I | C | C | A/R | C |
 | 測試策略、驗收與缺陷 | I | I | C | C | C | A/R |
 | 發版 Go／No-Go | A | I | I | I | C | R（品質建議） |
@@ -94,7 +94,7 @@ R=執行、A=最終負責、C=諮詢、I=知會。
 | 世界觀 | 世界核心、三章名稱／情緒、命名規則、禁用元素。 |
 | UI | 9:16 information architecture、主選單／HUD／獎勵低保真 flow、safe-area 規則。 |
 | 建模 | 三章 moodboard、主角／敵人形狀語言、資產預算、Import preset。 |
-| 工程 | Unity 6.3 LTS 專案、asmdef、CI 最小編譯、Android/iOS 空殼、coding baseline。 |
+| 工程 | Vite／TypeScript／Three.js 專案、React UI shell、CI 最小 build、PWA 空殼、coding baseline。 |
 | QA | 裝置矩陣、測試計畫、bug template、M0 smoke checklist。 |
 
 **Gate M0**：三份主規格及角色文件已核准；repo 可在乾淨環境建置 Android debug；所有角色／工作卡有 owner；未解決的系統設計 owner 已指定。
@@ -153,7 +153,7 @@ R=執行、A=最終負責、C=諮詢、I=知會。
 | PM | 內容 burn-down、feature freeze、外部測試招募與版本計畫。 |
 | 世界觀 | 全部章節／Boss／能力／錯誤的繁中與英文 localization、術語表鎖定。 |
 | UI | 最終 design system、所有狀態、平板適配、低特效／色弱檢查。 |
-| 建模 | 3 章 kit、所有敵人／Boss／夥伴／動畫、LOD、Addressables、授權清單。 |
+| 建模 | 3 章 kit、所有敵人／Boss／夥伴／動畫、LOD、GLB asset manifest、授權清單。 |
 | 工程 | 資產整合、內容 bundle、品質設定、analytics consent gate、crash hooks。 |
 | QA | 全內容回歸、缺失資產／文案／引用檢查、100 Run soak。 |
 
@@ -184,7 +184,7 @@ R=執行、A=最終負責、C=諮詢、I=知會。
 | 最終 smoke、RC 回歸、商店安裝、restore／刪除資料流程 | QA。 |
 | 發行 build 視覺／音訊／授權最終確認 | 建模＋世界觀＋PM。 |
 
-**Gate M6**：release artifact 可由 Git SHA、Unity／package lock、content version、CI run 重現；商店流程通過；P0=0；PM 和 QA 有書面 Go／No-Go；回滾版本已準備。
+**Gate M6**：release artifact 可由 Git SHA、Node／package lock、content version、asset manifest hash、CI run 重現；PWA／部署流程通過；P0=0；PM 和 QA 有書面 Go／No-Go；回滾版本已準備。
 
 ### M7：上架後穩定期
 
@@ -196,7 +196,7 @@ R=執行、A=最終負責、C=諮詢、I=知會。
 | --- | --- | --- |
 | 世界觀 → UI／建模 | 章節 brief、術語、文案 key、moodboard、禁用項 | 功能詞可讀、可放入畫面、形狀／色彩可執行。 |
 | UI → 工程 | flow、wireframe、高保真、redline、state matrix、asset export | 所有 state／safe area／觸控行為明確，無未定義狀態。 |
-| 建模 → 工程 | 原檔、FBX、貼圖、Prefab、socket、LOD、材質統計 | 可 import、無 missing ref、預算內、label 正確。 |
+| 建模 → 工程 | 原檔、GLB、貼圖、socket map、LOD、材質統計、asset manifest | 可由 GLTFLoader 載入、預算內、URL／hash 正確。 |
 | PM／系統 owner → 工程 | 資料表、ID、數值、條件、AC | 可 validator 驗證、無模糊邏輯。 |
 | 工程 → QA | build、變更清單、測試帳號／seed、已知問題、log 位置 | 能安裝、能重現、測試範圍可判定。 |
 | QA → PM／工程 | defect、證據、風險、回歸結果 | 有嚴重度、owner、版本與可執行下一步。 |

@@ -2,7 +2,7 @@
 
 版本：0.1｜Owner：系統／關卡／數值設計師（未設專職時由 PM 指派）｜關聯：[遊戲規格](Arrow-a-Row-開發規格書.md)、[技術規範](Arrow-a-Row-技術設計與程式規範.md)、[第一章垂直切片內容表](Arrow-a-Row-第一章垂直切片內容表.md)
 
-本文件是可量產遊戲內容的設計基線。所有數值是 MVP 起始值，必須集中於內容資料表（ScriptableObject／CSV），不可硬編碼。任何改動均需提高 `contentVersion`、附 playtest 或 simulation 證據。
+本文件是可量產遊戲內容的設計基線。所有數值是 MVP 起始值，必須集中於 JSON／CSV 內容資料表並經 Zod schema 驗證，不可硬編碼。任何改動均需提高 `contentVersion`、附 playtest 或 simulation 證據。
 
 ## 1. 設計目標與運行條件
 

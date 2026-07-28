@@ -16,7 +16,7 @@ QA 驗證規格是否被正確實作、玩家是否能穩定完成流程、資�
 | iPhone 非瀏海／瀏海 | iOS 15+ 各一 | safe area、背景、通知／來電。 |
 | iPad | 4:3 或近似比例 | UI 重排、拖曳、效能。 |
 
-每次 RC 至少跑 Low Android、Standard Android、瀏海 iPhone、iPad；OS 更新或 Unity／SDK 更新後擴大矩陣。
+每次 RC 至少跑 Low Android Chrome、Standard Android Chrome、瀏海 iPhone Safari、iPad Safari；OS、瀏覽器、Three.js／SDK 更新後擴大矩陣。
 
 ## 3. 測試層級與案例集
 
