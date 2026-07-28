@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type MouseEvent, type PointerEvent, type ReactElement } from 'react';
 import { GameLoop } from '../domain/GameLoop';
 import { M1RunSimulation, type M1RunSnapshot, type RewardId } from '../domain/M1RunSimulation';
 import { BrowserLifecycle } from '../infrastructure/BrowserLifecycle';
@@ -10,7 +10,7 @@ const INITIAL_SNAPSHOT = new M1RunSimulation().snapshot();
 const rewardNames: Record<RewardId, string> = { storm_bow: '風暴弓｜箭數 +2', blade_nexus: '刃環核心｜飛劍 +2', heartwood: '心木護佑｜最大 HP +60' };
 
 export function App(): ReactElement {
-  const canvasContainerRef = useRef<HTMLDivElement>(null); const simulationRef = useRef(new M1RunSimulation()); const checkpointRef = useRef(new RunCheckpointRepository()); const profileRef = useRef(new ProfileRepository()); const pendingCheckpointRef = useRef<M1RunSnapshot | undefined>(undefined);
+  const canvasContainerRef = useRef<HTMLDivElement>(null); const simulationRef = useRef(new M1RunSimulation()); const checkpointRef = useRef(new RunCheckpointRepository()); const profileRef = useRef(new ProfileRepository()); const pendingCheckpointRef = useRef<M1RunSnapshot | undefined>(undefined); const isMouseDraggingRef = useRef(false);
   const [snapshot, setSnapshot] = useState<M1RunSnapshot>(INITIAL_SNAPSHOT); const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE); const [screen, setScreen] = useState<'game' | 'shop'>('game'); const [selectedCard, setSelectedCard] = useState<RewardId>(); const [hasCheckpoint, setHasCheckpoint] = useState(false); const [isWebGlSupported] = useState(() => document.createElement('canvas').getContext('webgl2') !== null);
 
   useEffect(() => { void profileRef.current.loadAsync().then(setProfile).catch(() => undefined); void checkpointRef.current.loadAsync().then((checkpoint) => { const saved = checkpoint?.payload as M1RunSnapshot | undefined; if (saved?.phase === 'playing' || saved?.phase === 'reward') { pendingCheckpointRef.current = saved; setHasCheckpoint(true); } }).catch(() => undefined); }, []);
@@ -25,11 +25,16 @@ export function App(): ReactElement {
 
   const startRun = (): void => { setScreen('game'); setSelectedCard(undefined); setHasCheckpoint(false); simulationRef.current.start(); setSnapshot(simulationRef.current.snapshot()); };
   const resumeRun = (): void => { const saved = pendingCheckpointRef.current; if (saved === undefined || !simulationRef.current.restore(saved)) return; setScreen('game'); setHasCheckpoint(false); setSnapshot(simulationRef.current.snapshot()); };
-  const movePlayer = (event: PointerEvent<HTMLDivElement>): void => { if (snapshot.phase !== 'playing') return; const bounds = event.currentTarget.getBoundingClientRect(); simulationRef.current.setTargetX((((event.clientX - bounds.left) / bounds.width) * 2 - 1) * 5); };
+  const movePlayerFromClientX = (clientX: number, element: HTMLDivElement): void => { if (simulationRef.current.snapshot().phase !== 'playing') return; const bounds = element.getBoundingClientRect(); simulationRef.current.setTargetX((((clientX - bounds.left) / bounds.width) * 2 - 1) * 5); };
+  const onPointerDown = (event: PointerEvent<HTMLDivElement>): void => { event.currentTarget.setPointerCapture(event.pointerId); movePlayerFromClientX(event.clientX, event.currentTarget); };
+  const onPointerMove = (event: PointerEvent<HTMLDivElement>): void => { movePlayerFromClientX(event.clientX, event.currentTarget); };
+  const onMouseDown = (event: MouseEvent<HTMLDivElement>): void => { isMouseDraggingRef.current = true; movePlayerFromClientX(event.clientX, event.currentTarget); };
+  const onMouseMove = (event: MouseEvent<HTMLDivElement>): void => { if (isMouseDraggingRef.current) movePlayerFromClientX(event.clientX, event.currentTarget); };
+  const onMouseUp = (): void => { isMouseDraggingRef.current = false; };
   const confirmReward = (): void => { if (selectedCard === undefined || !simulationRef.current.chooseReward(selectedCard)) return; const next = simulationRef.current.snapshot(); setSnapshot(next); const updated = { ...profile, gold: profile.gold + next.earnedGold }; setProfile(updated); void profileRef.current.saveAsync(updated); void checkpointRef.current.clearAsync(); };
   const buy = (key: 'healthLevel' | 'damageLevel' | 'fireRateLevel'): void => { const cost = 20 + profile[key] * 15; if (profile.gold < cost || profile[key] >= 5) return; const updated = { ...profile, gold: profile.gold - cost, [key]: profile[key] + 1 }; setProfile(updated); void profileRef.current.saveAsync(updated); };
   if (!isWebGlSupported) return <main className="unsupported-screen"><h1>此裝置暫不支援</h1><p>Arrow a Row 需要 WebGL 2。</p></main>;
-  return <main className="app-shell"><div ref={canvasContainerRef} className="game-canvas" aria-hidden="true" onPointerDown={movePlayer} onPointerMove={movePlayer} />
+  return <main className="app-shell"><div ref={canvasContainerRef} className="game-canvas" aria-hidden="true" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp} />
     {screen === 'shop' ? <Shop profile={profile} onBuy={buy} onBack={() => setScreen('game')} /> : <>
       {snapshot.phase === 'playing' && <RunHud snapshot={snapshot} />}
       {snapshot.phase === 'menu' && <MainMenu onStart={startRun} onResume={hasCheckpoint ? resumeRun : undefined} onShop={() => setScreen('shop')} gold={profile.gold} />}

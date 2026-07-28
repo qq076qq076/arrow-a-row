@@ -22,6 +22,9 @@ export class ThreeRuntime {
   private readonly renderer: WebGLRenderer;
   private readonly playerMesh = new Mesh(new BoxGeometry(0.8, 1.2, 0.8), new MeshBasicMaterial({ color: '#f4c95d' }));
   private readonly bossMesh = new Mesh(new BoxGeometry(2.4, 2.2, 1.4), new MeshBasicMaterial({ color: '#6ea65a' }));
+  private readonly roadGeometry = new BoxGeometry(11, 0.12, 7);
+  private readonly roadMaterials = [new MeshBasicMaterial({ color: '#315f4a' }), new MeshBasicMaterial({ color: '#3d7755' })];
+  private readonly roadMeshes: Mesh[] = [];
   private readonly enemyMeshes = new Map<string, Mesh>();
   private readonly arrowMeshes = new Map<number, Mesh>();
   private readonly gateGroups = new Map<string, Group>();
@@ -31,10 +34,12 @@ export class ThreeRuntime {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.setClearColor(new Color('#173b3a'));
     this.container.append(this.renderer.domElement);
-    this.camera.position.set(0, 10, 10);
-    this.camera.lookAt(0, 0, 13);
+    // Third-person camera: 45° down toward the direction the runner travels (+Z).
+    this.camera.position.set(0, 8, -8);
+    this.camera.lookAt(0, 0, 0);
     this.scene.add(this.playerMesh);
     this.scene.add(this.bossMesh);
+    this.createRoad();
     this.bossMesh.visible = false;
     this.resize();
   }
@@ -63,6 +68,8 @@ export class ThreeRuntime {
     this.playerMesh.geometry.dispose();
     this.playerMesh.material.dispose();
     this.disposeMesh(this.bossMesh);
+    this.roadGeometry.dispose();
+    this.roadMaterials.forEach((material) => material.dispose());
     for (const mesh of this.enemyMeshes.values()) this.disposeMesh(mesh);
     for (const mesh of this.arrowMeshes.values()) this.disposeMesh(mesh);
     for (const group of this.gateGroups.values()) group.traverse((child) => {
@@ -70,6 +77,15 @@ export class ThreeRuntime {
     });
     this.renderer.dispose();
     this.renderer.domElement.remove();
+  }
+
+  private createRoad(): void {
+    for (let index = 0; index < 8; index += 1) {
+      const segment = new Mesh(this.roadGeometry, this.roadMaterials[index % this.roadMaterials.length]!);
+      segment.position.set(0, -0.1, index * 7 + 3.5);
+      this.roadMeshes.push(segment);
+      this.scene.add(segment);
+    }
   }
 
   private syncBoss(snapshot: M1RunSnapshot): void {

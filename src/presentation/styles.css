@@ -16,7 +16,7 @@ button { font: inherit; }
   background: #173b3a;
 }
 
-.game-canvas { position: absolute; inset: 0; touch-action: none; }
+.game-canvas { cursor: ew-resize; position: absolute; inset: 0; touch-action: none; user-select: none; }
 .game-canvas canvas { display: block; height: 100%; width: 100%; }
 
 .hud {
