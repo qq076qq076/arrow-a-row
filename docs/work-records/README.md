@@ -25,4 +25,4 @@
 | 3 | 介面設計師 | M0 資訊架構、直式 flow、安全區基線 | Completed | [M0-UI-001](M0-UI-001-資訊架構與直式線框.md) | `docs(ui): complete M0 mobile UX handoff` |
 | 4 | 建模師 | M0 美術方向、資產預算、章節 kit 規劃 | Completed | [M0-ART-001](M0-ART-001-晨線草原資產基線.md) | `docs(art): complete M0 chapter asset handoff` |
 | 5 | 工程師 | M0 Unity 專案、CI、asmdef、手機空殼 | Blocked | [M0-ENG-001](M0-ENG-001-工程環境與專案基線.md) | `docs(engineering): record M0 environment blocker` |
-| 6 | 測試人員 | M0 裝置矩陣、測試策略、Smoke 基線 | Ready（文件）／Blocked（真機） | — | — |
+| 6 | 測試人員 | M0 裝置矩陣、測試策略、Smoke 基線 | Completed（文件）／Blocked（真機） | [M0-QA-001](M0-QA-001-測試基線設計.md) | `docs(qa): complete M0 test design handoff` |
