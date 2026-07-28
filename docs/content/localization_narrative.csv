@@ -1,0 +1,14 @@
+key,zh_tw,en_us,max_characters,screen_id,trigger,tone,repeatable,notes
+chapter.ch01.title,晨線草原,Dawnthread Meadow,8,RunHUD,chapter_start,明亮,false,章節名稱
+chapter.ch01.intro,光軌在草浪間延伸，第一道裂隙就在前方。,The lightway crosses the grass. The first rift lies ahead.,26,RunHUD,chapter_start,鼓勵,false,章節開場
+chapter.ch01.boss_intro,苔冠守衛被靜滯困住了。讓它重新聽見風吧。,The Moss-Crown Warden is trapped in stasis. Let it hear the wind again.,30,BossHUD,boss_intro,堅定,false,Boss 前
+chapter.ch01.phase_two,靜滯正在加深！,The stasis deepens!,12,BossHUD,boss_phase_two,警示,false,Phase 轉換
+chapter.ch01.boss_outro,苔冠重新聽見了風；鏡潮高架的光線正在召喚你。,The crown hears the wind again. A light calls from Mirror Tide Viaduct.,32,Reward,boss_defeated,收束,false,Boss 後
+gate.sword_orbit.subtitle,自動追擊附近敵人。,Seeks nearby enemies automatically.,14,Gate,first_seen,說明,true,首次顯示才出現
+reward.title,選擇一份回響,Choose an Echo,10,Reward,boss_defeated,鼓勵,true,獎勵標題
+result.death.generic,光軌尚未熄滅。帶著晶塵回到曙站，再走一次。,The lightway remains. Return to Dawn Station with your dust and try again.,32,Result,death,鼓勵,true,一般死亡
+result.death.projectile,下次留意蓄力亮光；橫向移動能避開直線攻擊。,Watch for charging light next time. Move sideways to evade straight attacks.,31,Result,projectile_death,指引,true,敵彈死亡
+result.victory.ch01,第一道裂隙已修復。新的分支正在前方展開。,The first rift is mended. New branches open ahead.,24,Result,ch01_clear,成就,false,第一章通過
+menu.status.default,曙站正在等待下一位引線者。,Dawn Station awaits its next Threadbearer.,20,MainMenu,no_checkpoint,安定,true,主選單
+menu.status.resume,一段光軌仍在等待你。,A lightway still waits for you.,16,MainMenu,has_checkpoint,提醒,true,有 checkpoint
+error.save_failed,無法儲存進度，尚未扣除金幣。請重試。,Progress could not be saved. No gold was spent. Please try again.,28,Toast,save_failed,清楚,true,錯誤
