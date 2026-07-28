@@ -10,7 +10,7 @@
 - 已完成：PM、世界觀規劃、UI、建模、QA 的文件化 M0 交接。
 - 工程狀態：`M0 完成`。已建立 Three.js + TypeScript + React + Vite 的 Web／PWA 基線，Vitest 3/3、Playwright 手機 viewport Smoke 2/2、production build 皆通過。
 - 真機 QA：等待 iOS Safari 與 Chrome Android 的實體裝置／PWA Smoke；Playwright viewport 不取代實機驗收。
-- 開發進度：`M1 核心灰盒工程完成，等待 QA 回歸紀錄`。
+- 開發進度：`M1 核心灰盒自動化驗收完成，可進入 M2 垂直切片。`
 
 完整狀態與下一步請見：[工作交接紀錄索引](docs/work-records/README.md)。
 
