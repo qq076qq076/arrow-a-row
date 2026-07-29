@@ -82,11 +82,13 @@ export class ThreeRuntime {
   private readonly forgeSceneryGroup = new Group();
   private readonly canopySceneryGroup = new Group();
   private readonly archiveSceneryGroup = new Group();
+  private readonly horizonSceneryGroup = new Group();
   private bossModelTemplate: Group | undefined;
   private ch02BossModelTemplate: Group | undefined;
   private ch03BossModelTemplate: Group | undefined;
   private ch04BossModelTemplate: Group | undefined;
   private ch05BossModelTemplate: Group | undefined;
+  private ch06BossModelTemplate: Group | undefined;
   private buffModelTemplate: Group | undefined;
   private playerModelTemplate: Group | undefined;
   private enemyModelTemplate: Group | undefined;
@@ -98,6 +100,8 @@ export class ThreeRuntime {
   private ch04RangedModelTemplate: Group | undefined;
   private ch05MeleeModelTemplate: Group | undefined;
   private ch05RangedModelTemplate: Group | undefined;
+  private ch06MeleeModelTemplate: Group | undefined;
+  private ch06RangedModelTemplate: Group | undefined;
   private roadModelTemplate: Group | undefined;
   private readonly ambientLight = new AmbientLight('#cde4d0', 1.7);
   private readonly sunLight = new DirectionalLight('#fff0c4', 2.8);
@@ -115,7 +119,7 @@ export class ThreeRuntime {
     this.scene.add(this.bossMesh);
     this.scene.add(this.bossTelegraphRing);
     this.sunLight.position.set(-4, 9, -2);
-    this.scene.add(this.ambientLight, this.sunLight, this.sceneryGroup, this.viaductSceneryGroup, this.forgeSceneryGroup, this.canopySceneryGroup, this.archiveSceneryGroup);
+    this.scene.add(this.ambientLight, this.sunLight, this.sceneryGroup, this.viaductSceneryGroup, this.forgeSceneryGroup, this.canopySceneryGroup, this.archiveSceneryGroup, this.horizonSceneryGroup);
     this.createRoad();
     this.loadPolyhavenScenery();
     this.loadPolyhavenViaductScenery();
@@ -129,6 +133,7 @@ export class ThreeRuntime {
     this.loadPolyhavenForgeModels();
     this.loadPolyhavenCanopyModels();
     this.loadPolyhavenArchiveModels();
+    this.loadPolyhavenHorizonModels();
     this.bossMesh.visible = false;
     this.bossTelegraphRing.visible = false;
     this.resize();
@@ -178,26 +183,29 @@ export class ThreeRuntime {
     this.renderer.setClearColor(new Color(palette[0]!));
     this.roadMaterials[0]!.color.set(palette[1]!);
     this.roadMaterials[1]!.color.set(palette[2]!);
-    this.ambientLight.color.set(chapterId === 'ch05_archive' ? '#b6b5e6' : isForge ? '#ffb39a' : isMirrorViaduct ? '#b9d9ff' : '#b5d3bd');
-    this.sunLight.color.set(chapterId === 'ch05_archive' ? '#f4d27c' : isForge ? '#ff8e63' : isMirrorViaduct ? '#c4dcff' : '#fff0c4');
+    this.ambientLight.color.set(chapterId === 'ch05_archive' ? '#b6b5e6' : chapterId === 'ch06_horizon' ? '#cab7ec' : isForge ? '#ffb39a' : isMirrorViaduct ? '#b9d9ff' : '#b5d3bd');
+    this.sunLight.color.set(chapterId === 'ch05_archive' ? '#f4d27c' : chapterId === 'ch06_horizon' ? '#f5e7ad' : isForge ? '#ff8e63' : isMirrorViaduct ? '#c4dcff' : '#fff0c4');
     this.sceneryGroup.visible = chapterId === 'ch01_meadow';
     this.viaductSceneryGroup.visible = chapterId === 'ch02_viaduct';
     this.forgeSceneryGroup.visible = chapterId === 'ch03_forge';
     this.canopySceneryGroup.visible = chapterId === 'ch04_canopy';
     this.archiveSceneryGroup.visible = chapterId === 'ch05_archive';
+    this.horizonSceneryGroup.visible = chapterId === 'ch06_horizon';
     for (const road of this.roadMeshes) {
       const ch01Model = road.getObjectByName('ch01-road-model');
       const ch02Model = road.getObjectByName('ch02-road-model');
       const ch03Model = road.getObjectByName('ch03-road-model');
       const ch04Model = road.getObjectByName('ch04-road-model');
       const ch05Model = road.getObjectByName('ch05-road-model');
+      const ch06Model = road.getObjectByName('ch06-road-model');
       if (ch01Model !== undefined) ch01Model.visible = chapterId === 'ch01_meadow';
       if (ch02Model !== undefined) ch02Model.visible = chapterId === 'ch02_viaduct';
       if (ch03Model !== undefined) ch03Model.visible = chapterId === 'ch03_forge';
       if (ch04Model !== undefined) ch04Model.visible = chapterId === 'ch04_canopy';
       if (ch05Model !== undefined) ch05Model.visible = chapterId === 'ch05_archive';
+      if (ch06Model !== undefined) ch06Model.visible = chapterId === 'ch06_horizon';
       const material = road.material as MeshBasicMaterial;
-      material.colorWrite = chapterId !== 'ch01_meadow' && chapterId !== 'ch02_viaduct' && chapterId !== 'ch03_forge' && chapterId !== 'ch04_canopy' && chapterId !== 'ch05_archive';
+      material.colorWrite = chapterId !== 'ch01_meadow' && chapterId !== 'ch02_viaduct' && chapterId !== 'ch03_forge' && chapterId !== 'ch04_canopy' && chapterId !== 'ch05_archive' && chapterId !== 'ch06_horizon';
       material.depthWrite = material.colorWrite;
     }
   }
@@ -242,6 +250,9 @@ export class ThreeRuntime {
     this.archiveSceneryGroup.traverse((child) => {
       if (child instanceof Mesh) this.disposeMesh(child);
     });
+    this.horizonSceneryGroup.traverse((child) => {
+      if (child instanceof Mesh) this.disposeMesh(child);
+    });
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
@@ -264,6 +275,7 @@ export class ThreeRuntime {
         this.attachCh03RoadModel(road);
         this.attachCh04RoadModel(road);
         this.attachCh05RoadModel(road);
+        this.attachCh06RoadModel(road);
       }
     });
   }
@@ -365,6 +377,25 @@ export class ThreeRuntime {
     road.add(model);
   }
 
+  private attachCh06RoadModel(road: Mesh): void {
+    if (this.roadModelTemplate === undefined || road.getObjectByName('ch06-road-model') !== undefined) return;
+    const model = this.roadModelTemplate.clone(true);
+    model.name = 'ch06-road-model';
+    model.scale.set(11, 0.16, 7);
+    model.position.y = 0.1;
+    model.traverse((child) => {
+      if (child instanceof Mesh) {
+        const material = (child.material as MeshBasicMaterial).clone();
+        material.map = null;
+        material.vertexColors = false;
+        if (material.color !== undefined) material.color.set('#594178');
+        child.material = material;
+      }
+    });
+    model.visible = false;
+    road.add(model);
+  }
+
   private loadPolyhavenScenery(): void {
     new GLTFLoader().load(POLYHAVEN_ROCK_URL, (gltf) => {
       if (this.isDisposed) return;
@@ -430,20 +461,22 @@ export class ThreeRuntime {
         ? (kind === 'melee' ? this.ch03MeleeModelTemplate : this.ch03RangedModelTemplate)
         : chapterId === 'ch04_canopy'
           ? (kind === 'melee' ? this.ch04MeleeModelTemplate : this.ch04RangedModelTemplate)
-          : chapterId === 'ch05_archive'
+        : chapterId === 'ch05_archive'
             ? (kind === 'melee' ? this.ch05MeleeModelTemplate : this.ch05RangedModelTemplate)
+            : chapterId === 'ch06_horizon'
+              ? (kind === 'melee' ? this.ch06MeleeModelTemplate : this.ch06RangedModelTemplate)
       : this.enemyModelTemplate;
     if (template === undefined || anchor.getObjectByName('enemy-model') !== undefined) return;
     const model = template.clone(true);
     model.name = 'enemy-model';
-    model.scale.setScalar(chapterId === 'ch02_viaduct' ? (kind === 'ranged' ? 0.68 : 0.82) : chapterId === 'ch03_forge' ? (kind === 'ranged' ? 0.72 : 0.94) : chapterId === 'ch04_canopy' ? (kind === 'ranged' ? 0.52 : 0.9) : chapterId === 'ch05_archive' ? (kind === 'ranged' ? 0.72 : 1.2) : kind === 'ranged' ? 0.86 : 0.96);
-    model.position.set(0, chapterId === 'ch02_viaduct' || chapterId === 'ch03_forge' || chapterId === 'ch04_canopy' || chapterId === 'ch05_archive' ? -0.67 : -0.55, 0);
-    model.rotation.y = chapterId === 'ch02_viaduct' ? (kind === 'ranged' ? Math.PI : Math.PI / 2) : chapterId === 'ch03_forge' ? (kind === 'ranged' ? Math.PI / 2 : 0) : chapterId === 'ch04_canopy' ? (kind === 'ranged' ? Math.PI : 0) : chapterId === 'ch05_archive' ? (kind === 'ranged' ? Math.PI / 2 : Math.PI) : kind === 'ranged' ? Math.PI : 0;
+    model.scale.setScalar(chapterId === 'ch02_viaduct' ? (kind === 'ranged' ? 0.68 : 0.82) : chapterId === 'ch03_forge' ? (kind === 'ranged' ? 0.72 : 0.94) : chapterId === 'ch04_canopy' ? (kind === 'ranged' ? 0.52 : 0.9) : chapterId === 'ch05_archive' ? (kind === 'ranged' ? 0.72 : 1.2) : chapterId === 'ch06_horizon' ? (kind === 'ranged' ? 0.68 : 0.85) : kind === 'ranged' ? 0.86 : 0.96);
+    model.position.set(0, chapterId === 'ch02_viaduct' || chapterId === 'ch03_forge' || chapterId === 'ch04_canopy' || chapterId === 'ch05_archive' || chapterId === 'ch06_horizon' ? -0.67 : -0.55, 0);
+    model.rotation.y = chapterId === 'ch02_viaduct' ? (kind === 'ranged' ? Math.PI : Math.PI / 2) : chapterId === 'ch03_forge' ? (kind === 'ranged' ? Math.PI / 2 : 0) : chapterId === 'ch04_canopy' ? (kind === 'ranged' ? Math.PI : 0) : chapterId === 'ch05_archive' ? (kind === 'ranged' ? Math.PI / 2 : Math.PI) : chapterId === 'ch06_horizon' ? Math.PI / 2 : kind === 'ranged' ? Math.PI : 0;
     model.traverse((child) => {
       if (child instanceof Mesh) {
         const material = (child.material as MeshBasicMaterial).clone();
-        const tint = chapterId === 'ch02_viaduct' ? (kind === 'ranged' ? '#8cd7ff' : '#4d8ee8') : chapterId === 'ch03_forge' ? (kind === 'ranged' ? '#ff8b48' : '#b84d32') : chapterId === 'ch04_canopy' ? (kind === 'ranged' ? '#7ae8d0' : '#4a9e72') : chapterId === 'ch05_archive' ? (kind === 'ranged' ? '#f1cf71' : '#9f94d5') : kind === 'ranged' ? '#a986ef' : '#f06b5e';
-        if (chapterId === 'ch02_viaduct' || chapterId === 'ch03_forge' || chapterId === 'ch04_canopy' || chapterId === 'ch05_archive') {
+        const tint = chapterId === 'ch02_viaduct' ? (kind === 'ranged' ? '#8cd7ff' : '#4d8ee8') : chapterId === 'ch03_forge' ? (kind === 'ranged' ? '#ff8b48' : '#b84d32') : chapterId === 'ch04_canopy' ? (kind === 'ranged' ? '#7ae8d0' : '#4a9e72') : chapterId === 'ch05_archive' ? (kind === 'ranged' ? '#f1cf71' : '#9f94d5') : chapterId === 'ch06_horizon' ? (kind === 'ranged' ? '#fff0a5' : '#b58bff') : kind === 'ranged' ? '#a986ef' : '#f06b5e';
+        if (chapterId === 'ch02_viaduct' || chapterId === 'ch03_forge' || chapterId === 'ch04_canopy' || chapterId === 'ch05_archive' || chapterId === 'ch06_horizon') {
           material.map = null;
           material.vertexColors = false;
           if (material.color !== undefined) material.color.set(tint);
@@ -708,6 +741,29 @@ export class ThreeRuntime {
     });
   }
 
+  private loadPolyhavenHorizonModels(): void {
+    this.loadGltf(POLYHAVEN_AMMO_BOX_URL, 'Poly Haven Ammo Box (horizon)', (scene) => { this.ch06MeleeModelTemplate = scene; });
+    this.loadGltf(POLYHAVEN_CANNON_URL, 'Poly Haven Cannon (horizon)', (scene) => { this.ch06RangedModelTemplate = scene; });
+    this.loadGltf(POLYHAVEN_DRILL_PRESS_URL, 'Poly Haven Drill Press (horizon)', (scene) => {
+      this.ch06BossModelTemplate = scene;
+      this.syncChapterBossModel(this.bossChapterId);
+    });
+    this.loadGltf(POLYHAVEN_INDUSTRIAL_PIPES_URL, 'Poly Haven Industrial Pipes (horizon)', (scene) => {
+      for (const [x, z, rotationY] of [[-5.8, 14, Math.PI / 2], [5.8, 42, -Math.PI / 2], [-5.8, 68, Math.PI / 2]] as const) {
+        const prop = scene.clone(true);
+        prop.position.set(x, 0, z);
+        prop.rotation.y = rotationY;
+        prop.scale.setScalar(1.15);
+        prop.userData.worldZ = z;
+        prop.userData.sceneryIndex = this.horizonSceneryGroup.children.length;
+        const glow = new PointLight('#e7d1ff', 1.25, 8, 2);
+        glow.position.set(0, 1, 0);
+        prop.add(glow);
+        this.horizonSceneryGroup.add(prop);
+      }
+    });
+  }
+
   private loadPolyhavenBuffModel(): void {
     this.loadGltf(POLYHAVEN_BUFF_LANTERN_URL, 'Poly Haven Lantern 01', (scene) => {
       this.buffModelTemplate = scene;
@@ -739,7 +795,7 @@ export class ThreeRuntime {
   }
 
   private syncChapterBossModel(chapterId: M1RunSnapshot['chapterId']): void {
-    const template = chapterId === 'ch01_meadow' ? this.bossModelTemplate : chapterId === 'ch02_viaduct' ? this.ch02BossModelTemplate : chapterId === 'ch03_forge' ? this.ch03BossModelTemplate : chapterId === 'ch04_canopy' ? this.ch04BossModelTemplate : chapterId === 'ch05_archive' ? this.ch05BossModelTemplate : undefined;
+    const template = chapterId === 'ch01_meadow' ? this.bossModelTemplate : chapterId === 'ch02_viaduct' ? this.ch02BossModelTemplate : chapterId === 'ch03_forge' ? this.ch03BossModelTemplate : chapterId === 'ch04_canopy' ? this.ch04BossModelTemplate : chapterId === 'ch05_archive' ? this.ch05BossModelTemplate : chapterId === 'ch06_horizon' ? this.ch06BossModelTemplate : undefined;
     const expectedName = `chapter-boss-model:${chapterId}`;
     for (const child of [...this.bossMesh.children]) {
       if (child.name.startsWith('chapter-boss-model:') && child.name !== expectedName) this.bossMesh.remove(child);
@@ -759,9 +815,10 @@ export class ThreeRuntime {
     if (chapterId === 'ch02_viaduct') model.scale.set(14, 6, 14);
     else if (chapterId === 'ch03_forge') model.scale.setScalar(1.8);
     else if (chapterId === 'ch04_canopy') model.scale.setScalar(1.65);
-    else if (chapterId === 'ch05_archive') model.scale.setScalar(2.25);
+    else if (chapterId === 'ch05_archive') model.scale.setScalar(18);
+    else if (chapterId === 'ch06_horizon') model.scale.setScalar(1.7);
     else model.scale.setScalar(1.5);
-    model.position.set(0, chapterId === 'ch02_viaduct' ? -1.02 : chapterId === 'ch03_forge' ? -1.25 : chapterId === 'ch04_canopy' ? -1.1 : chapterId === 'ch05_archive' ? -1.2 : -1.05, 0);
+    model.position.set(0, chapterId === 'ch02_viaduct' ? -1.02 : chapterId === 'ch03_forge' ? -1.25 : chapterId === 'ch04_canopy' ? -1.1 : chapterId === 'ch05_archive' ? -0.58 : chapterId === 'ch06_horizon' ? -1.1 : -1.05, 0);
     if (chapterId === 'ch02_viaduct' || chapterId === 'ch03_forge') model.rotation.y = Math.PI;
     if (chapterId === 'ch02_viaduct') {
       model.traverse((child) => {
@@ -789,6 +846,11 @@ export class ThreeRuntime {
       core.position.set(0, 1.25, 0.2);
       model.add(core);
     }
+    if (chapterId === 'ch06_horizon') {
+      const core = new PointLight('#fff0a5', 2.6, 12, 2);
+      core.position.set(0, 1.3, 0.2);
+      model.add(core);
+    }
     this.bossMesh.add(model);
     const material = this.bossMesh.material as MeshBasicMaterial;
     material.colorWrite = false;
@@ -797,7 +859,7 @@ export class ThreeRuntime {
   }
 
   private syncScenery(snapshot: M1RunSnapshot): void {
-    for (const group of [this.sceneryGroup, this.viaductSceneryGroup, this.forgeSceneryGroup, this.canopySceneryGroup, this.archiveSceneryGroup]) {
+    for (const group of [this.sceneryGroup, this.viaductSceneryGroup, this.forgeSceneryGroup, this.canopySceneryGroup, this.archiveSceneryGroup, this.horizonSceneryGroup]) {
       for (const prop of group.children) {
         const worldZ = prop.userData.worldZ as number | undefined;
         const index = prop.userData.sceneryIndex as number | undefined;
