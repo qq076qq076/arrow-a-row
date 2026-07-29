@@ -12,6 +12,16 @@ describe('M1RunSimulation', () => {
     expect(simulation.snapshot().player.projectileCount).toBe(1);
   });
 
+  it('applies permanent profile modifiers to a new run', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start({ healthLevel: 2, damageLevel: 3, fireRateLevel: 4 });
+    const player = simulation.snapshot().player;
+    expect(player.maxHp).toBe(120);
+    expect(player.hp).toBe(120);
+    expect(player.damage).toBeCloseTo(1.6);
+    expect(player.projectileCount).toBe(1);
+  });
+
   it('applies the left gate once even after more ticks', () => {
     const simulation = new M1RunSimulation();
     simulation.start();

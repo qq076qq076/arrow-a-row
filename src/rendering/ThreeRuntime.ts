@@ -6,6 +6,7 @@ import {
   Group,
   Mesh,
   MeshBasicMaterial,
+  OctahedronGeometry,
   PerspectiveCamera,
   Scene,
   Sprite,
@@ -31,6 +32,8 @@ export class ThreeRuntime {
   private readonly roadMeshes: Mesh[] = [];
   private readonly enemyMeshes = new Map<string, Mesh>();
   private readonly arrowMeshes = new Map<number, Mesh>();
+  private readonly hitMeshes = new Map<number, Mesh>();
+  private readonly pickupMeshes = new Map<number, Mesh>();
   private readonly gateGroups = new Map<string, Group>();
 
   public constructor(private readonly container: HTMLElement) {
@@ -63,6 +66,8 @@ export class ThreeRuntime {
     this.syncGates(snapshot);
     this.syncEnemies(snapshot);
     this.syncArrows(snapshot);
+    this.syncHits(snapshot);
+    this.syncPickups(snapshot);
     this.syncBoss(snapshot);
   }
 
@@ -78,6 +83,8 @@ export class ThreeRuntime {
     this.roadMaterials.forEach((material) => material.dispose());
     for (const mesh of this.enemyMeshes.values()) this.disposeMesh(mesh);
     for (const mesh of this.arrowMeshes.values()) this.disposeMesh(mesh);
+    for (const mesh of this.hitMeshes.values()) this.disposeMesh(mesh);
+    for (const mesh of this.pickupMeshes.values()) this.disposeMesh(mesh);
     for (const group of this.gateGroups.values()) group.traverse((child) => {
       if (child instanceof Mesh) this.disposeMesh(child);
       if (child instanceof Sprite) {
@@ -182,6 +189,8 @@ export class ThreeRuntime {
       mesh.position.set(enemy.x, 0.55 - (1 - deathProgress) * 0.35, enemy.z);
       mesh.scale.setScalar(scale);
       mesh.rotation.y += enemy.kind === 'ranged' ? 0.045 : 0.015;
+      const healthFill = mesh.getObjectByName('health-fill') as Mesh | undefined;
+      if (healthFill !== undefined) healthFill.scale.x = Math.max(0, enemy.hp / (enemy.kind === 'melee' ? 8 : 12));
     }
   }
 
@@ -190,7 +199,12 @@ export class ThreeRuntime {
     const mesh = new Mesh(geometry, ENEMY_MATERIALS[kind]);
     const label = this.createEnemyLabel(kind === 'melee' ? '衝鋒獸' : '芽砲手');
     label.position.set(0, 1.1, 0);
-    mesh.add(label);
+    const healthBackground = new Mesh(new BoxGeometry(1, 0.07, 0.04), new MeshBasicMaterial({ color: '#321d25' }));
+    healthBackground.position.set(0, 1.28, 0);
+    const healthFill = new Mesh(new BoxGeometry(0.92, 0.04, 0.05), new MeshBasicMaterial({ color: '#84e38a' }));
+    healthFill.name = 'health-fill';
+    healthFill.position.set(0, 1.28, -0.03);
+    mesh.add(label, healthBackground, healthFill);
     return mesh;
   }
 
@@ -230,6 +244,26 @@ export class ThreeRuntime {
       }
       mesh.position.set(arrow.x, 0.8, arrow.z);
     }
+  }
+
+  private syncHits(snapshot: M1RunSnapshot): void {
+    this.syncTransientMeshes(snapshot.hits, this.hitMeshes, () => new Mesh(new SphereGeometry(0.28, 8, 8), new MeshBasicMaterial({ color: '#fff4ba' })), (mesh, hit) => {
+      mesh.position.set(hit.x, 0.8, hit.z);
+      mesh.scale.setScalar(1 + (0.2 - hit.seconds) * 5);
+    });
+  }
+
+  private syncPickups(snapshot: M1RunSnapshot): void {
+    this.syncTransientMeshes(snapshot.pickups, this.pickupMeshes, () => new Mesh(new OctahedronGeometry(0.3), new MeshBasicMaterial({ color: '#71e6d1' })), (mesh, pickup) => {
+      mesh.position.set(pickup.x, 0.45, pickup.z);
+      mesh.rotation.y += 0.08;
+    });
+  }
+
+  private syncTransientMeshes<T extends { readonly id: number }>(items: readonly T[], meshes: Map<number, Mesh>, create: () => Mesh, update: (mesh: Mesh, item: T) => void): void {
+    const activeIds = new Set(items.map((item) => item.id));
+    for (const [id, mesh] of meshes) { if (!activeIds.has(id)) { this.scene.remove(mesh); this.disposeMesh(mesh); meshes.delete(id); } }
+    for (const item of items) { let mesh = meshes.get(item.id); if (mesh === undefined) { mesh = create(); meshes.set(item.id, mesh); this.scene.add(mesh); } update(mesh, item); }
   }
 
   private disposeMesh(mesh: Mesh): void {
