@@ -14,6 +14,7 @@ import {
   MeshBasicMaterial,
   OctahedronGeometry,
   PerspectiveCamera,
+  PointLight,
   Scene,
   Sprite,
   SpriteMaterial,
@@ -36,6 +37,7 @@ const BUFF_ICON_GLYPHS: Record<BuffId, string> = {
 };
 
 const POLYHAVEN_ROCK_URL = `${import.meta.env.BASE_URL}assets/polyhaven/rock_07/rock_07.gltf`;
+const POLYHAVEN_STREET_LAMP_URL = `${import.meta.env.BASE_URL}assets/polyhaven/street_lamp_01/street_lamp_01.gltf`;
 
 export class ThreeRuntime {
   private readonly scene = new Scene();
@@ -55,6 +57,7 @@ export class ThreeRuntime {
   private readonly lightningArcs = new Map<string, Line>();
   private readonly gateGroups = new Map<string, Group>();
   private readonly sceneryGroup = new Group();
+  private readonly viaductSceneryGroup = new Group();
   private readonly ambientLight = new AmbientLight('#cde4d0', 1.7);
   private readonly sunLight = new DirectionalLight('#fff0c4', 2.8);
   private isDisposed = false;
@@ -71,9 +74,10 @@ export class ThreeRuntime {
     this.scene.add(this.bossMesh);
     this.scene.add(this.bossTelegraphRing);
     this.sunLight.position.set(-4, 9, -2);
-    this.scene.add(this.ambientLight, this.sunLight, this.sceneryGroup);
+    this.scene.add(this.ambientLight, this.sunLight, this.sceneryGroup, this.viaductSceneryGroup);
     this.createRoad();
     this.loadPolyhavenScenery();
+    this.loadPolyhavenViaductScenery();
     this.bossMesh.visible = false;
     this.bossTelegraphRing.visible = false;
     this.resize();
@@ -121,6 +125,7 @@ export class ThreeRuntime {
     this.ambientLight.color.set(isForge ? '#ffb39a' : isMirrorViaduct ? '#b9d9ff' : '#b5d3bd');
     this.sunLight.color.set(isForge ? '#ff8e63' : isMirrorViaduct ? '#c4dcff' : '#fff0c4');
     this.sceneryGroup.visible = chapterId === 'ch01_meadow';
+    this.viaductSceneryGroup.visible = chapterId === 'ch02_viaduct';
   }
 
   public render(): void {
@@ -149,6 +154,9 @@ export class ThreeRuntime {
       }
     });
     this.sceneryGroup.traverse((child) => {
+      if (child instanceof Mesh) this.disposeMesh(child);
+    });
+    this.viaductSceneryGroup.traverse((child) => {
       if (child instanceof Mesh) this.disposeMesh(child);
     });
     this.renderer.dispose();
@@ -180,6 +188,25 @@ export class ThreeRuntime {
         this.sceneryGroup.add(rock);
       }
     }, undefined, (error: unknown) => console.warn('Poly Haven Rock 07 載入失敗。', error));
+  }
+
+  private loadPolyhavenViaductScenery(): void {
+    new GLTFLoader().load(POLYHAVEN_STREET_LAMP_URL, (gltf) => {
+      if (this.isDisposed) return;
+      const placements: ReadonlyArray<readonly [number, number, number]> = [
+        [-5.1, 12, Math.PI / 2], [5.1, 26, -Math.PI / 2], [-5.1, 40, Math.PI / 2], [5.1, 54, -Math.PI / 2],
+      ];
+      for (const [x, z, rotationY] of placements) {
+        const lamp = gltf.scene.clone(true);
+        lamp.position.set(x, 0, z);
+        lamp.rotation.y = rotationY;
+        lamp.scale.setScalar(0.75);
+        const glow = new PointLight('#9dc9ff', 1.5, 9, 2);
+        glow.position.set(0, 3.2, 0);
+        lamp.add(glow);
+        this.viaductSceneryGroup.add(lamp);
+      }
+    }, undefined, (error: unknown) => console.warn('Poly Haven Street Lamp 01 載入失敗。', error));
   }
 
   private syncScenery(snapshot: M1RunSnapshot): void {
