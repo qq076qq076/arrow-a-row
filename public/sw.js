@@ -1,4 +1,4 @@
-const CACHE_NAME = 'arrow-a-row-shell-v2';
+const CACHE_NAME = 'arrow-a-row-shell-v3';
 const SHELL_URLS = ['/', '/index.html', '/manifest.webmanifest', '/assets/manifest.json', '/icons/icon-192.svg', '/icons/icon-512.svg'];
 
 self.addEventListener('install', (event) => {

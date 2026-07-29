@@ -39,6 +39,10 @@ const BUFF_ICON_GLYPHS: Record<BuffId, string> = {
 const POLYHAVEN_ROCK_URL = `${import.meta.env.BASE_URL}assets/polyhaven/rock_07/rock_07.gltf`;
 const POLYHAVEN_STREET_LAMP_URL = `${import.meta.env.BASE_URL}assets/polyhaven/street_lamp_01/street_lamp_01.gltf`;
 const POLYHAVEN_GOTHIC_STATUE_URL = `${import.meta.env.BASE_URL}assets/polyhaven/gothic_statue/gothic_statue.gltf`;
+const POLYHAVEN_BUFF_LANTERN_URL = `${import.meta.env.BASE_URL}assets/polyhaven/lantern_01/Lantern_01.gltf`;
+const QUATERNIUS_PLAYER_URL = `${import.meta.env.BASE_URL}assets/quaternius/platformer/character.gltf`;
+const QUATERNIUS_ENEMY_URL = `${import.meta.env.BASE_URL}assets/quaternius/platformer/enemy.gltf`;
+const QUATERNIUS_GRASS_ROAD_URL = `${import.meta.env.BASE_URL}assets/quaternius/platformer/grass_road_tile.gltf`;
 
 export class ThreeRuntime {
   private readonly scene = new Scene();
@@ -59,8 +63,11 @@ export class ThreeRuntime {
   private readonly gateGroups = new Map<string, Group>();
   private readonly sceneryGroup = new Group();
   private readonly viaductSceneryGroup = new Group();
-  private actorModelTemplate: Group | undefined;
   private bossModelTemplate: Group | undefined;
+  private buffModelTemplate: Group | undefined;
+  private playerModelTemplate: Group | undefined;
+  private enemyModelTemplate: Group | undefined;
+  private roadModelTemplate: Group | undefined;
   private readonly ambientLight = new AmbientLight('#cde4d0', 1.7);
   private readonly sunLight = new DirectionalLight('#fff0c4', 2.8);
   private isDisposed = false;
@@ -82,6 +89,9 @@ export class ThreeRuntime {
     this.loadPolyhavenScenery();
     this.loadPolyhavenViaductScenery();
     this.loadPolyhavenBossModel();
+    this.loadPolyhavenBuffModel();
+    this.loadQuaterniusActorModels();
+    this.loadQuaterniusRoadModel();
     this.bossMesh.visible = false;
     this.bossTelegraphRing.visible = false;
     this.resize();
@@ -119,7 +129,12 @@ export class ThreeRuntime {
   }
 
   private syncChapterTheme(chapterId: M1RunSnapshot['chapterId']): void {
-    if (this.bossChapterId !== chapterId) { this.bossMesh.geometry.dispose(); this.bossMesh.geometry = chapterId === 'ch02_viaduct' ? new OctahedronGeometry(1.45, 1) : chapterId === 'ch03_forge' ? new IcosahedronGeometry(1.35, 1) : new BoxGeometry(2.4, 2.2, 1.4); this.bossChapterId = chapterId; }
+    if (this.bossChapterId !== chapterId) {
+      this.bossMesh.geometry.dispose();
+      this.bossMesh.geometry = chapterId === 'ch02_viaduct' ? new OctahedronGeometry(1.45, 1) : chapterId === 'ch03_forge' ? new IcosahedronGeometry(1.35, 1) : new BoxGeometry(2.4, 2.2, 1.4);
+      this.bossChapterId = chapterId;
+    }
+    this.syncChapterBossModel(chapterId);
     const isMirrorViaduct = chapterId === 'ch02_viaduct';
     const isForge = chapterId === 'ch03_forge';
     const palette = chapterId === 'ch04_canopy' ? ['#1b3b32', '#356c54', '#5c9b70'] : chapterId === 'ch05_archive' ? ['#101b3d', '#263d70', '#b69a50'] : chapterId === 'ch06_horizon' ? ['#392b4d', '#7a5d9b', '#e0c97a'] : isForge ? ['#3b1e35', '#64334e', '#9a4f3b'] : isMirrorViaduct ? ['#172849', '#243d69', '#31528a'] : ['#173b3a', '#315f4a', '#3d7755'];
@@ -130,6 +145,13 @@ export class ThreeRuntime {
     this.sunLight.color.set(isForge ? '#ff8e63' : isMirrorViaduct ? '#c4dcff' : '#fff0c4');
     this.sceneryGroup.visible = chapterId === 'ch01_meadow';
     this.viaductSceneryGroup.visible = chapterId === 'ch02_viaduct';
+    for (const road of this.roadMeshes) {
+      const model = road.getObjectByName('ch01-road-model');
+      if (model !== undefined) model.visible = chapterId === 'ch01_meadow';
+      const material = road.material as MeshBasicMaterial;
+      material.colorWrite = chapterId !== 'ch01_meadow';
+      material.depthWrite = chapterId !== 'ch01_meadow';
+    }
   }
 
   public render(): void {
@@ -176,11 +198,37 @@ export class ThreeRuntime {
     }
   }
 
+  private loadQuaterniusRoadModel(): void {
+    this.loadGltf(QUATERNIUS_GRASS_ROAD_URL, 'Quaternius Grass Road Tile', (scene) => {
+      this.roadModelTemplate = scene;
+      for (const road of this.roadMeshes) this.attachCh01RoadModel(road);
+    });
+  }
+
+  private attachCh01RoadModel(road: Mesh): void {
+    if (this.roadModelTemplate === undefined || road.getObjectByName('ch01-road-model') !== undefined) return;
+    const model = this.roadModelTemplate.clone(true);
+    model.name = 'ch01-road-model';
+    model.scale.set(11, 0.16, 7);
+    model.position.y = 0.1;
+    model.traverse((child) => {
+      if (child instanceof Mesh) {
+        const material = (child.material as MeshBasicMaterial).clone();
+        material.map = null;
+        material.vertexColors = false;
+        if (material.color !== undefined) material.color.set('#315f4a');
+        child.material = material;
+      }
+    });
+    road.add(model);
+    const material = road.material as MeshBasicMaterial;
+    material.colorWrite = false;
+    material.depthWrite = false;
+  }
+
   private loadPolyhavenScenery(): void {
     new GLTFLoader().load(POLYHAVEN_ROCK_URL, (gltf) => {
       if (this.isDisposed) return;
-      this.actorModelTemplate = gltf.scene;
-      this.applyActorModels();
       const placements: ReadonlyArray<readonly [number, number, number, number]> = [
         [-7.4, 10, 10, 0.35], [7.3, 22, 9, -0.7], [-7.2, 38, 11, 1.15], [7.3, 56, 10, -1.55],
       ];
@@ -196,32 +244,63 @@ export class ThreeRuntime {
     }, undefined, (error: unknown) => console.warn('Poly Haven Rock 07 載入失敗。', error));
   }
 
-  private applyActorModels(): void {
-    if (this.actorModelTemplate === undefined) return;
-    this.attachActorModel(this.playerMesh, 0.085, '#f4c95d');
-    this.attachActorModel(this.bossMesh, 0.19, '#dc7449');
-    for (const enemy of this.enemyMeshes.values()) this.attachActorModel(enemy, 0.095, enemy.userData.kind === 'ranged' ? '#a986ef' : '#f06b5e');
-    for (const pickup of this.pickupMeshes.values()) this.attachActorModel(pickup, 0.048, '#71e6d1');
+  private loadGltf(url: string, label: string, onLoad: (scene: Group) => void): void {
+    const resourcePath = new URL('.', new URL(url, window.location.href)).href;
+    void fetch(url)
+      .then((response) => {
+        if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+        return response.arrayBuffer();
+      })
+      .then((source) => new Promise<Group>((resolve, reject) => {
+        new GLTFLoader().parse(source, resourcePath, (gltf) => resolve(gltf.scene), reject);
+      }))
+      .then((scene) => {
+        if (!this.isDisposed) onLoad(scene);
+      })
+      .catch((error: unknown) => console.warn(`${label} 載入失敗。`, error));
   }
 
-  private attachActorModel(anchor: Mesh, scale: number, color: string): void {
-    if (this.actorModelTemplate === undefined || anchor.userData.actorModelAttached === true) return;
-    const model = this.actorModelTemplate.clone(true);
-    model.name = 'actor-model';
-    model.scale.setScalar(scale);
+  private loadQuaterniusActorModels(): void {
+    this.loadGltf(QUATERNIUS_PLAYER_URL, 'Quaternius Character', (scene) => {
+      this.playerModelTemplate = scene;
+      this.attachPlayerModel();
+    });
+    this.loadGltf(QUATERNIUS_ENEMY_URL, 'Quaternius Enemy', (scene) => {
+      this.enemyModelTemplate = scene;
+      for (const enemy of this.enemyMeshes.values()) this.attachEnemyModel(enemy, enemy.userData.kind as 'melee' | 'ranged');
+    });
+  }
+
+  private attachPlayerModel(): void {
+    if (this.playerModelTemplate === undefined || this.playerMesh.getObjectByName('player-model') !== undefined) return;
+    const model = this.playerModelTemplate.clone(true);
+    model.name = 'player-model';
+    model.scale.setScalar(0.2);
+    model.position.set(0, -0.61, 0);
+    this.playerMesh.add(model);
+    const material = this.playerMesh.material as MeshBasicMaterial;
+    material.colorWrite = false;
+    material.depthWrite = false;
+  }
+
+  private attachEnemyModel(anchor: Mesh, kind: 'melee' | 'ranged'): void {
+    if (this.enemyModelTemplate === undefined || anchor.getObjectByName('enemy-model') !== undefined) return;
+    const model = this.enemyModelTemplate.clone(true);
+    model.name = 'enemy-model';
+    model.scale.setScalar(kind === 'ranged' ? 0.86 : 0.96);
     model.position.set(0, -0.55, 0);
+    model.rotation.y = kind === 'ranged' ? Math.PI : 0;
     model.traverse((child) => {
       if (child instanceof Mesh) {
         const material = (child.material as MeshBasicMaterial).clone();
-        material.color.set(color);
+        if (material.color !== undefined) material.color.lerp(new Color(kind === 'ranged' ? '#a986ef' : '#f06b5e'), 0.22);
         child.material = material;
       }
     });
-    const anchorMaterial = anchor.material as MeshBasicMaterial;
-    anchorMaterial.transparent = true;
-    anchorMaterial.opacity = 0;
     anchor.add(model);
-    anchor.userData.actorModelAttached = true;
+    const material = anchor.material as MeshBasicMaterial;
+    material.colorWrite = false;
+    material.depthWrite = false;
   }
 
   private loadPolyhavenViaductScenery(): void {
@@ -244,18 +323,62 @@ export class ThreeRuntime {
   }
 
   private loadPolyhavenBossModel(): void {
-    new GLTFLoader().load(POLYHAVEN_GOTHIC_STATUE_URL, (gltf) => {
-      if (this.isDisposed) return;
-      this.bossModelTemplate = gltf.scene;
-      if (this.bossMesh.userData.chapterBossAttached === true) return;
-      const model = gltf.scene.clone(true);
-      const genericModel = this.bossMesh.getObjectByName('actor-model');
-      if (genericModel !== undefined) this.bossMesh.remove(genericModel);
-      model.scale.setScalar(1.5);
-      model.position.set(0, -1.05, 0);
-      this.bossMesh.add(model);
-      this.bossMesh.userData.chapterBossAttached = true;
-    }, undefined, (error: unknown) => console.warn('Poly Haven Gothic Statue 載入失敗。', error));
+    this.loadGltf(POLYHAVEN_GOTHIC_STATUE_URL, 'Poly Haven Gothic Statue', (scene) => {
+      this.bossModelTemplate = scene;
+      this.syncChapterBossModel(this.bossChapterId);
+    });
+  }
+
+  private loadPolyhavenBuffModel(): void {
+    this.loadGltf(POLYHAVEN_BUFF_LANTERN_URL, 'Poly Haven Lantern 01', (scene) => {
+      this.buffModelTemplate = scene;
+      for (const pickup of this.pickupMeshes.values()) this.attachBuffModel(pickup, '#71e6d1', 1.7);
+      for (const group of this.gateGroups.values()) {
+        for (const anchor of group.children.filter((child): child is Mesh => child.name === 'buff-anchor')) this.attachBuffModel(anchor, anchor.userData.color as string, 5);
+      }
+    });
+  }
+
+  private attachBuffModel(anchor: Mesh, color: string, scale: number): void {
+    if (this.buffModelTemplate === undefined || anchor.userData.buffModelAttached === true) return;
+    const model = this.buffModelTemplate.clone(true);
+    model.name = 'buff-model';
+    model.scale.setScalar(scale);
+    model.position.set(0, -0.52, 0.02);
+    model.traverse((child) => {
+      if (child instanceof Mesh) {
+        const material = (child.material as MeshBasicMaterial).clone();
+        if (material.color !== undefined) material.color.lerp(new Color(color), 0.3);
+        child.material = material;
+      }
+    });
+    const anchorMaterial = anchor.material as MeshBasicMaterial;
+    anchorMaterial.colorWrite = false;
+    anchorMaterial.depthWrite = false;
+    anchor.add(model);
+    anchor.userData.buffModelAttached = true;
+  }
+
+  private syncChapterBossModel(chapterId: M1RunSnapshot['chapterId']): void {
+    const existingModel = this.bossMesh.getObjectByName('chapter-boss-model');
+    if (chapterId !== 'ch01_meadow' || this.bossModelTemplate === undefined) {
+      if (existingModel !== undefined) this.bossMesh.remove(existingModel);
+      this.bossMesh.userData.chapterBossAttached = false;
+      const material = this.bossMesh.material as MeshBasicMaterial;
+      material.colorWrite = true;
+      material.depthWrite = true;
+      return;
+    }
+    if (existingModel !== undefined) return;
+    const model = this.bossModelTemplate.clone(true);
+    model.name = 'chapter-boss-model';
+    model.scale.setScalar(1.5);
+    model.position.set(0, -1.05, 0);
+    this.bossMesh.add(model);
+    const material = this.bossMesh.material as MeshBasicMaterial;
+    material.colorWrite = false;
+    material.depthWrite = false;
+    this.bossMesh.userData.chapterBossAttached = true;
   }
 
   private syncScenery(snapshot: M1RunSnapshot): void {
@@ -315,8 +438,8 @@ export class ThreeRuntime {
       if (group === undefined) {
         group = new Group();
         group.userData.signature = signature;
-        const left = new Mesh(new BoxGeometry(2, 2.5, 0.25), new MeshBasicMaterial({ color: '#5bb5d8' }));
-        const right = new Mesh(new BoxGeometry(2, 2.5, 0.25), new MeshBasicMaterial({ color: '#8ccf9b' }));
+        const left = this.createGateBuffAnchor('#5bb5d8');
+        const right = this.createGateBuffAnchor('#8ccf9b');
         left.position.x = -2.5;
         right.position.x = 2.5;
         group.add(
@@ -331,6 +454,14 @@ export class ThreeRuntime {
       group.position.z = gate.z - snapshot.distanceMeters;
       group.visible = !gate.isChosen;
     }
+  }
+
+  private createGateBuffAnchor(color: string): Mesh {
+    const anchor = new Mesh(new BoxGeometry(2, 2.5, 0.25), new MeshBasicMaterial({ color }));
+    anchor.name = 'buff-anchor';
+    anchor.userData.color = color;
+    this.attachBuffModel(anchor, color, 5);
+    return anchor;
   }
 
   private createGateLabel(buffId: BuffId, text: string, background: string, x: number, isOpeningGate: boolean): Sprite {
@@ -402,7 +533,7 @@ export class ThreeRuntime {
     healthFill.name = 'health-fill';
     healthFill.position.set(0, 1.28, -0.03);
     mesh.add(label, healthBackground, healthFill);
-    this.attachActorModel(mesh, 0.095, kind === 'ranged' ? '#a986ef' : '#f06b5e');
+    this.attachEnemyModel(mesh, kind);
     return mesh;
   }
 
@@ -509,7 +640,7 @@ export class ThreeRuntime {
     const label = this.createPickupLabel('Buff +⅓', 'split_arrow');
     label.name = 'pickup-label';
     mesh.add(label);
-    this.attachActorModel(mesh, 0.048, '#71e6d1');
+    this.attachBuffModel(mesh, '#71e6d1', 1.7);
     return mesh;
   }
 
