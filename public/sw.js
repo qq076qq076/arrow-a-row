@@ -1,5 +1,5 @@
-const CACHE_NAME = 'arrow-a-row-shell-v1';
-const SHELL_URLS = ['/', '/index.html', '/manifest.webmanifest'];
+const CACHE_NAME = 'arrow-a-row-shell-v2';
+const SHELL_URLS = ['/', '/index.html', '/manifest.webmanifest', '/assets/manifest.json', '/icons/icon-192.svg', '/icons/icon-512.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_URLS)));

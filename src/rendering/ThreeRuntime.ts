@@ -52,6 +52,11 @@ export class ThreeRuntime {
     this.resize();
   }
 
+  public setQuality(mode: 'low' | 'standard'): void {
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, mode === 'low' ? 1 : 1.5));
+    this.resize();
+  }
+
   public resize(): void {
     const width = Math.max(this.container.clientWidth, 1);
     const height = Math.max(this.container.clientHeight, 1);

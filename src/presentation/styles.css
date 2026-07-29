@@ -47,6 +47,8 @@ button { font: inherit; }
 
 .main-menu button { min-height: 52px; min-width: min(100%, 320px); }
 .chapter-select { display: grid; gap: 6px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 12px auto; max-width: 420px; }
+.quality-control { align-items: center; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 10px auto; max-width: 420px; }
+.quality-control button { font-size: 12px; margin: 0; min-height: 44px; min-width: 0; padding: 8px 10px; width: auto; }
 .chapter-select button { font-size: 13px; margin: 0; min-height: 44px; min-width: 0; padding: 8px; width: 100%; }
 .main-menu button, .modal-card button { border: 0; border-radius: 12px; cursor: pointer; display: block; margin: 10px auto; padding: 14px 18px; }
 .main-menu button:not(.secondary), .modal-card button:not(.secondary) { background: #f4c95d; color: #173b3a; font-weight: 800; }
