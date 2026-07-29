@@ -1,9 +1,11 @@
 import {
+  AmbientLight,
   BoxGeometry,
   BufferGeometry,
   Color,
   CanvasTexture,
   ConeGeometry,
+  DirectionalLight,
   Group,
   IcosahedronGeometry,
   Line,
@@ -20,6 +22,7 @@ import {
   Vector3,
   WebGLRenderer,
 } from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import type { M1RunSnapshot } from '../domain/M1RunSimulation';
 import type { BuffId } from '../content/BuffCatalog';
 
@@ -31,6 +34,8 @@ const ENEMY_MATERIALS = {
 const BUFF_ICON_GLYPHS: Record<BuffId, string> = {
   split_arrow: '↗', power_shot: '✦', swift_shot: '➤', rapid_fire: '≋', piercing_arrow: '⊹', lightning_targets: '⚡', lightning_damage: '✹', lightning_range: '⌁', vitality: '✚', windstep: '➟', barkskin: '◆',
 };
+
+const POLYHAVEN_ROCK_URL = `${import.meta.env.BASE_URL}assets/polyhaven/rock_07/rock_07.gltf`;
 
 export class ThreeRuntime {
   private readonly scene = new Scene();
@@ -49,6 +54,11 @@ export class ThreeRuntime {
   private readonly lightningMeshes = new Map<string, Mesh>();
   private readonly lightningArcs = new Map<string, Line>();
   private readonly gateGroups = new Map<string, Group>();
+  private readonly sceneryGroup = new Group();
+  private readonly ambientLight = new AmbientLight('#cde4d0', 1.7);
+  private readonly sunLight = new DirectionalLight('#fff0c4', 2.8);
+  private isDisposed = false;
+  private qualityMode: 'low' | 'standard' = 'standard';
   private bossChapterId: M1RunSnapshot['chapterId'] = 'ch01_meadow';
 
   public constructor(private readonly container: HTMLElement) {
@@ -60,13 +70,17 @@ export class ThreeRuntime {
     this.scene.add(this.playerMesh);
     this.scene.add(this.bossMesh);
     this.scene.add(this.bossTelegraphRing);
+    this.sunLight.position.set(-4, 9, -2);
+    this.scene.add(this.ambientLight, this.sunLight, this.sceneryGroup);
     this.createRoad();
+    this.loadPolyhavenScenery();
     this.bossMesh.visible = false;
     this.bossTelegraphRing.visible = false;
     this.resize();
   }
 
   public setQuality(mode: 'low' | 'standard'): void {
+    this.qualityMode = mode;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, mode === 'low' ? 1 : 1.5));
     this.resize();
   }
@@ -86,6 +100,7 @@ export class ThreeRuntime {
     this.syncChapterTheme(snapshot.chapterId);
     this.playerMesh.position.set(snapshot.player.x, 0.6, 0);
     this.updateCamera(snapshot.player.x);
+    this.syncScenery(snapshot);
     this.syncGates(snapshot);
     this.syncEnemies(snapshot);
     this.syncArrows(snapshot);
@@ -103,6 +118,9 @@ export class ThreeRuntime {
     this.renderer.setClearColor(new Color(palette[0]!));
     this.roadMaterials[0]!.color.set(palette[1]!);
     this.roadMaterials[1]!.color.set(palette[2]!);
+    this.ambientLight.color.set(isForge ? '#ffb39a' : isMirrorViaduct ? '#b9d9ff' : '#b5d3bd');
+    this.sunLight.color.set(isForge ? '#ff8e63' : isMirrorViaduct ? '#c4dcff' : '#fff0c4');
+    this.sceneryGroup.visible = chapterId === 'ch01_meadow';
   }
 
   public render(): void {
@@ -110,6 +128,7 @@ export class ThreeRuntime {
   }
 
   public dispose(): void {
+    this.isDisposed = true;
     this.playerMesh.geometry.dispose();
     this.playerMesh.material.dispose();
     this.disposeMesh(this.bossMesh);
@@ -129,6 +148,9 @@ export class ThreeRuntime {
         child.material.dispose();
       }
     });
+    this.sceneryGroup.traverse((child) => {
+      if (child instanceof Mesh) this.disposeMesh(child);
+    });
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
@@ -139,6 +161,35 @@ export class ThreeRuntime {
       segment.position.set(0, -0.1, index * 7 + 3.5);
       this.roadMeshes.push(segment);
       this.scene.add(segment);
+    }
+  }
+
+  private loadPolyhavenScenery(): void {
+    new GLTFLoader().load(POLYHAVEN_ROCK_URL, (gltf) => {
+      if (this.isDisposed) return;
+      const placements: ReadonlyArray<readonly [number, number, number, number]> = [
+        [-7.4, 10, 10, 0.35], [7.3, 22, 9, -0.7], [-7.2, 38, 11, 1.15], [7.3, 56, 10, -1.55],
+      ];
+      for (const [index, [x, z, scale, rotationY]] of placements.entries()) {
+        const rock = gltf.scene.clone(true);
+        rock.position.set(x, 0.04, z);
+        rock.rotation.y = rotationY;
+        rock.scale.setScalar(scale);
+        rock.userData.worldZ = z;
+        rock.userData.sceneryIndex = index;
+        this.sceneryGroup.add(rock);
+      }
+    }, undefined, (error: unknown) => console.warn('Poly Haven Rock 07 載入失敗。', error));
+  }
+
+  private syncScenery(snapshot: M1RunSnapshot): void {
+    for (const rock of this.sceneryGroup.children) {
+      const worldZ = rock.userData.worldZ as number | undefined;
+      const index = rock.userData.sceneryIndex as number | undefined;
+      if (worldZ === undefined || index === undefined) continue;
+      const relativeZ = worldZ - snapshot.distanceMeters;
+      rock.position.z = relativeZ;
+      rock.visible = relativeZ > -8 && relativeZ < 64 && (this.qualityMode === 'standard' || index < 2);
     }
   }
 

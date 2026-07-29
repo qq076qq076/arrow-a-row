@@ -92,3 +92,4 @@
 | 7 | 工程師 | 一般怪物生命提高 10% | Completed | [M5-ENG-008](M5-ENG-008-一般怪物生命提高.md) | `工程(M5)：提高一般怪物生命` |
 | 8 | 工程師 | 分離選單與遊戲場景 | Completed | [M5-ENG-009](M5-ENG-009-分離選單與遊戲場景.md) | `工程(M5)：分離選單與遊戲場景` |
 | 9 | 工程師 | 1,000 局 Bot CI 逾時容錯 | Completed | [M5-ENG-010](M5-ENG-010-Bot測試CI逾時容錯.md) | `工程(M5)：調整Bot測試CI逾時` |
+| 10 | 工程師 | Poly Haven 場景模型、光線與實機檢查 | Completed | [M5-ENG-011](M5-ENG-011-PolyHaven場景模型整合.md) | `工程(M5)：整合Poly Haven場景模型` |
