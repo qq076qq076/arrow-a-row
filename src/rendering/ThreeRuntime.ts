@@ -4,6 +4,7 @@ import {
   CanvasTexture,
   ConeGeometry,
   Group,
+  IcosahedronGeometry,
   Mesh,
   MeshBasicMaterial,
   OctahedronGeometry,
@@ -27,7 +28,7 @@ export class ThreeRuntime {
   private readonly camera = new PerspectiveCamera(45, 1, 0.1, 100);
   private readonly renderer: WebGLRenderer;
   private readonly playerMesh = new Mesh(new BoxGeometry(0.8, 1.2, 0.8), new MeshBasicMaterial({ color: '#f4c95d' }));
-  private readonly bossMesh = new Mesh(new BoxGeometry(2.4, 2.2, 1.4), new MeshBasicMaterial({ color: '#6ea65a' }));
+  private readonly bossMesh: Mesh = new Mesh(new BoxGeometry(2.4, 2.2, 1.4), new MeshBasicMaterial({ color: '#6ea65a' }));
   private readonly roadGeometry = new BoxGeometry(11, 0.12, 7);
   private readonly roadMaterials = [new MeshBasicMaterial({ color: '#315f4a' }), new MeshBasicMaterial({ color: '#3d7755' })];
   private readonly roadMeshes: Mesh[] = [];
@@ -36,6 +37,7 @@ export class ThreeRuntime {
   private readonly hitMeshes = new Map<number, Mesh>();
   private readonly pickupMeshes = new Map<number, Mesh>();
   private readonly gateGroups = new Map<string, Group>();
+  private bossChapterId: M1RunSnapshot['chapterId'] = 'ch01_meadow';
 
   public constructor(private readonly container: HTMLElement) {
     this.renderer = new WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
@@ -74,6 +76,7 @@ export class ThreeRuntime {
   }
 
   private syncChapterTheme(chapterId: M1RunSnapshot['chapterId']): void {
+    if (this.bossChapterId !== chapterId) { this.bossMesh.geometry.dispose(); this.bossMesh.geometry = chapterId === 'ch02_viaduct' ? new OctahedronGeometry(1.45, 1) : chapterId === 'ch03_forge' ? new IcosahedronGeometry(1.35, 1) : new BoxGeometry(2.4, 2.2, 1.4); this.bossChapterId = chapterId; }
     const isMirrorViaduct = chapterId === 'ch02_viaduct';
     const isForge = chapterId === 'ch03_forge';
     const palette = chapterId === 'ch04_canopy' ? ['#1b3b32', '#356c54', '#5c9b70'] : chapterId === 'ch05_archive' ? ['#101b3d', '#263d70', '#b69a50'] : chapterId === 'ch06_horizon' ? ['#392b4d', '#7a5d9b', '#e0c97a'] : isForge ? ['#3b1e35', '#64334e', '#9a4f3b'] : isMirrorViaduct ? ['#172849', '#243d69', '#31528a'] : ['#173b3a', '#315f4a', '#3d7755'];
@@ -129,8 +132,10 @@ export class ThreeRuntime {
     if (boss === undefined || boss.isDefeated) return;
     this.bossMesh.position.set(0, 1.1, boss.z);
     const material = this.bossMesh.material as MeshBasicMaterial;
-    material.color.set(boss.telegraphSeconds > 0 ? '#f4c95d' : boss.phase === 2 ? '#b7774f' : '#6ea65a');
-    this.bossMesh.scale.setScalar(boss.telegraphSeconds > 0 ? 1.08 : 1);
+    const baseColor = snapshot.chapterId === 'ch02_viaduct' ? '#7fa8ef' : snapshot.chapterId === 'ch03_forge' ? '#dc7449' : '#6ea65a';
+    material.color.set(boss.telegraphSeconds > 0 ? '#f4c95d' : boss.phase === 2 ? '#b7774f' : baseColor);
+    const baseScale = snapshot.chapterId === 'ch02_viaduct' ? 0.9 : snapshot.chapterId === 'ch03_forge' ? 1.1 : 1;
+    this.bossMesh.scale.setScalar(baseScale * (boss.telegraphSeconds > 0 ? 1.08 : 1));
   }
 
   private syncGates(snapshot: M1RunSnapshot): void {
