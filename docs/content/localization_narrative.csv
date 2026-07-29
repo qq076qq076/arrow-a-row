@@ -24,3 +24,26 @@ shop.damage,弓弦研磨,String Sharpening,8,Shop,upgrade_name,鼓勵,true,箭�
 shop.fire_rate,迅捷弦律,Swift String,8,Shop,upgrade_name,鼓勵,true,攻速
 shop.purchase,購買（{cost} 金幣）,Buy ({cost} Gold),14,Shop,purchase,清楚,true,購買按鈕
 result.gold,獲得 {gold} 金幣,Gain {gold} Gold,14,Result,settlement,鼓勵,true,結算
+chapter.ch02.title,鏡潮高架,Mirror Tide Viaduct,8,RunHUD,chapter_start,冷冽,false,章節名稱
+chapter.ch02.intro,銀藍的高架在霧中折返；別讓倒影帶走方向。,Silver-blue spans turn through the mist. Do not let reflections steal your bearing.,32,RunHUD,chapter_start,警覺,false,章節開場
+chapter.ch02.boss_intro,鏡潮校準者正在鎖定航線；切斷它的折光。,The Mirror-Tide Calibrator is locking the route. Break its refracted light.,32,BossHUD,boss_intro,堅定,false,Boss 前
+chapter.ch02.boss_outro,航線回正，熾心熔庭的暖光正在遠方跳動。,The route is true again. A warm light pulses from Emberheart Court.,32,Reward,boss_defeated,收束,false,Boss 後
+chapter.ch03.title,熾心熔庭,Emberheart Court,8,RunHUD,chapter_start,熾熱,false,章節名稱
+chapter.ch03.intro,熔脈穿過石庭，靜滯在每一次脈動裡回響。,Molten veins cross the court. Stasis echoes in every pulse.,30,RunHUD,chapter_start,緊張,false,章節開場
+chapter.ch03.boss_intro,熔脈監工正在蓄積震波；以穩定的光軌穿過它。,The Vein Overseer is charging a shockwave. Hold a steady lightway through it.,34,BossHUD,boss_intro,堅定,false,Boss 前
+chapter.ch03.boss_outro,第三道裂隙熄滅，原野深處仍有光在等待。,The third rift falls silent. Deeper lights still wait in the wilds.,30,Reward,boss_defeated,收束,false,Boss 後
+buff.split_arrow,箭矢碎片,Arrow Fragment,8,Pickup,pickup,清楚,true,+1/3 箭矢
+buff.power_shot,箭傷回響,Power Echo,8,Pickup,pickup,清楚,true,+8% 箭傷
+buff.swift_shot,箭速回響,Swift Echo,8,Pickup,pickup,清楚,true,+8% 箭速
+buff.rapid_fire,迅捷回響,Rapid Echo,8,Pickup,pickup,清楚,true,+4% 射速
+buff.piercing_arrow,穿透碎片,Piercing Fragment,10,Pickup,pickup,清楚,true,+1/3 穿透
+buff.flying_sword,飛劍碎片,Blade Fragment,8,Pickup,pickup,清楚,true,+1/3 飛劍
+buff.vitality,生命回響,Vitality Echo,8,Pickup,pickup,鼓勵,true,+7 生命
+buff.windstep,步伐回響,Windstep Echo,8,Pickup,pickup,鼓勵,true,+7% 移速
+buff.barkskin,樹甲回響,Barkskin Echo,8,Pickup,pickup,鼓勵,true,+5% 減傷
+reward.deadeye,獵手印記,Hunter Mark,8,Reward,reward_card,鼓勵,true,箭傷 +50%
+reward.gale_heart,疾風之心,Gale Heart,8,Reward,reward_card,鼓勵,true,箭速 +40%
+reward.ironbark,鐵木護甲,Ironbark Armor,8,Reward,reward_card,鼓勵,true,減傷 +25%
+achievement.first_rift,初線修復,First Thread Mended,10,Achievement,ch01_clear,鼓勵,false,完成 CH01
+achievement.full_fan,風之扇面,Wind Fan,10,Achievement,three_arrows,鼓勵,false,同時擁有三支箭
+achievement.piercing_line,穿線者,Linebreaker,10,Achievement,pierce_one,鼓勵,false,取得穿透 +1
