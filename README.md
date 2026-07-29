@@ -4,6 +4,12 @@
 
 > 本專案以公開可觀察的同類玩法作為研究起點，但世界觀、美術、角色、文本、數值、關卡與程式碼必須完全原創；不得複製任何既有遊戲資產或 IP。
 
+## 線上遊玩
+
+[GitHub Pages：Arrow a Row](https://qq076qq076.github.io/arrow-a-row/)
+
+每次推送至 `main` 都會透過 [GitHub Pages 部署流程](.github/workflows/deploy-pages.yml) 建置並發布。首次部署前，repository owner 需在 GitHub 的 **Settings → Pages** 將來源設為 **GitHub Actions**。
+
 ## 目前狀態
 
 - 階段：`M2 第一章垂直切片` 自動化 QA 已簽核；實機 Release QA 待執行。

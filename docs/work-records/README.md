@@ -87,3 +87,4 @@
 | 2 | 工程師 | 1,000 局 bot 平衡、回響調整、初始 Gate／Boss 預警、自動電擊、近距離傷害與暫停操作 | Completed | [M5-ENG-001](M5-ENG-001-Bot平衡與回響調整.md)、[M5-ENG-002](M5-ENG-002-初始Gate與Boss預警可讀性.md)、[M5-ENG-003](M5-ENG-003-飛劍替換為自動電擊.md)、[M5-ENG-004](M5-ENG-004-電擊動畫與近距離傷害.md)、[M5-ENG-005](M5-ENG-005-暫停與操作可近用性.md) | `工程(M5)：完成Bot平衡與回響調整`、`工程(M5)：改善初始Gate與Boss預警`、`工程(M5)：以自動電擊取代飛劍`、`工程(M5)：加入電擊動畫與近距離傷害`、`工程(M5)：加入暫停與操作可近用性` |
 | 3 | 測試人員 | M5 回歸、viewport 與風險結案 | Completed（自動化）／Accepted Risk（實機） | [M5-QA-001](M5-QA-001-Beta回歸與相容性結案.md) | `測試(M5)：完成Beta回歸與相容性結案` |
 | 4 | PM | 可玩性與 GitHub Pages 發布優化 | Completed | [M5-PM-002](M5-PM-002-可玩性與Web發布優化.md) | `PM(M5)：鎖定可玩性與Web發布優化` |
+| 5 | 工程師 | GitHub Pages workflow 與 README 公開連結 | Completed（workflow）／Pending（首次遠端部署） | [M5-ENG-006](M5-ENG-006-GitHubPages發布.md) | `工程(M5)：建立GitHub Pages發布` |
