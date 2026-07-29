@@ -57,13 +57,16 @@ expectedArrowDps = projectileCount × shotsPerSecond × baseDamage
 
 ## 3. Run、章節與路段模型
 
-### 3.1 三章結構
+### 3.1 六章結構
 
 | 章節 | 建議時長 | 一般 Gate | 戰鬥 | 精英 | Boss | 難度重點 |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
 | 1 晨線草原 | 3–4 分 | 5 | 3 | 1 | 1 | 教會移動、射擊、門、首領獎勵。 |
 | 2 鏡潮高架 | 4–5 分 | 6 | 4 | 1 | 1 | 飛行敵、穿透、橫向預判。 |
 | 3 熾心熔庭 | 4–6 分 | 6 | 4 | 2 | 1 | 密集預警、召喚與 Build 檢定。 |
+| 4 霧冠林海 | 4–6 分 | 6 | 4 | 1 | 1 | 衝鋒、遮蔽與近遠輪替。 |
+| 5 星圖遺庫 | 5–6 分 | 7 | 4 | 2 | 1 | 菁英 modifier 與窄安全縫。 |
+| 6 裂光地平 | 5–7 分 | 7 | 5 | 2 | 1 | 全 Build 終局與三段 Boss。 |
 
 每章的標準節奏：`Intro → Safe → Choice → Combat → Choice → Combat → Elite → Choice → Combat → Choice → Boss`。首局章 1 使用固定 sequence；其後每章在模板池抽樣，但不可打破「每 20–30 秒給一次選擇／回饋」節奏。
 
@@ -107,8 +110,8 @@ expectedArrowDps = projectileCount × shotsPerSecond × baseDamage
 ### 4.2 章節成長
 
 ```text
-chapterHpScale = 1.55 ^ (chapter - 1)
-chapterDamageScale = 1.25 ^ (chapter - 1)
+chapterHpScale = 1.40 ^ (chapter - 1)
+chapterDamageScale = 1.22 ^ (chapter - 1)
 encounterHpScale = 1 + 0.08 × encounterIndexWithinChapter
 enemyHp = round(baseHp × chapterHpScale × encounterHpScale)
 enemyDamage = round(baseDamage × chapterDamageScale)
