@@ -57,3 +57,5 @@
 | 5 | 工程師 | CH02 鏡潮高架灰盒內容 | Completed | [M3-ENG-004](M3-ENG-004-鏡潮高架灰盒內容.md) | `工程(M3)：完成鏡潮高架灰盒內容` |
 | 6 | 工程師 | 章節解鎖與 IndexedDB 保存 | Completed | [M3-ENG-005](M3-ENG-005-章節解鎖與保存.md) | `工程(M3)：完成章節解鎖與保存` |
 | 7 | 測試人員 | 六章長流程回歸 | Completed（自動化）／Ready（實機） | [M3-QA-001](M3-QA-001-六章長流程回歸.md) | `測試(M3)：完成六章長流程回歸` |
+| 8 | 工程師 | 擴充箭速與飛劍 Gate Buff | Completed | [M3-ENG-008](M3-ENG-008-擴充GateBuff.md) | `工程(M3)：擴充箭速與飛劍Buff` |
+| 9 | 工程師 | 戰鬥節奏、遠距 Boss 進場與自動射箭 | Completed | [M3-ENG-009](M3-ENG-009-戰鬥節奏與Boss進場.md) | `工程(M3)：調整戰鬥節奏與Boss進場` |

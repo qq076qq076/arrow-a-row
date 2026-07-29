@@ -118,7 +118,7 @@ export class ThreeRuntime {
   private updateCamera(playerX: number): void {
     // Keep the runner in the lower third even on narrow portrait windows. The
     // camera tracks laterally so moving to either edge cannot leave it offscreen.
-    this.camera.position.set(playerX * 0.75, 12, -6);
+    this.camera.position.set(playerX * 0.75, 7, -6);
     this.camera.lookAt(playerX * 0.45, 0, 6);
   }
 
@@ -126,7 +126,7 @@ export class ThreeRuntime {
     const boss = snapshot.boss;
     this.bossMesh.visible = boss !== undefined && !boss.isDefeated;
     if (boss === undefined || boss.isDefeated) return;
-    this.bossMesh.position.set(0, 1.1, 15);
+    this.bossMesh.position.set(0, 1.1, boss.z);
     const material = this.bossMesh.material as MeshBasicMaterial;
     material.color.set(boss.telegraphSeconds > 0 ? '#f4c95d' : boss.phase === 2 ? '#b7774f' : '#6ea65a');
     this.bossMesh.scale.setScalar(boss.telegraphSeconds > 0 ? 1.08 : 1);

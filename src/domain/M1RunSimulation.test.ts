@@ -12,6 +12,25 @@ describe('M1RunSimulation', () => {
     expect(simulation.snapshot().player.projectileCount).toBe(1);
   });
 
+  it('fires immediately, then makes the Boss approach from beyond the fifth wave', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start({ healthLevel: 5, damageLevel: 5, fireRateLevel: 5 });
+    simulation.setTargetX(5);
+    simulation.tick(1 / 30);
+    expect(simulation.snapshot().arrows).toHaveLength(1);
+
+    advanceToDistance(simulation, 55.9);
+    expect(simulation.snapshot().boss).toBeUndefined();
+    advanceToDistance(simulation, 56);
+    simulation.tick(1 / 30);
+    expect(simulation.snapshot().phase).toBe('playing');
+    const arrivingBoss = simulation.snapshot().boss;
+    expect(arrivingBoss?.z).toBeGreaterThan(15);
+
+    for (let tick = 0; tick < 240; tick += 1) simulation.tick(1 / 30);
+    expect(simulation.snapshot().boss?.z).toBe(15);
+  });
+
   it('applies permanent profile modifiers to a new run', () => {
     const simulation = new M1RunSimulation();
     simulation.start({ healthLevel: 2, damageLevel: 3, fireRateLevel: 4 });
