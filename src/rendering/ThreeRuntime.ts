@@ -2,6 +2,7 @@ import {
   BoxGeometry,
   Color,
   CanvasTexture,
+  ConeGeometry,
   Group,
   Mesh,
   MeshBasicMaterial,
@@ -15,8 +16,8 @@ import {
 import type { M1RunSnapshot } from '../domain/M1RunSimulation';
 
 const ENEMY_MATERIALS = {
-  melee: new MeshBasicMaterial({ color: '#c76b7a' }),
-  ranged: new MeshBasicMaterial({ color: '#b48cdb' }),
+  melee: new MeshBasicMaterial({ color: '#f06b5e' }),
+  ranged: new MeshBasicMaterial({ color: '#a986ef' }),
 };
 
 export class ThreeRuntime {
@@ -172,13 +173,43 @@ export class ThreeRuntime {
     for (const enemy of snapshot.enemies) {
       let mesh = this.enemyMeshes.get(enemy.id);
       if (mesh === undefined) {
-        mesh = new Mesh(new BoxGeometry(0.9, 1.1, 0.9), ENEMY_MATERIALS[enemy.kind]);
+        mesh = this.createEnemyMesh(enemy.kind);
         this.enemyMeshes.set(enemy.id, mesh);
         this.scene.add(mesh);
       }
-      mesh.position.set(enemy.x, 0.55, enemy.z);
-      mesh.scale.setScalar(enemy.telegraphSeconds > 0 ? 1.25 : 1);
+      const deathProgress = enemy.deathSeconds / 0.45;
+      const scale = enemy.deathSeconds > 0 ? 0.35 + deathProgress * 0.65 : enemy.telegraphSeconds > 0 ? 1.25 : 1;
+      mesh.position.set(enemy.x, 0.55 - (1 - deathProgress) * 0.35, enemy.z);
+      mesh.scale.setScalar(scale);
+      mesh.rotation.y += enemy.kind === 'ranged' ? 0.045 : 0.015;
     }
+  }
+
+  private createEnemyMesh(kind: 'melee' | 'ranged'): Mesh {
+    const geometry = kind === 'melee' ? new ConeGeometry(0.72, 1.45, 4) : new SphereGeometry(0.72, 10, 8);
+    const mesh = new Mesh(geometry, ENEMY_MATERIALS[kind]);
+    const label = this.createEnemyLabel(kind === 'melee' ? '衝鋒獸' : '芽砲手');
+    label.position.set(0, 1.1, 0);
+    mesh.add(label);
+    return mesh;
+  }
+
+  private createEnemyLabel(text: string): Sprite {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 128;
+    const context = canvas.getContext('2d');
+    if (context === null) throw new Error('無法建立怪物文字貼圖。');
+    context.fillStyle = '#102c2a';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = '#f8f7ef';
+    context.font = '700 58px system-ui, sans-serif';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(text, canvas.width / 2, canvas.height / 2 + 3);
+    const label = new Sprite(new SpriteMaterial({ map: new CanvasTexture(canvas), transparent: false }));
+    label.scale.set(1.05, 0.26, 1);
+    return label;
   }
 
   private syncArrows(snapshot: M1RunSnapshot): void {
@@ -203,6 +234,12 @@ export class ThreeRuntime {
 
   private disposeMesh(mesh: Mesh): void {
     mesh.geometry.dispose();
+    mesh.traverse((child) => {
+      if (child instanceof Sprite) {
+        child.material.map?.dispose();
+        child.material.dispose();
+      }
+    });
     if (Array.isArray(mesh.material)) mesh.material.forEach((material) => material.dispose());
     else if (mesh.material !== ENEMY_MATERIALS.melee && mesh.material !== ENEMY_MATERIALS.ranged) mesh.material.dispose();
   }
