@@ -13,6 +13,19 @@ describe('M1RunSimulation', () => {
     expect(simulation.snapshot().player.projectileCount).toBe(1);
   });
 
+  it('freezes simulation state while paused and resumes from the same state', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start();
+    simulation.tick(1 / 30);
+    const beforePause = simulation.snapshot();
+    expect(simulation.togglePause()).toBe(true);
+    simulation.tick(2);
+    expect(simulation.snapshot().distanceMeters).toBe(beforePause.distanceMeters);
+    expect(simulation.togglePause()).toBe(true);
+    simulation.tick(1 / 30);
+    expect(simulation.snapshot().distanceMeters).toBeGreaterThan(beforePause.distanceMeters);
+  });
+
   it('fires immediately, then makes the Boss approach from beyond the fifth wave', () => {
     const simulation = new M1RunSimulation();
     simulation.start();

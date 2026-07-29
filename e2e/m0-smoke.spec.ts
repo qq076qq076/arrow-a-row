@@ -42,3 +42,13 @@ test('手機主選單可切換標準與省電畫質', async ({ page }) => {
   await quality.getByRole('button', { name: '標準 60 FPS' }).click();
   await expect(quality.getByRole('button', { name: '標準 60 FPS' })).toHaveClass(/selected/);
 });
+
+test('Run 可由暫停鍵與 Esc 暫停及繼續', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '開始 晨線草原' }).click();
+  await page.getByRole('button', { name: '暫停遊戲' }).click();
+  await expect(page.getByLabel('遊戲已暫停')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByLabel('遊戲已暫停')).toBeHidden();
+  await expect(page.getByRole('button', { name: '暫停遊戲' })).toBeVisible();
+});

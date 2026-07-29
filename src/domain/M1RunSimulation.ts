@@ -1,7 +1,7 @@
 import { getChapterDefinition, getNextChapterDefinition, type ChapterId } from '../content/ChapterDefinitions';
 import { BUFF_CATALOG, BUFF_IDS, OFFENSIVE_BUFF_IDS, type BuffId } from '../content/BuffCatalog';
 
-export type RunPhase = 'menu' | 'playing' | 'reward' | 'dead' | 'complete';
+export type RunPhase = 'menu' | 'playing' | 'paused' | 'reward' | 'dead' | 'complete';
 export type EnemyKind = 'melee' | 'ranged';
 export type RewardId = 'storm_bow' | 'lightning_core' | 'heartwood' | 'deadeye' | 'gale_heart' | 'ironbark';
 export interface RunModifiers { readonly healthLevel?: number; readonly damageLevel?: number; readonly fireRateLevel?: number; readonly arrowSpeedLevel?: number; readonly pierceLevel?: number; readonly movementLevel?: number; }
@@ -69,6 +69,7 @@ export class M1RunSimulation {
   }
 
   public setTargetX(targetX: number): void { this.targetX = Math.max(-PLAYER_MAX_X, Math.min(PLAYER_MAX_X, targetX)); }
+  public togglePause(): boolean { if (this.phase === 'playing') { this.phase = 'paused'; return true; } if (this.phase === 'paused') { this.phase = 'playing'; return true; } return false; }
   public chooseReward(rewardId: RewardId): boolean {
     if (this.phase !== 'reward' || this.selectedReward !== undefined || !this.rewardOptions.includes(rewardId)) return false;
     this.selectedReward = rewardId;
