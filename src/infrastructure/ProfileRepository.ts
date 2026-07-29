@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import { PROFILE_STORE } from './RunCheckpointRepository';
 
-const ProfileSchema = z.object({ gold: z.number().int().nonnegative(), healthLevel: z.number().int().min(0).max(5), damageLevel: z.number().int().min(0).max(5), fireRateLevel: z.number().int().min(0).max(5), unlockedChapterIndex: z.number().int().min(1).max(6).default(1) });
+const ProfileSchema = z.object({ gold: z.number().int().nonnegative(), healthLevel: z.number().int().min(0).max(5), damageLevel: z.number().int().min(0).max(5), fireRateLevel: z.number().int().min(0).max(5), arrowSpeedLevel: z.number().int().min(0).max(5).default(0), pierceLevel: z.number().int().min(0).max(5).default(0), movementLevel: z.number().int().min(0).max(5).default(0), unlockedChapterIndex: z.number().int().min(1).max(6).default(1) });
 export type Profile = z.infer<typeof ProfileSchema>;
-export const DEFAULT_PROFILE: Profile = { gold: 0, healthLevel: 0, damageLevel: 0, fireRateLevel: 0, unlockedChapterIndex: 1 };
+export const DEFAULT_PROFILE: Profile = { gold: 0, healthLevel: 0, damageLevel: 0, fireRateLevel: 0, arrowSpeedLevel: 0, pierceLevel: 0, movementLevel: 0, unlockedChapterIndex: 1 };
 const DATABASE_NAME = 'arrow-a-row'; const DATABASE_VERSION = 2; const PROFILE_KEY = 'active';
 
 export class ProfileRepository {

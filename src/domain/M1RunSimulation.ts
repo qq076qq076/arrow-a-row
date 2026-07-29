@@ -4,7 +4,7 @@ import { BUFF_CATALOG, BUFF_IDS, OFFENSIVE_BUFF_IDS, type BuffId } from '../cont
 export type RunPhase = 'menu' | 'playing' | 'reward' | 'dead' | 'complete';
 export type EnemyKind = 'melee' | 'ranged';
 export type RewardId = 'storm_bow' | 'blade_nexus' | 'heartwood' | 'deadeye' | 'gale_heart' | 'ironbark';
-export interface RunModifiers { readonly healthLevel?: number; readonly damageLevel?: number; readonly fireRateLevel?: number; }
+export interface RunModifiers { readonly healthLevel?: number; readonly damageLevel?: number; readonly fireRateLevel?: number; readonly arrowSpeedLevel?: number; readonly pierceLevel?: number; readonly movementLevel?: number; }
 
 export interface PlayerSnapshot { readonly x: number; readonly hp: number; readonly maxHp: number; readonly damage: number; readonly projectileCount: number; readonly arrowSpeed: number; readonly swordCount: number; readonly pierceCount: number; readonly movementSpeed: number; readonly damageReduction: number; readonly fireRateMultiplier: number; readonly arrowCharge: number; readonly pierceCharge: number; readonly swordCharge: number; }
 export interface EnemySnapshot { readonly id: string; readonly kind: EnemyKind; readonly x: number; readonly z: number; readonly hp: number; readonly telegraphSeconds: number; readonly deathSeconds: number; }
@@ -49,7 +49,7 @@ export class M1RunSimulation {
     this.randomState = (chapter.index * 2654435761 + ++this.runNumber) >>> 0;
     this.phase = 'playing'; this.elapsedSeconds = 0; this.distanceMeters = 0; this.targetX = 0; this.earnedGold = 0; this.boss = undefined; this.selectedReward = undefined; this.rewardOptions = [];
     const maxHp = 100 + (modifiers.healthLevel ?? 0) * 10;
-    this.player = { x: 0, hp: maxHp, maxHp, damage: 1 + (modifiers.damageLevel ?? 0) * 0.2, projectileCount: 1, arrowSpeed: 24, swordCount: 0, pierceCount: 0, movementSpeed: PLAYER_MOVE_SPEED, damageReduction: 0, fireRateMultiplier: 1, arrowCharge: 0, pierceCharge: 0, swordCharge: 0 }; this.attackCooldownSeconds = 0; this.attackIntervalSeconds = Math.max(0.25, 0.45 - (modifiers.fireRateLevel ?? 0) * 0.04); this.nextArrowId = 1; this.nextEffectId = 1; this.collectedShards = 0;
+    this.player = { x: 0, hp: maxHp, maxHp, damage: 1 + (modifiers.damageLevel ?? 0) * 0.2, projectileCount: 1, arrowSpeed: 24 + (modifiers.arrowSpeedLevel ?? 0) * 2, swordCount: 0, pierceCount: modifiers.pierceLevel ?? 0, movementSpeed: PLAYER_MOVE_SPEED + (modifiers.movementLevel ?? 0), damageReduction: 0, fireRateMultiplier: 1, arrowCharge: 0, pierceCharge: 0, swordCharge: 0 }; this.attackCooldownSeconds = 0; this.attackIntervalSeconds = Math.max(0.25, 0.45 - (modifiers.fireRateLevel ?? 0) * 0.04); this.nextArrowId = 1; this.nextEffectId = 1; this.collectedShards = 0;
     this.selectedGateIds.clear(); this.spawnedWaveIds.clear(); this.positionedEnemyIds.clear(); this.enemies.length = 0; this.arrows.length = 0; this.hits.length = 0; this.pickups.length = 0;
     this.gates.splice(0, this.gates.length, ...this.createGates());
   }

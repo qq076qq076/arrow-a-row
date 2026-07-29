@@ -45,6 +45,14 @@ describe('M1RunSimulation', () => {
     expect(player.projectileCount).toBe(1);
   });
 
+  it('applies the three additional permanent upgrades to a new run', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start({ arrowSpeedLevel: 2, pierceLevel: 1, movementLevel: 3 });
+    expect(simulation.snapshot().player.arrowSpeed).toBe(28);
+    expect(simulation.snapshot().player.pierceCount).toBe(1);
+    expect(simulation.snapshot().player.movementSpeed).toBe(13);
+  });
+
   it('applies a randomly generated left gate once even after more ticks', () => {
     const simulation = new M1RunSimulation();
     simulation.start();
