@@ -94,3 +94,4 @@
 | 9 | 工程師 | 1,000 局 Bot CI 逾時容錯 | Completed | [M5-ENG-010](M5-ENG-010-Bot測試CI逾時容錯.md) | `工程(M5)：調整Bot測試CI逾時` |
 | 10 | 工程師 | Poly Haven 場景模型、光線與實機檢查 | Completed | [M5-ENG-011](M5-ENG-011-PolyHaven場景模型整合.md) | `工程(M5)：整合Poly Haven場景模型` |
 | 11 | 工程師 | CH02 高架路燈模型與冷色照明 | Completed（建置）／Ready（解鎖流程實機） | [M5-ENG-012](M5-ENG-012-CH02高架路燈模型.md) | `工程(M5)：加入CH02高架路燈模型` |
+| 12 | 工程師 | CH01 與全章共用角色／Buff 模型基線 | Completed（建置）／Ready（實機） | [M5-ENG-013](M5-ENG-013-CH01共用模型基線.md) | `工程(M5)：建立共用角色模型基線` |

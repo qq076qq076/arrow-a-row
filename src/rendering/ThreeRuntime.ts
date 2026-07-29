@@ -58,6 +58,7 @@ export class ThreeRuntime {
   private readonly gateGroups = new Map<string, Group>();
   private readonly sceneryGroup = new Group();
   private readonly viaductSceneryGroup = new Group();
+  private actorModelTemplate: Group | undefined;
   private readonly ambientLight = new AmbientLight('#cde4d0', 1.7);
   private readonly sunLight = new DirectionalLight('#fff0c4', 2.8);
   private isDisposed = false;
@@ -175,6 +176,8 @@ export class ThreeRuntime {
   private loadPolyhavenScenery(): void {
     new GLTFLoader().load(POLYHAVEN_ROCK_URL, (gltf) => {
       if (this.isDisposed) return;
+      this.actorModelTemplate = gltf.scene;
+      this.applyActorModels();
       const placements: ReadonlyArray<readonly [number, number, number, number]> = [
         [-7.4, 10, 10, 0.35], [7.3, 22, 9, -0.7], [-7.2, 38, 11, 1.15], [7.3, 56, 10, -1.55],
       ];
@@ -188,6 +191,33 @@ export class ThreeRuntime {
         this.sceneryGroup.add(rock);
       }
     }, undefined, (error: unknown) => console.warn('Poly Haven Rock 07 載入失敗。', error));
+  }
+
+  private applyActorModels(): void {
+    if (this.actorModelTemplate === undefined) return;
+    this.attachActorModel(this.playerMesh, 0.085, '#f4c95d');
+    this.attachActorModel(this.bossMesh, 0.19, '#dc7449');
+    for (const enemy of this.enemyMeshes.values()) this.attachActorModel(enemy, 0.095, enemy.userData.kind === 'ranged' ? '#a986ef' : '#f06b5e');
+    for (const pickup of this.pickupMeshes.values()) this.attachActorModel(pickup, 0.048, '#71e6d1');
+  }
+
+  private attachActorModel(anchor: Mesh, scale: number, color: string): void {
+    if (this.actorModelTemplate === undefined || anchor.userData.actorModelAttached === true) return;
+    const model = this.actorModelTemplate.clone(true);
+    model.scale.setScalar(scale);
+    model.position.set(0, -0.55, 0);
+    model.traverse((child) => {
+      if (child instanceof Mesh) {
+        const material = (child.material as MeshBasicMaterial).clone();
+        material.color.set(color);
+        child.material = material;
+      }
+    });
+    const anchorMaterial = anchor.material as MeshBasicMaterial;
+    anchorMaterial.transparent = true;
+    anchorMaterial.opacity = 0;
+    anchor.add(model);
+    anchor.userData.actorModelAttached = true;
   }
 
   private loadPolyhavenViaductScenery(): void {
@@ -343,6 +373,7 @@ export class ThreeRuntime {
   private createEnemyMesh(kind: 'melee' | 'ranged'): Mesh {
     const geometry = kind === 'melee' ? new ConeGeometry(0.72, 1.45, 4) : new SphereGeometry(0.72, 10, 8);
     const mesh = new Mesh(geometry, ENEMY_MATERIALS[kind]);
+    mesh.userData.kind = kind;
     const label = this.createEnemyLabel(kind === 'melee' ? '衝鋒獸' : '芽砲手');
     label.position.set(0, 1.1, 0);
     const healthBackground = new Mesh(new BoxGeometry(1, 0.07, 0.04), new MeshBasicMaterial({ color: '#321d25' }));
@@ -352,6 +383,7 @@ export class ThreeRuntime {
     healthFill.name = 'health-fill';
     healthFill.position.set(0, 1.28, -0.03);
     mesh.add(label, healthBackground, healthFill);
+    this.attachActorModel(mesh, 0.095, kind === 'ranged' ? '#a986ef' : '#f06b5e');
     return mesh;
   }
 
@@ -458,6 +490,7 @@ export class ThreeRuntime {
     const label = this.createPickupLabel('Buff +⅓', 'split_arrow');
     label.name = 'pickup-label';
     mesh.add(label);
+    this.attachActorModel(mesh, 0.048, '#71e6d1');
     return mesh;
   }
 
