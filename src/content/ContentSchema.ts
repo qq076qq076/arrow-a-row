@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const PreloadGroupSchema = z.enum(['shell', 'chapter-01', 'shared-character', 'shared-vfx']);
+const PreloadGroupSchema = z.enum(['shell', 'chapter-01', 'chapter-02', 'chapter-03', 'shared-character', 'shared-vfx']);
 
 const GlbAssetSchema = z.object({
   id: z.string().min(1),

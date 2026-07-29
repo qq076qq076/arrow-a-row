@@ -1,5 +1,5 @@
 {
-  "contentVersion": "0.2.0",
+  "contentVersion": "0.4.0",
   "assets": [
     {
       "id": "chr_seeker_a",
@@ -40,6 +40,38 @@
       "preloadGroup": "chapter-01",
       "version": "m2-graybox-1",
       "sockets": ["Root"]
+    },
+    {
+      "id": "env_mirror_viaduct_path_a",
+      "kind": "procedural",
+      "renderer": "primitive-kit",
+      "preloadGroup": "chapter-02",
+      "version": "m4-kit-1",
+      "sockets": ["Root"]
+    },
+    {
+      "id": "bos_mirror_calibrator_a",
+      "kind": "procedural",
+      "renderer": "primitive-kit",
+      "preloadGroup": "chapter-02",
+      "version": "m4-kit-1",
+      "sockets": ["Root", "HitPoint", "Muzzle"]
+    },
+    {
+      "id": "env_emberheart_court_path_a",
+      "kind": "procedural",
+      "renderer": "primitive-kit",
+      "preloadGroup": "chapter-03",
+      "version": "m4-kit-1",
+      "sockets": ["Root"]
+    },
+    {
+      "id": "bos_vein_overseer_a",
+      "kind": "procedural",
+      "renderer": "primitive-kit",
+      "preloadGroup": "chapter-03",
+      "version": "m4-kit-1",
+      "sockets": ["Root", "HitPoint", "Muzzle"]
     }
   ]
 }

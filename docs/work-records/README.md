@@ -75,6 +75,6 @@
 | 1 | PM | M4 Web 內容範圍、Gate 與交付順序凍結 | Completed | [M4-PM-001](M4-PM-001-內容完成範圍凍結.md) | `PM(M4)：凍結Web內容完成範圍` |
 | 2 | 遊戲世界觀規劃師 | CH01–CH03 localization 與術語鎖定 | Completed | [M4-WORLD-001](M4-WORLD-001-前三章Localization鎖定.md) | `世界觀(M4)：鎖定前三章雙語文案` |
 | 3 | 介面設計師 | M4 全畫面 state／可近用性規格 | Completed | [M4-UI-001](M4-UI-001-內容完成UI狀態規格.md) | `介面(M4)：鎖定內容完成UI狀態` |
-| 4 | 建模師 | 三章程序化資產 kit 與 manifest | Ready | — | — |
+| 4 | 建模師 | 三章程序化資產 kit 與 manifest | Completed | [M4-ART-001](M4-ART-001-三章程序化資產Kit.md) | `建模(M4)：完成三章程序化資產Kit` |
 | 5 | 工程師 | 內容整合、Meta、成就與品質設定 | Ready | — | — |
 | 6 | 測試人員 | M4 內容回歸與 soak | Ready | — | — |
