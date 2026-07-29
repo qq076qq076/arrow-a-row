@@ -9,12 +9,12 @@ export interface ChapterDefinition {
 }
 
 export const CHAPTER_DEFINITIONS: readonly ChapterDefinition[] = [
-  { id: 'ch01_meadow', index: 1, title: '晨線草原', enemyHpScale: 1, bossHp: 36 },
-  { id: 'ch02_viaduct', index: 2, title: '鏡潮高架', enemyHpScale: 1.4, bossHp: 50 },
-  { id: 'ch03_forge', index: 3, title: '熾心熔庭', enemyHpScale: 1.96, bossHp: 71 },
-  { id: 'ch04_canopy', index: 4, title: '霧冠林海', enemyHpScale: 2.74, bossHp: 99 },
-  { id: 'ch05_archive', index: 5, title: '星圖遺庫', enemyHpScale: 3.84, bossHp: 138 },
-  { id: 'ch06_horizon', index: 6, title: '裂光地平', enemyHpScale: 5.38, bossHp: 194 },
+  { id: 'ch01_meadow', index: 1, title: '晨線草原', enemyHpScale: 1.1, bossHp: 36 },
+  { id: 'ch02_viaduct', index: 2, title: '鏡潮高架', enemyHpScale: 1.54, bossHp: 50 },
+  { id: 'ch03_forge', index: 3, title: '熾心熔庭', enemyHpScale: 2.156, bossHp: 71 },
+  { id: 'ch04_canopy', index: 4, title: '霧冠林海', enemyHpScale: 3.014, bossHp: 99 },
+  { id: 'ch05_archive', index: 5, title: '星圖遺庫', enemyHpScale: 4.224, bossHp: 138 },
+  { id: 'ch06_horizon', index: 6, title: '裂光地平', enemyHpScale: 5.918, bossHp: 194 },
 ] as const;
 
 export function getChapterDefinition(id: ChapterId): ChapterDefinition {

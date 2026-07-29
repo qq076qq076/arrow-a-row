@@ -89,3 +89,4 @@
 | 4 | PM | 可玩性與 GitHub Pages 發布優化 | Completed | [M5-PM-002](M5-PM-002-可玩性與Web發布優化.md) | `PM(M5)：鎖定可玩性與Web發布優化` |
 | 5 | 工程師 | GitHub Pages workflow 與 README 公開連結 | Completed（workflow）／Pending（首次遠端部署） | [M5-ENG-006](M5-ENG-006-GitHubPages發布.md) | `工程(M5)：建立GitHub Pages發布` |
 | 6 | 工程師 | 修正滑鼠／觸控左右輸入方向 | Completed | [M5-ENG-007](M5-ENG-007-修正左右輸入方向.md) | `工程(M5)：修正左右輸入方向` |
+| 7 | 工程師 | 一般怪物生命提高 10% | Completed | [M5-ENG-008](M5-ENG-008-一般怪物生命提高.md) | `工程(M5)：提高一般怪物生命` |
