@@ -15,6 +15,7 @@ import {
   WebGLRenderer,
 } from 'three';
 import type { M1RunSnapshot } from '../domain/M1RunSimulation';
+import type { BuffId } from '../content/BuffCatalog';
 
 const ENEMY_MATERIALS = {
   melee: new MeshBasicMaterial({ color: '#f06b5e' }),
@@ -284,10 +285,10 @@ export class ThreeRuntime {
       mesh.position.set(pickup.x, 0.45, pickup.z);
       mesh.rotation.y += 0.08;
       const label = mesh.getObjectByName('pickup-label') as Sprite | undefined;
-      if (label !== undefined && label.userData.text !== pickup.label) {
+      if (label !== undefined && (label.userData.text !== pickup.label || label.userData.buffId !== pickup.buffId)) {
         label.material.map?.dispose();
         label.material.dispose();
-        const replacement = this.createPickupLabel(pickup.label);
+        const replacement = this.createPickupLabel(pickup.label, pickup.buffId);
         replacement.name = 'pickup-label';
         mesh.remove(label);
         mesh.add(replacement);
@@ -297,21 +298,30 @@ export class ThreeRuntime {
 
   private createPickupMesh(): Mesh {
     const mesh = new Mesh(new OctahedronGeometry(0.3), new MeshBasicMaterial({ color: '#71e6d1' }));
-    const label = this.createPickupLabel('Buff +⅓');
+    const label = this.createPickupLabel('Buff +⅓', 'split_arrow');
     label.name = 'pickup-label';
     mesh.add(label);
     return mesh;
   }
 
-  private createPickupLabel(text: string): Sprite {
-    const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 192;
+  private createPickupLabel(text: string, buffId: BuffId): Sprite {
+    const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 420;
     const context = canvas.getContext('2d');
     if (context === null) throw new Error('無法建立掉落 Buff 文字貼圖。');
-    context.fillStyle = '#173b3a'; context.fillRect(0, 0, canvas.width, canvas.height);
-    context.fillStyle = '#e8fff1'; context.font = '700 78px system-ui, sans-serif'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(text, canvas.width / 2, canvas.height / 2);
+    context.fillStyle = '#102c2a'; context.fillRect(0, 0, canvas.width, canvas.height);
+    context.strokeStyle = '#e8fff1'; context.lineWidth = 12; context.strokeRect(6, 6, canvas.width - 12, canvas.height - 12);
+    this.drawPickupIcon(context, buffId, canvas.width / 2, 108);
+    context.fillStyle = '#f8f7ef'; context.font = '800 108px system-ui, sans-serif'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(text, canvas.width / 2, 294);
     const label = new Sprite(new SpriteMaterial({ map: new CanvasTexture(canvas), transparent: false }));
-    label.userData.text = text; label.position.set(0, 0.82, 0); label.scale.set(2.35, 0.44, 1);
+    label.userData.text = text; label.userData.buffId = buffId; label.position.set(0, 1.1, 0); label.scale.set(3, 1.22, 1);
     return label;
+  }
+
+  private drawPickupIcon(context: CanvasRenderingContext2D, buffId: BuffId, x: number, y: number): void {
+    const icons: Record<BuffId, readonly [string, string]> = { split_arrow: ['➤', '#f4c95d'], power_shot: ['✦', '#ff9a6b'], swift_shot: ['≫', '#71e6d1'], rapid_fire: ['⚡', '#fff4ba'], piercing_arrow: ['⇥', '#a986ef'], flying_sword: ['†', '#d8d0ff'], vitality: ['+', '#ff8d9b'], windstep: ['➜', '#83d7ff'], barkskin: ['⬡', '#8fe39a'] };
+    const [glyph, color] = icons[buffId];
+    context.fillStyle = color; context.beginPath(); context.arc(x, y, 72, 0, Math.PI * 2); context.fill();
+    context.fillStyle = '#102c2a'; context.font = '800 104px system-ui, sans-serif'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(glyph, x, y + 4);
   }
 
   private syncTransientMeshes<T extends { readonly id: number }>(items: readonly T[], meshes: Map<number, Mesh>, create: () => Mesh, update: (mesh: Mesh, item: T) => void): void {

@@ -66,3 +66,4 @@
 | 14 | 工程師 | 箭矢碰撞與穿透 Buff | Completed | [M3-ENG-013](M3-ENG-013-箭矢碰撞與穿透Buff.md) | `工程(M3)：完成箭矢碰撞與穿透Buff` |
 | 15 | 工程師 | 固定正前方箭矢方向 | Completed | [M3-ENG-014](M3-ENG-014-正前方箭矢方向.md) | `工程(M3)：修正箭矢固定正前方` |
 | 16 | 介面設計師／工程師 | Build HUD 與正前方瞄準提示 | Completed | [M3-UI-002](M3-UI-002-BuildHUD與瞄準提示.md) | `介面(M3)：加入Build狀態與瞄準提示` |
+| 17 | 介面設計師／工程師 | Buff 掉落圖示與放大說明 | Completed | [M3-UI-003](M3-UI-003-Buff圖示與可讀性.md) | `介面(M3)：放大Buff文字並加入圖示` |
