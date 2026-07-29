@@ -22,3 +22,8 @@ export function getChapterDefinition(id: ChapterId): ChapterDefinition {
   if (chapter === undefined) throw new Error(`未知章節：${id}`);
   return chapter;
 }
+
+export function getNextChapterDefinition(id: ChapterId): ChapterDefinition | undefined {
+  const index = CHAPTER_DEFINITIONS.findIndex((chapter) => chapter.id === id);
+  return index < 0 ? undefined : CHAPTER_DEFINITIONS[index + 1];
+}

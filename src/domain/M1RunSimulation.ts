@@ -1,3 +1,5 @@
+import { getChapterDefinition, getNextChapterDefinition, type ChapterId } from '../content/ChapterDefinitions';
+
 export type RunPhase = 'menu' | 'playing' | 'reward' | 'dead' | 'complete';
 export type EnemyKind = 'melee' | 'ranged';
 export type RewardId = 'storm_bow' | 'blade_nexus' | 'heartwood';
@@ -73,6 +75,16 @@ export class M1RunSimulation {
     return true;
   }
 
+  public continueToNextChapter(): boolean {
+    if (this.phase !== 'complete') return false;
+    const next = getNextChapterDefinition(this.chapterId);
+    if (next === undefined) return false;
+    this.chapterId = next.id; this.phase = 'playing'; this.elapsedSeconds = 0; this.distanceMeters = 0; this.targetX = 0; this.boss = undefined; this.selectedReward = undefined; this.earnedGold = 0; this.attackCooldownSeconds = 0;
+    this.enemies.length = 0; this.arrows.length = 0; this.hits.length = 0; this.pickups.length = 0; this.selectedGateIds.clear();
+    this.gates.splice(0, this.gates.length, { groupId: 'g01', leftLabel: '+1 箭矢', rightLabel: '箭傷 +25%', z: 10, isChosen: false }, { groupId: 'g02', leftLabel: '+1 箭矢', rightLabel: '箭傷 +25%', z: 28, isChosen: false });
+    return true;
+  }
+
   public tick(deltaSeconds: number): void {
     if (this.phase !== 'playing') return;
     this.elapsedSeconds += deltaSeconds; this.movePlayer(deltaSeconds); this.resolveGates(); this.spawnEnemies(); this.updateEnemies(deltaSeconds);
@@ -102,4 +114,3 @@ export class M1RunSimulation {
   private updatePickups(deltaSeconds: number): void { for (let index = this.pickups.length - 1; index >= 0; index -= 1) { const pickup = this.pickups[index]; if (pickup === undefined) continue; pickup.z -= WORLD_SPEED * deltaSeconds; if (pickup.z < 1.4 && Math.abs(pickup.x - this.player.x) < 1.5) { this.collectedShards += 1; this.pickups.splice(index, 1); } else if (pickup.z < -2) this.pickups.splice(index, 1); } }
   private hasEnemy(id: string): boolean { return this.enemies.some((enemy) => enemy.id === id); }
 }
-import { getChapterDefinition, type ChapterId } from '../content/ChapterDefinitions';
