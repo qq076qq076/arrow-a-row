@@ -75,9 +75,10 @@ export class ThreeRuntime {
   private syncChapterTheme(chapterId: M1RunSnapshot['chapterId']): void {
     const isMirrorViaduct = chapterId === 'ch02_viaduct';
     const isForge = chapterId === 'ch03_forge';
-    this.renderer.setClearColor(new Color(isForge ? '#3b1e35' : isMirrorViaduct ? '#172849' : '#173b3a'));
-    this.roadMaterials[0]!.color.set(isForge ? '#64334e' : isMirrorViaduct ? '#243d69' : '#315f4a');
-    this.roadMaterials[1]!.color.set(isForge ? '#9a4f3b' : isMirrorViaduct ? '#31528a' : '#3d7755');
+    const palette = chapterId === 'ch04_canopy' ? ['#1b3b32', '#356c54', '#5c9b70'] : chapterId === 'ch05_archive' ? ['#101b3d', '#263d70', '#b69a50'] : chapterId === 'ch06_horizon' ? ['#392b4d', '#7a5d9b', '#e0c97a'] : isForge ? ['#3b1e35', '#64334e', '#9a4f3b'] : isMirrorViaduct ? ['#172849', '#243d69', '#31528a'] : ['#173b3a', '#315f4a', '#3d7755'];
+    this.renderer.setClearColor(new Color(palette[0]!));
+    this.roadMaterials[0]!.color.set(palette[1]!);
+    this.roadMaterials[1]!.color.set(palette[2]!);
   }
 
   public render(): void {
