@@ -1,11 +1,14 @@
 import {
   BoxGeometry,
   Color,
+  CanvasTexture,
   Group,
   Mesh,
   MeshBasicMaterial,
   PerspectiveCamera,
   Scene,
+  Sprite,
+  SpriteMaterial,
   SphereGeometry,
   WebGLRenderer,
 } from 'three';
@@ -76,6 +79,10 @@ export class ThreeRuntime {
     for (const mesh of this.arrowMeshes.values()) this.disposeMesh(mesh);
     for (const group of this.gateGroups.values()) group.traverse((child) => {
       if (child instanceof Mesh) this.disposeMesh(child);
+      if (child instanceof Sprite) {
+        child.material.map?.dispose();
+        child.material.dispose();
+      }
     });
     this.renderer.dispose();
     this.renderer.domElement.remove();
@@ -116,13 +123,41 @@ export class ThreeRuntime {
         const right = new Mesh(new BoxGeometry(2, 2.5, 0.25), new MeshBasicMaterial({ color: '#8ccf9b' }));
         left.position.x = -2.5;
         right.position.x = 2.5;
-        group.add(left, right);
+        group.add(
+          left,
+          right,
+          this.createGateLabel(gate.leftLabel, '#5bb5d8', -2.5),
+          this.createGateLabel(gate.rightLabel, '#8ccf9b', 2.5),
+        );
         this.gateGroups.set(gate.groupId, group);
         this.scene.add(group);
       }
       group.position.z = gate.z - snapshot.distanceMeters;
       group.visible = !gate.isChosen;
     }
+  }
+
+  private createGateLabel(text: string, background: string, x: number): Sprite {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 256;
+    const context = canvas.getContext('2d');
+    if (context === null) throw new Error('無法建立 Gate 文字貼圖。');
+    context.fillStyle = background;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.strokeStyle = '#f8f7ef';
+    context.lineWidth = 16;
+    context.strokeRect(8, 8, canvas.width - 16, canvas.height - 16);
+    context.fillStyle = '#102c2a';
+    context.font = '700 92px system-ui, sans-serif';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(text, canvas.width / 2, canvas.height / 2 + 4);
+    const material = new SpriteMaterial({ map: new CanvasTexture(canvas), transparent: false });
+    const label = new Sprite(material);
+    label.position.set(x, 0.2, -0.18);
+    label.scale.set(1.85, 0.46, 1);
+    return label;
   }
 
   private syncEnemies(snapshot: M1RunSnapshot): void {
