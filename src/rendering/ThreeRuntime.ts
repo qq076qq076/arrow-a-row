@@ -13,6 +13,7 @@ import {
   Sprite,
   SpriteMaterial,
   SphereGeometry,
+  TorusGeometry,
   WebGLRenderer,
 } from 'three';
 import type { M1RunSnapshot } from '../domain/M1RunSimulation';
@@ -23,12 +24,17 @@ const ENEMY_MATERIALS = {
   ranged: new MeshBasicMaterial({ color: '#a986ef' }),
 };
 
+const BUFF_ICON_GLYPHS: Record<BuffId, string> = {
+  split_arrow: '↗', power_shot: '✦', swift_shot: '➤', rapid_fire: '≋', piercing_arrow: '⊹', flying_sword: '⚔', vitality: '✚', windstep: '➟', barkskin: '◆',
+};
+
 export class ThreeRuntime {
   private readonly scene = new Scene();
   private readonly camera = new PerspectiveCamera(45, 1, 0.1, 100);
   private readonly renderer: WebGLRenderer;
   private readonly playerMesh = new Mesh(new BoxGeometry(0.8, 1.2, 0.8), new MeshBasicMaterial({ color: '#f4c95d' }));
   private readonly bossMesh: Mesh = new Mesh(new BoxGeometry(2.4, 2.2, 1.4), new MeshBasicMaterial({ color: '#6ea65a' }));
+  private readonly bossTelegraphRing = new Mesh(new TorusGeometry(2.1, 0.12, 8, 32), new MeshBasicMaterial({ color: '#f4c95d', transparent: true, opacity: 0.88 }));
   private readonly roadGeometry = new BoxGeometry(11, 0.12, 7);
   private readonly roadMaterials = [new MeshBasicMaterial({ color: '#315f4a' }), new MeshBasicMaterial({ color: '#3d7755' })];
   private readonly roadMeshes: Mesh[] = [];
@@ -47,8 +53,10 @@ export class ThreeRuntime {
     this.updateCamera(0);
     this.scene.add(this.playerMesh);
     this.scene.add(this.bossMesh);
+    this.scene.add(this.bossTelegraphRing);
     this.createRoad();
     this.bossMesh.visible = false;
+    this.bossTelegraphRing.visible = false;
     this.resize();
   }
 
@@ -98,6 +106,7 @@ export class ThreeRuntime {
     this.playerMesh.geometry.dispose();
     this.playerMesh.material.dispose();
     this.disposeMesh(this.bossMesh);
+    this.disposeMesh(this.bossTelegraphRing);
     this.roadGeometry.dispose();
     this.roadMaterials.forEach((material) => material.dispose());
     for (const mesh of this.enemyMeshes.values()) this.disposeMesh(mesh);
@@ -134,13 +143,24 @@ export class ThreeRuntime {
   private syncBoss(snapshot: M1RunSnapshot): void {
     const boss = snapshot.boss;
     this.bossMesh.visible = boss !== undefined && !boss.isDefeated;
+    this.bossTelegraphRing.visible = false;
     if (boss === undefined || boss.isDefeated) return;
     this.bossMesh.position.set(0, 1.1, boss.z);
     const material = this.bossMesh.material as MeshBasicMaterial;
     const baseColor = snapshot.chapterId === 'ch02_viaduct' ? '#7fa8ef' : snapshot.chapterId === 'ch03_forge' ? '#dc7449' : '#6ea65a';
     material.color.set(boss.telegraphSeconds > 0 ? '#f4c95d' : boss.phase === 2 ? '#b7774f' : baseColor);
     const baseScale = snapshot.chapterId === 'ch02_viaduct' ? 0.9 : snapshot.chapterId === 'ch03_forge' ? 1.1 : 1;
-    this.bossMesh.scale.setScalar(baseScale * (boss.telegraphSeconds > 0 ? 1.08 : 1));
+    const isAttackTelegraph = boss.telegraphSeconds > 0 && boss.telegraphText !== '靜滯正在加深！';
+    const pulse = isAttackTelegraph ? 1 + Math.sin(performance.now() / 70) * 0.12 : 1;
+    this.bossMesh.scale.setScalar(baseScale * pulse);
+    this.bossMesh.rotation.y += isAttackTelegraph ? 0.12 : 0.02;
+    if (isAttackTelegraph) {
+      this.bossTelegraphRing.visible = true;
+      this.bossTelegraphRing.position.set(0, 0.06, boss.z);
+      this.bossTelegraphRing.rotation.x = -Math.PI / 2;
+      this.bossTelegraphRing.rotation.z += 0.16;
+      this.bossTelegraphRing.scale.setScalar(0.85 + (1 - boss.telegraphSeconds / 0.75) * 1.55);
+    }
   }
 
   private syncGates(snapshot: M1RunSnapshot): void {
@@ -166,8 +186,8 @@ export class ThreeRuntime {
         group.add(
           left,
           right,
-          this.createGateLabel(gate.leftLabel, '#5bb5d8', -2.5),
-          this.createGateLabel(gate.rightLabel, '#8ccf9b', 2.5),
+          this.createGateLabel(gate.leftBuffId, gate.leftLabel, '#5bb5d8', -2.5, gate.groupId === 'g01'),
+          this.createGateLabel(gate.rightBuffId, gate.rightLabel, '#8ccf9b', 2.5, gate.groupId === 'g01'),
         );
         this.gateGroups.set(gate.groupId, group);
         this.scene.add(group);
@@ -177,7 +197,7 @@ export class ThreeRuntime {
     }
   }
 
-  private createGateLabel(text: string, background: string, x: number): Sprite {
+  private createGateLabel(buffId: BuffId, text: string, background: string, x: number, isOpeningGate: boolean): Sprite {
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
     canvas.height = 256;
@@ -189,14 +209,17 @@ export class ThreeRuntime {
     context.lineWidth = 16;
     context.strokeRect(8, 8, canvas.width - 16, canvas.height - 16);
     context.fillStyle = '#102c2a';
-    context.font = '700 92px system-ui, sans-serif';
-    context.textAlign = 'center';
+    context.font = `800 ${isOpeningGate ? 142 : 104}px system-ui, sans-serif`;
+    context.textAlign = 'left';
     context.textBaseline = 'middle';
-    context.fillText(text, canvas.width / 2, canvas.height / 2 + 4);
+    context.font = `800 ${isOpeningGate ? 154 : 112}px system-ui, sans-serif`;
+    context.fillText(BUFF_ICON_GLYPHS[buffId], isOpeningGate ? 70 : 92, canvas.height / 2 + 4);
+    context.font = `800 ${isOpeningGate ? 112 : 80}px system-ui, sans-serif`;
+    context.fillText(text, isOpeningGate ? 230 : 190, canvas.height / 2 + 4);
     const material = new SpriteMaterial({ map: new CanvasTexture(canvas), transparent: false });
     const label = new Sprite(material);
     label.position.set(x, 0.2, -0.18);
-    label.scale.set(1.85, 0.46, 1);
+    label.scale.set(isOpeningGate ? 2.2 : 1.85, isOpeningGate ? 0.55 : 0.46, 1);
     return label;
   }
 

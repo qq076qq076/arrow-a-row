@@ -84,5 +84,5 @@
 | 順序 | 角色 | 工作包 | 狀態 | 紀錄 | Commit |
 | ---: | --- | --- | --- | --- | --- |
 | 1 | PM | Beta 範圍、平衡 KPI 與外部驗收風險接受 | Completed（自動化）／Accepted Risk（實機） | [M5-PM-001](M5-PM-001-Beta範圍與風險接受.md) | `PM(M5)：鎖定Beta範圍與風險接受` |
-| 2 | 工程師 | 1,000 局 bot 平衡工具與回響數值調整 | Completed | [M5-ENG-001](M5-ENG-001-Bot平衡與回響調整.md) | `工程(M5)：完成Bot平衡與回響調整` |
+| 2 | 工程師 | 1,000 局 bot 平衡、回響調整與初始 Gate／Boss 預警可讀性 | Completed | [M5-ENG-001](M5-ENG-001-Bot平衡與回響調整.md)、[M5-ENG-002](M5-ENG-002-初始Gate與Boss預警可讀性.md) | `工程(M5)：完成Bot平衡與回響調整`、`工程(M5)：改善初始Gate與Boss預警` |
 | 3 | 測試人員 | M5 回歸、viewport 與風險結案 | Completed（自動化）／Accepted Risk（實機） | [M5-QA-001](M5-QA-001-Beta回歸與相容性結案.md) | `測試(M5)：完成Beta回歸與相容性結案` |
