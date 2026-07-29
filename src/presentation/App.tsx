@@ -14,16 +14,18 @@ const rewardNames: Record<RewardId, string> = { storm_bow: '風暴弓｜箭數 +
 export function App(): ReactElement {
   const canvasContainerRef = useRef<HTMLDivElement>(null); const runtimeRef = useRef<ThreeRuntime | null>(null); const simulationRef = useRef(new M1RunSimulation()); const checkpointRef = useRef(new RunCheckpointRepository()); const profileRef = useRef(new ProfileRepository()); const pendingCheckpointRef = useRef<M1RunSnapshot | undefined>(undefined); const isMouseDraggingRef = useRef(false);
   const [snapshot, setSnapshot] = useState<M1RunSnapshot>(INITIAL_SNAPSHOT); const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE); const [screen, setScreen] = useState<'game' | 'shop' | 'achievements'>('game'); const [selectedChapterId, setSelectedChapterId] = useState<ChapterId>('ch01_meadow'); const [selectedCard, setSelectedCard] = useState<RewardId>(); const [hasCheckpoint, setHasCheckpoint] = useState(false); const [isWebGlSupported] = useState(() => document.createElement('canvas').getContext('webgl2') !== null);
+  const isGameplaySceneActive = screen === 'game' && snapshot.phase !== 'menu';
 
   useEffect(() => { void profileRef.current.loadAsync().then(setProfile).catch(() => undefined); void checkpointRef.current.loadAsync().then((checkpoint) => { const saved = checkpoint?.payload as M1RunSnapshot | undefined; if (saved?.phase === 'playing' || saved?.phase === 'reward') { pendingCheckpointRef.current = saved; setHasCheckpoint(true); } }).catch(() => undefined); }, []);
   useEffect(() => {
+    if (!isGameplaySceneActive) return undefined;
     const container = canvasContainerRef.current; if (container === null || !isWebGlSupported) return undefined;
     const runtime = new ThreeRuntime(container); runtimeRef.current = runtime; const save = async (): Promise<void> => { const current = simulationRef.current.snapshot(); if (current.phase === 'playing' || current.phase === 'reward') await checkpointRef.current.saveAsync({ runId: 'ch01-active', contentVersion: '0.2.0', savedAtMs: Date.now(), simulationTick: Math.floor(current.elapsedSeconds * 30), payload: current }); };
     const lifecycle = new BrowserLifecycle({ onSuspend: save, onResume: () => undefined });
     const gameLoop = new GameLoop({ tick: (deltaSeconds) => simulationRef.current.tick(deltaSeconds) }, () => { const next = simulationRef.current.snapshot(); runtime.sync(next); runtime.render(); setSnapshot(next); });
     const onResize = (): void => runtime.resize(); lifecycle.start(); gameLoop.start(); window.addEventListener('resize', onResize);
     return () => { window.removeEventListener('resize', onResize); lifecycle.stop(); gameLoop.stop(); runtime.dispose(); runtimeRef.current = null; };
-  }, [isWebGlSupported]);
+  }, [isGameplaySceneActive, isWebGlSupported]);
 
   useEffect(() => { runtimeRef.current?.setQuality(profile.qualityMode); }, [profile.qualityMode]);
   useEffect(() => { const onKeyDown = (event: KeyboardEvent): void => { if (event.key === 'Escape' && simulationRef.current.togglePause()) setSnapshot(simulationRef.current.snapshot()); }; window.addEventListener('keydown', onKeyDown); return () => window.removeEventListener('keydown', onKeyDown); }, []);
@@ -42,7 +44,7 @@ export function App(): ReactElement {
   const setQuality = (qualityMode: Profile['qualityMode']): void => { const updated = { ...profile, qualityMode }; setProfile(updated); void profileRef.current.saveAsync(updated); };
   const togglePause = (): void => { if (simulationRef.current.togglePause()) setSnapshot(simulationRef.current.snapshot()); };
   if (!isWebGlSupported) return <main className="unsupported-screen"><h1>此裝置暫不支援</h1><p>Arrow a Row 需要 WebGL 2。</p></main>;
-  return <main className="app-shell"><div ref={canvasContainerRef} className="game-canvas" aria-hidden="true" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp} />
+  return <main className={isGameplaySceneActive ? 'app-shell gameplay-shell' : 'app-shell menu-shell'}>{isGameplaySceneActive && <div ref={canvasContainerRef} className="game-canvas" aria-hidden="true" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp} />}
     {screen === 'shop' ? <Shop profile={profile} onBuy={buy} onBack={() => setScreen('game')} /> : screen === 'achievements' ? <Achievements profile={profile} onBack={() => setScreen('game')} /> : <>
       {snapshot.phase === 'playing' && <RunHud snapshot={snapshot} onTogglePause={togglePause} />}
       {snapshot.phase === 'paused' && <PauseScreen onResume={togglePause} />}

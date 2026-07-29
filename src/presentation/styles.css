@@ -16,6 +16,10 @@ button { font: inherit; }
   background: #173b3a;
 }
 
+.menu-shell {
+  background: radial-gradient(circle at 50% 12%, rgb(99 162 137 / 48%), transparent 34%), linear-gradient(160deg, #0b2528 0%, #173b3a 56%, #102c2a 100%);
+}
+
 .game-canvas { cursor: ew-resize; position: absolute; inset: 0; touch-action: none; user-select: none; }
 .game-canvas canvas { display: block; height: 100%; width: 100%; }
 

@@ -4,6 +4,13 @@ test('顯示第一章主選單與主要開始按鈕', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Arrow a Row' })).toBeVisible();
   await expect(page.getByRole('button', { name: '開始 晨線草原' })).toBeVisible();
+  await expect(page.locator('.game-canvas')).toHaveCount(0);
+});
+
+test('進入 Run 後才掛載遊戲畫面', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '開始 晨線草原' }).click();
+  await expect(page.locator('.game-canvas')).toHaveCount(1);
 });
 
 test('可開始第一章 Run 並選取左側第一個 Gate', async ({ page }) => {
