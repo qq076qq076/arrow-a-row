@@ -15,7 +15,7 @@ error.save_failed,無法儲存進度，尚未扣除金幣。請重試。,Progres
 boss.moss_crown.attack.vine,藤刺正在瞄準！,Vines are taking aim!,12,BossHUD,boss_attack_vine,警示,true,Boss 預警
 boss.moss_crown.attack.roots,根鬚正在掃掠！,Roots are sweeping in!,12,BossHUD,boss_attack_roots,警示,true,Boss 預警
 boss.moss_crown.attack.wave,震波正在擴散！,A shockwave is spreading!,14,BossHUD,boss_attack_wave,警示,true,Boss 預警
-reward.storm_bow,風暴弓,Storm Bow,8,Reward,reward_card,鼓勵,true,箭數 +2
+reward.storm_bow,風暴弓,Storm Bow,12,Reward,reward_card,鼓勵,true,箭數 +2、箭傷 +40%
 reward.blade_nexus,刃環核心,Blade Nexus,8,Reward,reward_card,鼓勵,true,飛劍 Build
 reward.heartwood,心木護佑,Heartwood Guard,8,Reward,reward_card,鼓勵,true,生存 Build
 shop.title,永久強化,Permanent Upgrades,10,Shop,open_shop,安定,true,商店標題
@@ -41,9 +41,9 @@ buff.flying_sword,飛劍碎片,Blade Fragment,8,Pickup,pickup,清楚,true,+1/3 �
 buff.vitality,生命回響,Vitality Echo,8,Pickup,pickup,鼓勵,true,+7 生命
 buff.windstep,步伐回響,Windstep Echo,8,Pickup,pickup,鼓勵,true,+7% 移速
 buff.barkskin,樹甲回響,Barkskin Echo,8,Pickup,pickup,鼓勵,true,+5% 減傷
-reward.deadeye,獵手印記,Hunter Mark,8,Reward,reward_card,鼓勵,true,箭傷 +50%
+reward.deadeye,獵手印記,Hunter Mark,8,Reward,reward_card,鼓勵,true,箭傷 +35%
 reward.gale_heart,疾風之心,Gale Heart,8,Reward,reward_card,鼓勵,true,箭速 +40%
-reward.ironbark,鐵木護甲,Ironbark Armor,8,Reward,reward_card,鼓勵,true,減傷 +25%
+reward.ironbark,鐵木護甲,Ironbark Armor,16,Reward,reward_card,鼓勵,true,減傷 +40%、最大 HP +30
 achievement.first_rift,初線修復,First Thread Mended,10,Achievement,ch01_clear,鼓勵,false,完成 CH01
 achievement.full_fan,風之扇面,Wind Fan,10,Achievement,three_arrows,鼓勵,false,同時擁有三支箭
 achievement.piercing_line,穿線者,Linebreaker,10,Achievement,pierce_one,鼓勵,false,取得穿透 +1

@@ -9,7 +9,7 @@ import { ThreeRuntime } from '../rendering/ThreeRuntime';
 import { ACHIEVEMENTS } from '../content/Achievements';
 
 const INITIAL_SNAPSHOT = new M1RunSimulation().snapshot();
-const rewardNames: Record<RewardId, string> = { storm_bow: '風暴弓｜箭數 +2', blade_nexus: '刃環核心｜飛劍 +2', heartwood: '心木護佑｜最大 HP +60', deadeye: '獵手印記｜箭傷 +50%', gale_heart: '疾風之心｜箭速 +40%', ironbark: '鐵木護甲｜減傷 +25%' };
+const rewardNames: Record<RewardId, string> = { storm_bow: '風暴弓｜箭數 +2、箭傷 +40%', blade_nexus: '刃環核心｜飛劍 +2', heartwood: '心木護佑｜最大 HP +60', deadeye: '獵手印記｜箭傷 +35%', gale_heart: '疾風之心｜箭速 +40%', ironbark: '鐵木護甲｜減傷 +40%、最大 HP +30' };
 
 export function App(): ReactElement {
   const canvasContainerRef = useRef<HTMLDivElement>(null); const runtimeRef = useRef<ThreeRuntime | null>(null); const simulationRef = useRef(new M1RunSimulation()); const checkpointRef = useRef(new RunCheckpointRepository()); const profileRef = useRef(new ProfileRepository()); const pendingCheckpointRef = useRef<M1RunSnapshot | undefined>(undefined); const isMouseDraggingRef = useRef(false);

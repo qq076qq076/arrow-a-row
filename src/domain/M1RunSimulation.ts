@@ -69,12 +69,12 @@ export class M1RunSimulation {
   public chooseReward(rewardId: RewardId): boolean {
     if (this.phase !== 'reward' || this.selectedReward !== undefined || !this.rewardOptions.includes(rewardId)) return false;
     this.selectedReward = rewardId;
-    if (rewardId === 'storm_bow') this.player.projectileCount += 2;
+    if (rewardId === 'storm_bow') { this.player.projectileCount += 2; this.player.damage *= 1.4; }
     if (rewardId === 'blade_nexus') this.player.swordCount += 2;
     if (rewardId === 'heartwood') { this.player.maxHp += 60; this.player.hp += 60; }
-    if (rewardId === 'deadeye') this.player.damage *= 1.5;
+    if (rewardId === 'deadeye') this.player.damage *= 1.35;
     if (rewardId === 'gale_heart') this.player.arrowSpeed *= 1.4;
-    if (rewardId === 'ironbark') this.player.damageReduction = Math.min(0.6, this.player.damageReduction + 0.25);
+    if (rewardId === 'ironbark') { this.player.damageReduction = Math.min(0.6, this.player.damageReduction + 0.4); this.player.maxHp += 30; this.player.hp += 30; }
     this.phase = 'complete';
     return true;
   }
