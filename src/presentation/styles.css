@@ -42,6 +42,8 @@ button { font: inherit; }
 }
 
 .main-menu button { min-height: 52px; min-width: min(100%, 320px); }
+.chapter-select { display: grid; gap: 6px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 12px auto; max-width: 420px; }
+.chapter-select button { font-size: 13px; margin: 0; min-height: 44px; min-width: 0; padding: 8px; width: 100%; }
 .main-menu button, .modal-card button { border: 0; border-radius: 12px; cursor: pointer; display: block; margin: 10px auto; padding: 14px 18px; }
 .main-menu button:not(.secondary), .modal-card button:not(.secondary) { background: #f4c95d; color: #173b3a; font-weight: 800; }
 .secondary { background: rgb(9 29 29 / 88%); border: 1px solid #d9e8d2 !important; color: #f8f7ef; }
