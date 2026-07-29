@@ -81,4 +81,26 @@ describe('M1RunSimulation', () => {
     expect(restored.snapshot().phase).toBe('reward');
     expect(restored.snapshot().rewardOptions).toEqual(source.snapshot().rewardOptions);
   });
+
+  it('carries the selected Build through all six chapters and stops after CH06', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start({ healthLevel: 5, damageLevel: 5, fireRateLevel: 5 });
+    let previousArrowCount = 1;
+    const bossHpByChapter: number[] = [];
+
+    for (let chapterIndex = 1; chapterIndex <= 6; chapterIndex += 1) {
+      simulation.setTargetX(5);
+      for (let tick = 0; tick < 12000 && simulation.snapshot().phase === 'playing'; tick += 1) simulation.tick(1 / 30);
+      const reward = simulation.snapshot();
+      expect(reward.phase).toBe('reward');
+      expect(reward.chapterId).toBe(`ch0${chapterIndex}_${['meadow', 'viaduct', 'forge', 'canopy', 'archive', 'horizon'][chapterIndex - 1]}`);
+      bossHpByChapter.push(reward.boss?.maxHp ?? 0);
+      expect(simulation.chooseReward('storm_bow')).toBe(true);
+      expect(simulation.snapshot().player.projectileCount).toBeGreaterThan(previousArrowCount);
+      previousArrowCount = simulation.snapshot().player.projectileCount;
+      expect(simulation.continueToNextChapter()).toBe(chapterIndex < 6);
+    }
+
+    expect(bossHpByChapter).toEqual([36, 50, 71, 99, 138, 194]);
+  });
 });
