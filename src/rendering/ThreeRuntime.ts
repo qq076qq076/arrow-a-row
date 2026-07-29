@@ -61,6 +61,7 @@ export class ThreeRuntime {
   }
 
   public sync(snapshot: M1RunSnapshot): void {
+    this.syncChapterTheme(snapshot.chapterId);
     this.playerMesh.position.set(snapshot.player.x, 0.6, 0);
     this.updateCamera(snapshot.player.x);
     this.syncGates(snapshot);
@@ -69,6 +70,13 @@ export class ThreeRuntime {
     this.syncHits(snapshot);
     this.syncPickups(snapshot);
     this.syncBoss(snapshot);
+  }
+
+  private syncChapterTheme(chapterId: M1RunSnapshot['chapterId']): void {
+    const isMirrorViaduct = chapterId === 'ch02_viaduct';
+    this.renderer.setClearColor(new Color(isMirrorViaduct ? '#172849' : '#173b3a'));
+    this.roadMaterials[0]!.color.set(isMirrorViaduct ? '#243d69' : '#315f4a');
+    this.roadMaterials[1]!.color.set(isMirrorViaduct ? '#31528a' : '#3d7755');
   }
 
   public render(): void {
