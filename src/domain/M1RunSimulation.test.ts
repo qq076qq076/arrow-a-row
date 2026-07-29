@@ -20,9 +20,9 @@ describe('M1RunSimulation', () => {
     simulation.tick(1 / 30);
     expect(simulation.snapshot().arrows).toHaveLength(1);
 
-    advanceToDistance(simulation, 55.9);
+    advanceToDistance(simulation, 77.9);
     expect(simulation.snapshot().boss).toBeUndefined();
-    advanceToDistance(simulation, 56);
+    advanceToDistance(simulation, 78);
     simulation.tick(1 / 30);
     expect(simulation.snapshot().phase).toBe('playing');
     const arrivingBoss = simulation.snapshot().boss;
@@ -125,10 +125,13 @@ describe('M1RunSimulation', () => {
 
     expect(simulation.snapshot().phase).toBe('reward');
     expect(simulation.snapshot().earnedGold).toBe(30);
-    expect(simulation.chooseReward('storm_bow')).toBe(true);
+    const selectedReward = simulation.snapshot().rewardOptions[0]!;
+    expect(simulation.snapshot().rewardOptions).toHaveLength(3);
+    expect(new Set(simulation.snapshot().rewardOptions).size).toBe(3);
+    expect(simulation.chooseReward(selectedReward)).toBe(true);
     expect(simulation.snapshot().phase).toBe('complete');
-    expect(simulation.snapshot().player.projectileCount).toBeGreaterThanOrEqual(3);
-    expect(simulation.chooseReward('storm_bow')).toBe(false);
+    expect(simulation.snapshot().selectedReward).toBe(selectedReward);
+    expect(simulation.chooseReward(selectedReward)).toBe(false);
   });
 
   it('restores an in-progress reward choice without replacing its candidates', () => {
@@ -145,7 +148,6 @@ describe('M1RunSimulation', () => {
   it('carries the selected Build through all six chapters and stops after CH06', () => {
     const simulation = new M1RunSimulation();
     simulation.start({ healthLevel: 5, damageLevel: 5, fireRateLevel: 5 });
-    let previousArrowCount = 1;
     const bossHpByChapter: number[] = [];
 
     for (let chapterIndex = 1; chapterIndex <= 6; chapterIndex += 1) {
@@ -155,9 +157,9 @@ describe('M1RunSimulation', () => {
       expect(reward.phase).toBe('reward');
       expect(reward.chapterId).toBe(`ch0${chapterIndex}_${['meadow', 'viaduct', 'forge', 'canopy', 'archive', 'horizon'][chapterIndex - 1]}`);
       bossHpByChapter.push(reward.boss?.maxHp ?? 0);
-      expect(simulation.chooseReward('storm_bow')).toBe(true);
-      expect(simulation.snapshot().player.projectileCount).toBeGreaterThan(previousArrowCount);
-      previousArrowCount = simulation.snapshot().player.projectileCount;
+      const selectedReward = reward.rewardOptions[0]!;
+      expect(simulation.chooseReward(selectedReward)).toBe(true);
+      expect(simulation.snapshot().selectedReward).toBe(selectedReward);
       expect(simulation.continueToNextChapter()).toBe(chapterIndex < 6);
     }
 

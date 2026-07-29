@@ -304,13 +304,13 @@ export class ThreeRuntime {
   }
 
   private createPickupLabel(text: string): Sprite {
-    const canvas = document.createElement('canvas'); canvas.width = 768; canvas.height = 128;
+    const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 192;
     const context = canvas.getContext('2d');
     if (context === null) throw new Error('無法建立掉落 Buff 文字貼圖。');
     context.fillStyle = '#173b3a'; context.fillRect(0, 0, canvas.width, canvas.height);
-    context.fillStyle = '#e8fff1'; context.font = '700 54px system-ui, sans-serif'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(text, canvas.width / 2, canvas.height / 2);
+    context.fillStyle = '#e8fff1'; context.font = '700 78px system-ui, sans-serif'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(text, canvas.width / 2, canvas.height / 2);
     const label = new Sprite(new SpriteMaterial({ map: new CanvasTexture(canvas), transparent: false }));
-    label.userData.text = text; label.position.set(0, 0.7, 0); label.scale.set(1.45, 0.24, 1);
+    label.userData.text = text; label.position.set(0, 0.82, 0); label.scale.set(2.35, 0.44, 1);
     return label;
   }
 
