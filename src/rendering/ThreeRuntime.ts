@@ -1,10 +1,13 @@
 import {
   BoxGeometry,
+  BufferGeometry,
   Color,
   CanvasTexture,
   ConeGeometry,
   Group,
   IcosahedronGeometry,
+  Line,
+  LineBasicMaterial,
   Mesh,
   MeshBasicMaterial,
   OctahedronGeometry,
@@ -14,6 +17,7 @@ import {
   SpriteMaterial,
   SphereGeometry,
   TorusGeometry,
+  Vector3,
   WebGLRenderer,
 } from 'three';
 import type { M1RunSnapshot } from '../domain/M1RunSimulation';
@@ -43,6 +47,7 @@ export class ThreeRuntime {
   private readonly hitMeshes = new Map<number, Mesh>();
   private readonly pickupMeshes = new Map<number, Mesh>();
   private readonly lightningMeshes = new Map<string, Mesh>();
+  private readonly lightningArcs = new Map<string, Line>();
   private readonly gateGroups = new Map<string, Group>();
   private bossChapterId: M1RunSnapshot['chapterId'] = 'ch01_meadow';
 
@@ -116,6 +121,7 @@ export class ThreeRuntime {
     for (const mesh of this.hitMeshes.values()) this.disposeMesh(mesh);
     for (const mesh of this.pickupMeshes.values()) this.disposeMesh(mesh);
     for (const mesh of this.lightningMeshes.values()) this.disposeMesh(mesh);
+    for (const line of this.lightningArcs.values()) this.disposeLine(line);
     for (const group of this.gateGroups.values()) group.traverse((child) => {
       if (child instanceof Mesh) this.disposeMesh(child);
       if (child instanceof Sprite) {
@@ -321,6 +327,9 @@ export class ThreeRuntime {
     for (const [id, mesh] of this.lightningMeshes) {
       if (!targets.has(id)) { this.scene.remove(mesh); this.disposeMesh(mesh); this.lightningMeshes.delete(id); }
     }
+    for (const [id, line] of this.lightningArcs) {
+      if (!targets.has(id)) { this.scene.remove(line); this.disposeLine(line); this.lightningArcs.delete(id); }
+    }
     for (const enemy of snapshot.enemies) {
       if (!targets.has(enemy.id)) continue;
       let mesh = this.lightningMeshes.get(enemy.id);
@@ -333,7 +342,21 @@ export class ThreeRuntime {
       mesh.rotation.y += 0.18;
       const pulse = 0.9 + Math.sin(performance.now() / 55) * 0.2;
       mesh.scale.setScalar(pulse);
+      this.syncLightningArc(enemy.id, snapshot.player.x, enemy.x, enemy.z);
     }
+    if (targets.has('boss') && snapshot.boss !== undefined) this.syncLightningArc('boss', snapshot.player.x, 0, snapshot.boss.z);
+  }
+
+  private syncLightningArc(id: string, startX: number, endX: number, endZ: number): void {
+    let line = this.lightningArcs.get(id);
+    if (line === undefined) {
+      line = new Line(new BufferGeometry(), new LineBasicMaterial({ color: '#b9f4ff', transparent: true, opacity: 0.95 }));
+      this.lightningArcs.set(id, line);
+      this.scene.add(line);
+    }
+    const phase = performance.now() / 48 + id.length;
+    const points = [0, 0.25, 0.5, 0.75, 1].map((progress) => new Vector3(startX + (endX - startX) * progress + (progress === 0 || progress === 1 ? 0 : Math.sin(phase + progress * 13) * 0.42), 0.72 + Math.sin(phase + progress * 9) * 0.12, endZ * progress));
+    line.geometry.setFromPoints(points);
   }
 
   private syncPickups(snapshot: M1RunSnapshot): void {
@@ -397,4 +420,6 @@ export class ThreeRuntime {
     if (Array.isArray(mesh.material)) mesh.material.forEach((material) => material.dispose());
     else if (mesh.material !== ENEMY_MATERIALS.melee && mesh.material !== ENEMY_MATERIALS.ranged) mesh.material.dispose();
   }
+
+  private disposeLine(line: Line): void { line.geometry.dispose(); if (Array.isArray(line.material)) line.material.forEach((material) => material.dispose()); else line.material.dispose(); }
 }

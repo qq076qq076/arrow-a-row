@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BUFF_IDS } from '../content/BuffCatalog';
-import { M1RunSimulation } from './M1RunSimulation';
+import { BASE_ARROW_DAMAGE, BASE_LIGHTNING_DAMAGE_PER_SECOND, getArrowDamageMultiplier, M1RunSimulation } from './M1RunSimulation';
 
 function advanceToDistance(simulation: M1RunSimulation, distanceMeters: number): void {
   while (simulation.snapshot().distanceMeters < distanceMeters) simulation.tick(1 / 30);
@@ -41,8 +41,18 @@ describe('M1RunSimulation', () => {
     const player = simulation.snapshot().player;
     expect(player.maxHp).toBe(120);
     expect(player.hp).toBe(120);
-    expect(player.damage).toBeCloseTo(1.6);
+    expect(player.damage).toBeCloseTo(1.28);
     expect(player.projectileCount).toBe(1);
+  });
+
+  it('uses a weaker base arrow but rewards close-range hits, while lightning is the stronger short-range baseline', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start();
+    expect(simulation.snapshot().player.damage).toBe(BASE_ARROW_DAMAGE);
+    expect(simulation.snapshot().player.lightningDamagePerSecond).toBe(BASE_LIGHTNING_DAMAGE_PER_SECOND);
+    expect(getArrowDamageMultiplier(6)).toBe(1.5);
+    expect(getArrowDamageMultiplier(14)).toBe(0.9);
+    expect(getArrowDamageMultiplier(24)).toBe(0.55);
   });
 
   it('applies the three additional permanent upgrades to a new run', () => {
