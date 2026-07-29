@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { BUFF_IDS } from '../content/BuffCatalog';
 import { M1RunSimulation } from './M1RunSimulation';
 
 function advanceToDistance(simulation: M1RunSimulation, distanceMeters: number): void {
@@ -14,7 +15,7 @@ describe('M1RunSimulation', () => {
 
   it('fires immediately, then makes the Boss approach from beyond the fifth wave', () => {
     const simulation = new M1RunSimulation();
-    simulation.start({ healthLevel: 5, damageLevel: 5, fireRateLevel: 5 });
+    simulation.start();
     simulation.setTargetX(5);
     simulation.tick(1 / 30);
     expect(simulation.snapshot().arrows).toHaveLength(1);
@@ -27,8 +28,10 @@ describe('M1RunSimulation', () => {
     const arrivingBoss = simulation.snapshot().boss;
     expect(arrivingBoss?.z).toBeGreaterThan(15);
 
-    for (let tick = 0; tick < 240; tick += 1) simulation.tick(1 / 30);
-    expect(simulation.snapshot().boss?.z).toBe(15);
+    const initialBossHp = arrivingBoss?.hp ?? 0;
+    for (let tick = 0; tick < 120; tick += 1) simulation.tick(1 / 30);
+    expect(simulation.snapshot().boss?.z).toBeGreaterThan(15);
+    expect(simulation.snapshot().boss?.hp).toBeLessThan(initialBossHp);
   });
 
   it('applies permanent profile modifiers to a new run', () => {
@@ -41,7 +44,7 @@ describe('M1RunSimulation', () => {
     expect(player.projectileCount).toBe(1);
   });
 
-  it('applies the left gate once even after more ticks', () => {
+  it('applies a randomly generated left gate once even after more ticks', () => {
     const simulation = new M1RunSimulation();
     simulation.start();
     simulation.setTargetX(-4);
@@ -49,8 +52,7 @@ describe('M1RunSimulation', () => {
     const afterGate = simulation.snapshot();
     advanceToDistance(simulation, 14);
 
-    expect(afterGate.player.projectileCount).toBe(2);
-    expect(simulation.snapshot().player.projectileCount).toBe(2);
+    expect(afterGate.selectedGateIds).toEqual(['g01']);
     expect(simulation.snapshot().selectedGateIds).toEqual(['g01']);
   });
 
@@ -76,18 +78,25 @@ describe('M1RunSimulation', () => {
     expect(gates.slice(0, 2).flatMap((gate) => [gate.leftLabel, gate.rightLabel]).join(' ')).not.toMatch(/HP|生命|回復|治療/);
   });
 
-  it('applies arrow speed and flying sword buffs from the second gate', () => {
-    const speedRun = new M1RunSimulation();
-    speedRun.start();
-    speedRun.setTargetX(-4);
-    advanceToDistance(speedRun, 29);
-    expect(speedRun.snapshot().player.arrowSpeed).toBe(30);
+  it('draws distinct random Gate options from the eight-Buff catalog', () => {
+    const seen = new Set<string>();
+    const simulation = new M1RunSimulation();
+    for (let index = 0; index < 6; index += 1) {
+      simulation.start();
+      const gates = simulation.snapshot().gates;
+      expect(gates.slice(0, 2).flatMap((gate) => [gate.leftLabel, gate.rightLabel]).join(' ')).not.toMatch(/生命|移速|減傷/);
+      gates.forEach((gate) => { seen.add(gate.leftBuffId); seen.add(gate.rightBuffId); expect(gate.leftBuffId).not.toBe(gate.rightBuffId); });
+    }
+    expect([...seen].sort()).toEqual([...BUFF_IDS].sort());
+  });
 
-    const swordRun = new M1RunSimulation();
-    swordRun.start();
-    swordRun.setTargetX(4);
-    advanceToDistance(swordRun, 29);
-    expect(swordRun.snapshot().player.swordCount).toBe(1);
+  it('drops a readable one-third Buff pickup when a minor enemy is defeated', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start({ damageLevel: 20 });
+    for (let tick = 0; tick < 600 && simulation.snapshot().pickups.length === 0; tick += 1) simulation.tick(1 / 30);
+    const pickup = simulation.snapshot().pickups[0];
+    expect(pickup?.buffId).toBeDefined();
+    expect(pickup?.label).toMatch(/\+⅓|\+8%|\+4%|\+7%|\+5%/);
   });
 
   it('reaches Boss reward and applies it exactly once', () => {

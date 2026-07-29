@@ -1,16 +1,17 @@
 import { getChapterDefinition, getNextChapterDefinition, type ChapterId } from '../content/ChapterDefinitions';
+import { BUFF_CATALOG, BUFF_IDS, OFFENSIVE_BUFF_IDS, type BuffId } from '../content/BuffCatalog';
 
 export type RunPhase = 'menu' | 'playing' | 'reward' | 'dead' | 'complete';
 export type EnemyKind = 'melee' | 'ranged';
 export type RewardId = 'storm_bow' | 'blade_nexus' | 'heartwood';
 export interface RunModifiers { readonly healthLevel?: number; readonly damageLevel?: number; readonly fireRateLevel?: number; }
 
-export interface PlayerSnapshot { readonly x: number; readonly hp: number; readonly maxHp: number; readonly damage: number; readonly projectileCount: number; readonly arrowSpeed: number; readonly swordCount: number; }
+export interface PlayerSnapshot { readonly x: number; readonly hp: number; readonly maxHp: number; readonly damage: number; readonly projectileCount: number; readonly arrowSpeed: number; readonly swordCount: number; readonly movementSpeed: number; readonly damageReduction: number; readonly fireRateMultiplier: number; readonly arrowCharge: number; readonly swordCharge: number; }
 export interface EnemySnapshot { readonly id: string; readonly kind: EnemyKind; readonly x: number; readonly z: number; readonly hp: number; readonly telegraphSeconds: number; readonly deathSeconds: number; }
-export interface GateSnapshot { readonly groupId: string; readonly leftLabel: string; readonly rightLabel: string; readonly z: number; readonly isChosen: boolean; }
+export interface GateSnapshot { readonly groupId: string; readonly leftLabel: string; readonly rightLabel: string; readonly leftBuffId: BuffId; readonly rightBuffId: BuffId; readonly z: number; readonly isChosen: boolean; }
 export interface ArrowSnapshot { readonly id: number; readonly x: number; readonly z: number; }
 export interface HitSnapshot { readonly id: number; readonly x: number; readonly z: number; readonly seconds: number; }
-export interface PickupSnapshot { readonly id: number; readonly x: number; readonly z: number; }
+export interface PickupSnapshot { readonly id: number; readonly x: number; readonly z: number; readonly buffId: BuffId; readonly label: string; }
 export interface BossSnapshot { readonly id: 'bos_moss_crown_a'; readonly hp: number; readonly maxHp: number; readonly z: number; readonly phase: 1 | 2; readonly telegraphSeconds: number; readonly telegraphText: string; readonly isDefeated: boolean; }
 export interface M1RunSnapshot {
   readonly phase: RunPhase; readonly chapterId: ChapterId; readonly chapterTitle: string; readonly elapsedSeconds: number; readonly distanceMeters: number; readonly player: PlayerSnapshot;
@@ -19,10 +20,10 @@ export interface M1RunSnapshot {
 }
 
 interface MutableEnemy { id: string; kind: EnemyKind; x: number; z: number; hp: number; attackCooldownSeconds: number; telegraphSeconds: number; deathSeconds: number; }
-interface MutableGate { groupId: string; leftLabel: string; rightLabel: string; z: number; isChosen: boolean; }
+interface MutableGate { groupId: string; leftLabel: string; rightLabel: string; leftBuffId: BuffId; rightBuffId: BuffId; z: number; isChosen: boolean; }
 interface MutableArrow { id: number; x: number; z: number; }
 interface MutableHit { id: number; x: number; z: number; seconds: number; }
-interface MutablePickup { id: number; x: number; z: number; }
+interface MutablePickup { id: number; x: number; z: number; buffId: BuffId; label: string; }
 interface MutableBoss { hp: number; maxHp: number; z: number; phase: 1 | 2; telegraphSeconds: number; telegraphText: string; attackCooldownSeconds: number; isDefeated: boolean; }
 
 const WORLD_SPEED = 4;
@@ -33,26 +34,24 @@ const REWARDS: readonly RewardId[] = ['storm_bow', 'blade_nexus', 'heartwood'];
 
 export class M1RunSimulation {
   private phase: RunPhase = 'menu'; private chapterId: ChapterId = 'ch01_meadow'; private elapsedSeconds = 0; private distanceMeters = 0; private targetX = 0;
-  private player = { x: 0, hp: 100, maxHp: 100, damage: 1, projectileCount: 1, arrowSpeed: 24, swordCount: 0 };
+  private player = { x: 0, hp: 100, maxHp: 100, damage: 1, projectileCount: 1, arrowSpeed: 24, swordCount: 0, movementSpeed: PLAYER_MOVE_SPEED, damageReduction: 0, fireRateMultiplier: 1, arrowCharge: 0, swordCharge: 0 };
   private attackCooldownSeconds = 0; private attackIntervalSeconds = 0.45; private nextArrowId = 1; private nextEffectId = 1; private earnedGold = 0; private collectedShards = 0; private boss: MutableBoss | undefined;
-  private selectedReward: RewardId | undefined; private readonly selectedGateIds = new Set<string>(); private readonly spawnedWaveIds = new Set<string>(); private readonly enemies: MutableEnemy[] = []; private readonly arrows: MutableArrow[] = []; private readonly hits: MutableHit[] = []; private readonly pickups: MutablePickup[] = [];
+  private selectedReward: RewardId | undefined; private randomState = 1; private runNumber = 0; private readonly selectedGateIds = new Set<string>(); private readonly spawnedWaveIds = new Set<string>(); private readonly enemies: MutableEnemy[] = []; private readonly arrows: MutableArrow[] = []; private readonly hits: MutableHit[] = []; private readonly pickups: MutablePickup[] = [];
   private readonly gates: MutableGate[] = [
-    { groupId: 'g01', leftLabel: '+1 箭矢', rightLabel: '箭傷 +25%', z: 10, isChosen: false },
-    { groupId: 'g02', leftLabel: '箭速 +25%', rightLabel: '飛劍 +1', z: 28, isChosen: false },
-    { groupId: 'g03', leftLabel: '+1 箭矢', rightLabel: '箭傷 +25%', z: 42, isChosen: false },
+    { groupId: 'g01', leftLabel: '+1 箭矢', rightLabel: '箭傷 +25%', leftBuffId: 'split_arrow', rightBuffId: 'power_shot', z: 10, isChosen: false },
+    { groupId: 'g02', leftLabel: '箭速 +25%', rightLabel: '飛劍 +1', leftBuffId: 'swift_shot', rightBuffId: 'flying_sword', z: 28, isChosen: false },
+    { groupId: 'g03', leftLabel: '+1 箭矢', rightLabel: '箭傷 +25%', leftBuffId: 'split_arrow', rightBuffId: 'power_shot', z: 42, isChosen: false },
   ];
 
   public start(modifiers: RunModifiers = {}, chapterId: ChapterId = 'ch01_meadow'): void {
     const chapter = getChapterDefinition(chapterId);
     this.chapterId = chapter.id;
+    this.randomState = (chapter.index * 2654435761 + ++this.runNumber) >>> 0;
     this.phase = 'playing'; this.elapsedSeconds = 0; this.distanceMeters = 0; this.targetX = 0; this.earnedGold = 0; this.boss = undefined; this.selectedReward = undefined;
     const maxHp = 100 + (modifiers.healthLevel ?? 0) * 10;
-    this.player = { x: 0, hp: maxHp, maxHp, damage: 1 + (modifiers.damageLevel ?? 0) * 0.2, projectileCount: 1, arrowSpeed: 24, swordCount: 0 }; this.attackCooldownSeconds = 0; this.attackIntervalSeconds = Math.max(0.25, 0.45 - (modifiers.fireRateLevel ?? 0) * 0.04); this.nextArrowId = 1; this.nextEffectId = 1; this.collectedShards = 0;
+    this.player = { x: 0, hp: maxHp, maxHp, damage: 1 + (modifiers.damageLevel ?? 0) * 0.2, projectileCount: 1, arrowSpeed: 24, swordCount: 0, movementSpeed: PLAYER_MOVE_SPEED, damageReduction: 0, fireRateMultiplier: 1, arrowCharge: 0, swordCharge: 0 }; this.attackCooldownSeconds = 0; this.attackIntervalSeconds = Math.max(0.25, 0.45 - (modifiers.fireRateLevel ?? 0) * 0.04); this.nextArrowId = 1; this.nextEffectId = 1; this.collectedShards = 0;
     this.selectedGateIds.clear(); this.spawnedWaveIds.clear(); this.enemies.length = 0; this.arrows.length = 0; this.hits.length = 0; this.pickups.length = 0;
-    this.gates.splice(0, this.gates.length,
-      { groupId: 'g01', leftLabel: '+1 箭矢', rightLabel: '箭傷 +25%', z: 10, isChosen: false },
-      { groupId: 'g02', leftLabel: '箭速 +25%', rightLabel: '飛劍 +1', z: 28, isChosen: false },
-      { groupId: 'g03', leftLabel: '+1 箭矢', rightLabel: '箭傷 +25%', z: 42, isChosen: false });
+    this.gates.splice(0, this.gates.length, ...this.createGates());
   }
 
   /** Restores only data produced by snapshot(); cooldowns restart safely on resume. */
@@ -83,7 +82,8 @@ export class M1RunSimulation {
     if (next === undefined) return false;
     this.chapterId = next.id; this.phase = 'playing'; this.elapsedSeconds = 0; this.distanceMeters = 0; this.targetX = 0; this.boss = undefined; this.selectedReward = undefined; this.earnedGold = 0; this.attackCooldownSeconds = 0;
     this.enemies.length = 0; this.arrows.length = 0; this.hits.length = 0; this.pickups.length = 0; this.selectedGateIds.clear(); this.spawnedWaveIds.clear();
-    this.gates.splice(0, this.gates.length, { groupId: 'g01', leftLabel: '+1 箭矢', rightLabel: '箭傷 +25%', z: 10, isChosen: false }, { groupId: 'g02', leftLabel: '箭速 +25%', rightLabel: '飛劍 +1', z: 28, isChosen: false }, { groupId: 'g03', leftLabel: '+1 箭矢', rightLabel: '箭傷 +25%', z: 42, isChosen: false });
+    this.randomState = (getChapterDefinition(next.id).index * 2654435761 + ++this.runNumber) >>> 0;
+    this.gates.splice(0, this.gates.length, ...this.createGates());
     return true;
   }
 
@@ -102,18 +102,36 @@ export class M1RunSimulation {
     return { phase: this.phase, chapterId: chapter.id, chapterTitle: chapter.title, elapsedSeconds: this.elapsedSeconds, distanceMeters: this.distanceMeters, player: { ...this.player }, enemies: this.enemies.map((enemy) => ({ ...enemy })), gates: this.gates.map((gate) => ({ ...gate })), arrows: this.arrows.map((arrow) => ({ ...arrow })), hits: this.hits.map((hit) => ({ ...hit })), pickups: this.pickups.map((pickup) => ({ ...pickup })), collectedShards: this.collectedShards, selectedGateIds: [...this.selectedGateIds], boss: this.boss === undefined ? undefined : { id: 'bos_moss_crown_a', hp: this.boss.hp, maxHp: this.boss.maxHp, z: this.boss.z, phase: this.boss.phase, telegraphSeconds: this.boss.telegraphSeconds, telegraphText: this.boss.telegraphText, isDefeated: this.boss.isDefeated }, rewardOptions: REWARDS, selectedReward: this.selectedReward, earnedGold: this.earnedGold };
   }
 
-  private movePlayer(deltaSeconds: number): void { const delta = this.targetX - this.player.x; const maxMove = PLAYER_MOVE_SPEED * deltaSeconds; this.player.x += Math.max(-maxMove, Math.min(maxMove, delta)); }
-  private resolveGates(): void { for (const gate of this.gates) { if (gate.isChosen || this.distanceMeters < gate.z) continue; const isLeft = this.player.x < 0; gate.isChosen = true; this.selectedGateIds.add(gate.groupId); if (gate.groupId === 'g02') { if (isLeft) this.player.arrowSpeed *= 1.25; else this.player.swordCount += 1; } else if (isLeft) this.player.projectileCount += 1; else this.player.damage *= 1.25; } }
+  private movePlayer(deltaSeconds: number): void { const delta = this.targetX - this.player.x; const maxMove = this.player.movementSpeed * deltaSeconds; this.player.x += Math.max(-maxMove, Math.min(maxMove, delta)); }
+  private resolveGates(): void { for (const gate of this.gates) { if (gate.isChosen || this.distanceMeters < gate.z) continue; gate.isChosen = true; this.selectedGateIds.add(gate.groupId); this.applyBuff(this.player.x < 0 ? gate.leftBuffId : gate.rightBuffId, 1); } }
+  private createGates(): MutableGate[] {
+    const drawPair = (pool: readonly BuffId[]): readonly [BuffId, BuffId] => { const first = pool[this.nextRandomIndex(pool.length)]!; const alternatives = pool.filter((id) => id !== first); return [first, alternatives[this.nextRandomIndex(alternatives.length)]!]; };
+    const first = drawPair(OFFENSIVE_BUFF_IDS); const second = drawPair(OFFENSIVE_BUFF_IDS); const third = drawPair(BUFF_IDS);
+    return [this.makeGate('g01', 10, first), this.makeGate('g02', 28, second), this.makeGate('g03', 42, third)];
+  }
+  private makeGate(groupId: string, z: number, pair: readonly [BuffId, BuffId]): MutableGate { return { groupId, z, leftBuffId: pair[0], rightBuffId: pair[1], leftLabel: BUFF_CATALOG[pair[0]].gateLabel, rightLabel: BUFF_CATALOG[pair[1]].gateLabel, isChosen: false }; }
+  private nextRandomIndex(length: number): number { this.randomState = (1664525 * this.randomState + 1013904223) >>> 0; return this.randomState % length; }
+  private applyBuff(buffId: BuffId, scale: number): void {
+    if (buffId === 'split_arrow') { this.player.arrowCharge += scale; while (this.player.arrowCharge >= 1) { this.player.projectileCount += 1; this.player.arrowCharge -= 1; } }
+    if (buffId === 'power_shot') this.player.damage *= 1 + 0.25 * scale;
+    if (buffId === 'swift_shot') this.player.arrowSpeed *= 1 + 0.25 * scale;
+    if (buffId === 'rapid_fire') this.player.fireRateMultiplier *= 1 - 0.12 * scale;
+    if (buffId === 'flying_sword') { this.player.swordCharge += scale; while (this.player.swordCharge >= 1) { this.player.swordCount += 1; this.player.swordCharge -= 1; } }
+    if (buffId === 'vitality') { const amount = 20 * scale; this.player.maxHp += amount; this.player.hp = Math.min(this.player.maxHp, this.player.hp + amount); }
+    if (buffId === 'windstep') this.player.movementSpeed *= 1 + 0.2 * scale;
+    if (buffId === 'barkskin') this.player.damageReduction = Math.min(0.6, this.player.damageReduction + 0.15 * scale);
+  }
   private spawnEnemies(): void { const scale = getChapterDefinition(this.chapterId).enemyHpScale; if (this.chapterId === 'ch02_viaduct') { if (this.distanceMeters >= 15 && !this.hasEnemy('mirror-wing-1')) this.enemies.push({ id: 'mirror-wing-1', kind: 'ranged', x: -3, z: 30, hp: Math.round(12 * scale), attackCooldownSeconds: 1, telegraphSeconds: 0, deathSeconds: 0 }, { id: 'mirror-wing-2', kind: 'ranged', x: 3, z: 35, hp: Math.round(12 * scale), attackCooldownSeconds: 1.8, telegraphSeconds: 0, deathSeconds: 0 }); if (this.distanceMeters >= 35 && !this.hasEnemy('viaduct-runner-1')) this.enemies.push({ id: 'viaduct-runner-1', kind: 'melee', x: 0, z: 38, hp: Math.round(8 * scale), attackCooldownSeconds: 0, telegraphSeconds: 0, deathSeconds: 0 }); return; } if (this.chapterId === 'ch03_forge') { if (this.distanceMeters >= 15 && !this.hasEnemy('ember-shell-1')) this.enemies.push({ id: 'ember-shell-1', kind: 'melee', x: 0, z: 30, hp: Math.round(8 * scale), attackCooldownSeconds: 0, telegraphSeconds: 0, deathSeconds: 0 }, { id: 'ember-shell-2', kind: 'melee', x: -3, z: 36, hp: Math.round(8 * scale), attackCooldownSeconds: 0, telegraphSeconds: 0, deathSeconds: 0 }); if (this.distanceMeters >= 35 && !this.hasEnemy('forge-slinger-1')) this.enemies.push({ id: 'forge-slinger-1', kind: 'ranged', x: -2.5, z: 38, hp: Math.round(12 * scale), attackCooldownSeconds: 0.8, telegraphSeconds: 0, deathSeconds: 0 }, { id: 'forge-slinger-2', kind: 'ranged', x: 2.5, z: 41, hp: Math.round(12 * scale), attackCooldownSeconds: 1.5, telegraphSeconds: 0, deathSeconds: 0 }); return; } if (this.distanceMeters >= 15 && !this.hasEnemy('melee-1')) this.enemies.push({ id: 'melee-1', kind: 'melee', x: -2, z: 30, hp: Math.round(8 * scale), attackCooldownSeconds: 0, telegraphSeconds: 0, deathSeconds: 0 }, { id: 'melee-2', kind: 'melee', x: 0, z: 34, hp: Math.round(8 * scale), attackCooldownSeconds: 0, telegraphSeconds: 0, deathSeconds: 0 }, { id: 'melee-3', kind: 'melee', x: 2, z: 38, hp: Math.round(8 * scale), attackCooldownSeconds: 0, telegraphSeconds: 0, deathSeconds: 0 }); if (this.distanceMeters >= 35 && !this.hasEnemy('ranged-1')) this.enemies.push({ id: 'ranged-1', kind: 'ranged', x: 0, z: 38, hp: Math.round(12 * scale), attackCooldownSeconds: 2, telegraphSeconds: 0, deathSeconds: 0 }); }
   private spawnExtraWaves(): void { const scale = getChapterDefinition(this.chapterId).enemyHpScale; const add = (id: string, at: number, kind: EnemyKind, x: number): void => { if (this.distanceMeters >= at && !this.hasEnemy(id)) this.enemies.push({ id, kind, x, z: 38, hp: Math.round((kind === 'melee' ? 8 : 12) * scale), attackCooldownSeconds: kind === 'ranged' ? 1 : 0, telegraphSeconds: 0, deathSeconds: 0 }); }; add('wave-3a', 24, 'melee', -2); add('wave-3b', 24, 'melee', 2); add('wave-4a', 38, 'ranged', -3); add('wave-4b', 38, 'ranged', 3); add('wave-5a', 48, 'melee', 0); }
-  private updateEnemies(deltaSeconds: number): void { for (const enemy of this.enemies) { if (enemy.deathSeconds > 0) { enemy.deathSeconds = Math.max(0, enemy.deathSeconds - deltaSeconds); continue; } enemy.z -= WORLD_SPEED * deltaSeconds; enemy.attackCooldownSeconds -= deltaSeconds; if (enemy.kind === 'melee' && enemy.z <= 1.2 && Math.abs(this.player.x - enemy.x) < 1.2 && enemy.attackCooldownSeconds <= 0) { this.player.hp -= 10; enemy.attackCooldownSeconds = 1; } if (enemy.kind === 'ranged') { if (enemy.attackCooldownSeconds <= 0 && enemy.telegraphSeconds <= 0) enemy.telegraphSeconds = 0.6; if (enemy.telegraphSeconds > 0) { enemy.telegraphSeconds -= deltaSeconds; if (enemy.telegraphSeconds <= 0) { if (Math.abs(this.player.x - enemy.x) < 1.2) this.player.hp -= 12; enemy.attackCooldownSeconds = 3.5; } } } } }
+  private updateEnemies(deltaSeconds: number): void { for (const enemy of this.enemies) { if (enemy.deathSeconds > 0) { enemy.deathSeconds = Math.max(0, enemy.deathSeconds - deltaSeconds); continue; } enemy.z -= WORLD_SPEED * deltaSeconds; enemy.attackCooldownSeconds -= deltaSeconds; if (enemy.kind === 'melee' && enemy.z <= 1.2 && Math.abs(this.player.x - enemy.x) < 1.2 && enemy.attackCooldownSeconds <= 0) { this.takeDamage(10); enemy.attackCooldownSeconds = 1; } if (enemy.kind === 'ranged') { if (enemy.attackCooldownSeconds <= 0 && enemy.telegraphSeconds <= 0) enemy.telegraphSeconds = 0.6; if (enemy.telegraphSeconds > 0) { enemy.telegraphSeconds -= deltaSeconds; if (enemy.telegraphSeconds <= 0) { if (Math.abs(this.player.x - enemy.x) < 1.2) this.takeDamage(12); enemy.attackCooldownSeconds = 3.5; } } } } }
   private spawnBoss(): void { const hp = getChapterDefinition(this.chapterId).bossHp; const messages: Record<ChapterId, string> = { ch01_meadow: '苔冠守衛被靜滯困住了。', ch02_viaduct: '鏡潮校準者正在鎖定航線！', ch03_forge: '熔脈監工正在蓄積震波！', ch04_canopy: '枝語母體正在喚醒霧冠！', ch05_archive: '無光抄錄者正在改寫星圖！', ch06_horizon: '靜滯之核正在撕裂地平！' }; this.enemies.length = 0; this.boss = { hp, maxHp: hp, z: 46, phase: 1, telegraphSeconds: 0.8, telegraphText: messages[this.chapterId], attackCooldownSeconds: 2.5, isDefeated: false }; }
-  private updateBoss(deltaSeconds: number): void { const boss = this.boss; if (boss === undefined || boss.isDefeated) return; if (boss.z > 15) { boss.z = Math.max(15, boss.z - WORLD_SPEED * deltaSeconds); return; } if (boss.hp <= boss.maxHp / 2 && boss.phase === 1) { boss.phase = 2; boss.telegraphSeconds = 0.8; boss.telegraphText = '靜滯正在加深！'; boss.attackCooldownSeconds = 2.2; } boss.attackCooldownSeconds -= deltaSeconds; if (boss.telegraphSeconds > 0) { boss.telegraphSeconds -= deltaSeconds; if (boss.telegraphSeconds <= 0 && boss.telegraphText !== '靜滯正在加深！') { if (Math.abs(this.player.x) < 2.3) this.player.hp -= boss.phase === 1 ? 14 : 20; boss.attackCooldownSeconds = boss.phase === 1 ? 2.7 : 2.1; } return; } if (boss.attackCooldownSeconds <= 0) { boss.telegraphSeconds = 0.75; boss.telegraphText = boss.phase === 1 ? '藤刺正在瞄準！' : '震波正在擴散！'; } }
-  private fireAtNearestTarget(): void { this.attackCooldownSeconds = this.attackIntervalSeconds; const target = this.boss !== undefined && !this.boss.isDefeated && this.boss.z <= 18 ? 'boss' : this.enemies.filter((enemy) => enemy.z > 0 && enemy.deathSeconds <= 0).sort((a, b) => a.z - b.z)[0]; for (let index = 0; index < this.player.projectileCount; index += 1) { const offset = (index - (this.player.projectileCount - 1) / 2) * 0.3; this.arrows.push({ id: this.nextArrowId++, x: this.player.x + offset, z: 1 }); if (target === 'boss') { this.boss!.hp -= this.player.damage; this.addHit(0, this.boss!.z); if (this.boss!.hp <= 0) { this.boss!.hp = 0; this.boss!.isDefeated = true; this.earnedGold = 30; this.phase = 'reward'; } } else if (target !== undefined && Math.abs(target.x - (this.player.x + offset)) < 2.5) this.damageEnemy(target, this.player.damage); } }
-  private damageEnemy(enemy: MutableEnemy, damage: number): void { enemy.hp -= damage; this.addHit(enemy.x, enemy.z); if (enemy.hp <= 0) { enemy.hp = 0; enemy.deathSeconds = 0.45; this.pickups.push({ id: this.nextEffectId++, x: enemy.x, z: enemy.z }); } }
+  private updateBoss(deltaSeconds: number): void { const boss = this.boss; if (boss === undefined || boss.isDefeated) return; if (boss.z > 15) { boss.z = Math.max(15, boss.z - WORLD_SPEED * deltaSeconds); return; } if (boss.hp <= boss.maxHp / 2 && boss.phase === 1) { boss.phase = 2; boss.telegraphSeconds = 0.8; boss.telegraphText = '靜滯正在加深！'; boss.attackCooldownSeconds = 2.2; } boss.attackCooldownSeconds -= deltaSeconds; if (boss.telegraphSeconds > 0) { boss.telegraphSeconds -= deltaSeconds; if (boss.telegraphSeconds <= 0 && boss.telegraphText !== '靜滯正在加深！') { if (Math.abs(this.player.x) < 2.3) this.takeDamage(boss.phase === 1 ? 14 : 20); boss.attackCooldownSeconds = boss.phase === 1 ? 2.7 : 2.1; } return; } if (boss.attackCooldownSeconds <= 0) { boss.telegraphSeconds = 0.75; boss.telegraphText = boss.phase === 1 ? '藤刺正在瞄準！' : '震波正在擴散！'; } }
+  private fireAtNearestTarget(): void { this.attackCooldownSeconds = this.attackIntervalSeconds * this.player.fireRateMultiplier; const target = this.boss !== undefined && !this.boss.isDefeated ? 'boss' : this.enemies.filter((enemy) => enemy.z > 0 && enemy.deathSeconds <= 0).sort((a, b) => a.z - b.z)[0]; for (let index = 0; index < this.player.projectileCount; index += 1) { const offset = (index - (this.player.projectileCount - 1) / 2) * 0.3; this.arrows.push({ id: this.nextArrowId++, x: this.player.x + offset, z: 1 }); if (target === 'boss') { this.boss!.hp -= this.player.damage; this.addHit(0, this.boss!.z); if (this.boss!.hp <= 0) { this.boss!.hp = 0; this.boss!.isDefeated = true; this.earnedGold = 30; this.phase = 'reward'; } } else if (target !== undefined && Math.abs(target.x - (this.player.x + offset)) < 2.5) this.damageEnemy(target, this.player.damage); } }
+  private damageEnemy(enemy: MutableEnemy, damage: number): void { enemy.hp -= damage; this.addHit(enemy.x, enemy.z); if (enemy.hp <= 0) { enemy.hp = 0; enemy.deathSeconds = 0.45; const buffId = BUFF_IDS[this.nextRandomIndex(BUFF_IDS.length)]!; this.pickups.push({ id: this.nextEffectId++, x: enemy.x, z: enemy.z, buffId, label: BUFF_CATALOG[buffId].pickupLabel }); } }
+  private takeDamage(amount: number): void { this.player.hp -= amount * (1 - this.player.damageReduction); }
   private addHit(x: number, z: number): void { this.hits.push({ id: this.nextEffectId++, x, z, seconds: 0.2 }); }
   private updateArrows(deltaSeconds: number): void { for (const arrow of this.arrows) arrow.z += this.player.arrowSpeed * deltaSeconds; for (let index = this.arrows.length - 1; index >= 0; index -= 1) { const arrow = this.arrows[index]; if (arrow !== undefined && arrow.z > 45) this.arrows.splice(index, 1); } for (let index = this.enemies.length - 1; index >= 0; index -= 1) { const enemy = this.enemies[index]; if (enemy !== undefined && (enemy.z < -2 || (enemy.hp <= 0 && enemy.deathSeconds <= 0))) this.enemies.splice(index, 1); } }
   private updateEffects(deltaSeconds: number): void { for (let index = this.hits.length - 1; index >= 0; index -= 1) { const hit = this.hits[index]; if (hit === undefined) continue; hit.seconds -= deltaSeconds; if (hit.seconds <= 0) this.hits.splice(index, 1); } }
-  private updatePickups(deltaSeconds: number): void { for (let index = this.pickups.length - 1; index >= 0; index -= 1) { const pickup = this.pickups[index]; if (pickup === undefined) continue; pickup.z -= WORLD_SPEED * deltaSeconds; if (pickup.z < 1.4 && Math.abs(pickup.x - this.player.x) < 1.5) { this.collectedShards += 1; this.pickups.splice(index, 1); } else if (pickup.z < -2) this.pickups.splice(index, 1); } }
+  private updatePickups(deltaSeconds: number): void { for (let index = this.pickups.length - 1; index >= 0; index -= 1) { const pickup = this.pickups[index]; if (pickup === undefined) continue; pickup.z -= WORLD_SPEED * deltaSeconds; if (pickup.z < 1.4 && Math.abs(pickup.x - this.player.x) < 1.5) { this.collectedShards += 1; this.applyBuff(pickup.buffId, 1 / 3); this.pickups.splice(index, 1); } else if (pickup.z < -2) this.pickups.splice(index, 1); } }
   private hasEnemy(id: string): boolean { if (this.spawnedWaveIds.has(id)) return true; if (this.enemies.some((enemy) => enemy.id === id)) return true; this.spawnedWaveIds.add(id); return false; }
 }

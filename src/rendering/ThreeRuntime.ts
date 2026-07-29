@@ -107,7 +107,7 @@ export class ThreeRuntime {
   }
 
   private createRoad(): void {
-    for (let index = 0; index < 8; index += 1) {
+    for (let index = 0; index < 24; index += 1) {
       const segment = new Mesh(this.roadGeometry, this.roadMaterials[index % this.roadMaterials.length]!);
       segment.position.set(0, -0.1, index * 7 + 3.5);
       this.roadMeshes.push(segment);
@@ -135,8 +135,19 @@ export class ThreeRuntime {
   private syncGates(snapshot: M1RunSnapshot): void {
     for (const gate of snapshot.gates) {
       let group = this.gateGroups.get(gate.groupId);
+      const signature = `${gate.leftBuffId}:${gate.rightBuffId}`;
+      if (group !== undefined && group.userData.signature !== signature) {
+        this.scene.remove(group);
+        group.traverse((child) => {
+          if (child instanceof Mesh) this.disposeMesh(child);
+          if (child instanceof Sprite) { child.material.map?.dispose(); child.material.dispose(); }
+        });
+        this.gateGroups.delete(gate.groupId);
+        group = undefined;
+      }
       if (group === undefined) {
         group = new Group();
+        group.userData.signature = signature;
         const left = new Mesh(new BoxGeometry(2, 2.5, 0.25), new MeshBasicMaterial({ color: '#5bb5d8' }));
         const right = new Mesh(new BoxGeometry(2, 2.5, 0.25), new MeshBasicMaterial({ color: '#8ccf9b' }));
         left.position.x = -2.5;
@@ -200,6 +211,10 @@ export class ThreeRuntime {
       mesh.scale.setScalar(scale);
       mesh.rotation.y += enemy.kind === 'ranged' ? 0.045 : 0.015;
       const healthFill = mesh.getObjectByName('health-fill') as Mesh | undefined;
+      const healthBackground = mesh.getObjectByName('health-background') as Mesh | undefined;
+      // Enemy bodies may spin, but their HP bars stay stable and readable.
+      if (healthBackground !== undefined) healthBackground.rotation.y = -mesh.rotation.y;
+      if (healthFill !== undefined) healthFill.rotation.y = -mesh.rotation.y;
       if (healthFill !== undefined) healthFill.scale.x = Math.max(0, enemy.hp / (enemy.kind === 'melee' ? 8 : 12));
     }
   }
@@ -210,6 +225,7 @@ export class ThreeRuntime {
     const label = this.createEnemyLabel(kind === 'melee' ? '衝鋒獸' : '芽砲手');
     label.position.set(0, 1.1, 0);
     const healthBackground = new Mesh(new BoxGeometry(1, 0.07, 0.04), new MeshBasicMaterial({ color: '#321d25' }));
+    healthBackground.name = 'health-background';
     healthBackground.position.set(0, 1.28, 0);
     const healthFill = new Mesh(new BoxGeometry(0.92, 0.04, 0.05), new MeshBasicMaterial({ color: '#84e38a' }));
     healthFill.name = 'health-fill';
@@ -264,10 +280,38 @@ export class ThreeRuntime {
   }
 
   private syncPickups(snapshot: M1RunSnapshot): void {
-    this.syncTransientMeshes(snapshot.pickups, this.pickupMeshes, () => new Mesh(new OctahedronGeometry(0.3), new MeshBasicMaterial({ color: '#71e6d1' })), (mesh, pickup) => {
+    this.syncTransientMeshes(snapshot.pickups, this.pickupMeshes, () => this.createPickupMesh(), (mesh, pickup) => {
       mesh.position.set(pickup.x, 0.45, pickup.z);
       mesh.rotation.y += 0.08;
+      const label = mesh.getObjectByName('pickup-label') as Sprite | undefined;
+      if (label !== undefined && label.userData.text !== pickup.label) {
+        label.material.map?.dispose();
+        label.material.dispose();
+        const replacement = this.createPickupLabel(pickup.label);
+        replacement.name = 'pickup-label';
+        mesh.remove(label);
+        mesh.add(replacement);
+      }
     });
+  }
+
+  private createPickupMesh(): Mesh {
+    const mesh = new Mesh(new OctahedronGeometry(0.3), new MeshBasicMaterial({ color: '#71e6d1' }));
+    const label = this.createPickupLabel('Buff +⅓');
+    label.name = 'pickup-label';
+    mesh.add(label);
+    return mesh;
+  }
+
+  private createPickupLabel(text: string): Sprite {
+    const canvas = document.createElement('canvas'); canvas.width = 768; canvas.height = 128;
+    const context = canvas.getContext('2d');
+    if (context === null) throw new Error('無法建立掉落 Buff 文字貼圖。');
+    context.fillStyle = '#173b3a'; context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = '#e8fff1'; context.font = '700 54px system-ui, sans-serif'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(text, canvas.width / 2, canvas.height / 2);
+    const label = new Sprite(new SpriteMaterial({ map: new CanvasTexture(canvas), transparent: false }));
+    label.userData.text = text; label.position.set(0, 0.7, 0); label.scale.set(1.45, 0.24, 1);
+    return label;
   }
 
   private syncTransientMeshes<T extends { readonly id: number }>(items: readonly T[], meshes: Map<number, Mesh>, create: () => Mesh, update: (mesh: Mesh, item: T) => void): void {
