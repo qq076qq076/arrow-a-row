@@ -88,3 +88,4 @@
 | 3 | 測試人員 | M5 回歸、viewport 與風險結案 | Completed（自動化）／Accepted Risk（實機） | [M5-QA-001](M5-QA-001-Beta回歸與相容性結案.md) | `測試(M5)：完成Beta回歸與相容性結案` |
 | 4 | PM | 可玩性與 GitHub Pages 發布優化 | Completed | [M5-PM-002](M5-PM-002-可玩性與Web發布優化.md) | `PM(M5)：鎖定可玩性與Web發布優化` |
 | 5 | 工程師 | GitHub Pages workflow 與 README 公開連結 | Completed（workflow）／Pending（首次遠端部署） | [M5-ENG-006](M5-ENG-006-GitHubPages發布.md) | `工程(M5)：建立GitHub Pages發布` |
+| 6 | 工程師 | 修正滑鼠／觸控左右輸入方向 | Completed | [M5-ENG-007](M5-ENG-007-修正左右輸入方向.md) | `工程(M5)：修正左右輸入方向` |
