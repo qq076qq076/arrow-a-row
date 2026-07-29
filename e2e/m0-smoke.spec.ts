@@ -33,3 +33,12 @@ test('桌機滑鼠拖曳可控制角色選取左側 Gate', async ({ page }) => {
 
   await expect(page.getByText(/箭｜晶塵/)).toBeVisible({ timeout: 5000 });
 });
+
+test('手機主選單可切換標準與省電畫質', async ({ page }) => {
+  await page.goto('/');
+  const quality = page.getByLabel('畫質設定');
+  await quality.getByRole('button', { name: '省電 30 FPS' }).click();
+  await expect(quality.getByRole('button', { name: '省電 30 FPS' })).toHaveClass(/selected/);
+  await quality.getByRole('button', { name: '標準 60 FPS' }).click();
+  await expect(quality.getByRole('button', { name: '標準 60 FPS' })).toHaveClass(/selected/);
+});
