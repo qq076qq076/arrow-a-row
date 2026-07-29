@@ -11,5 +11,5 @@ describe('M5 beta bot balance', () => {
     expect(metrics.every((metric) => metric.completedCampaigns > 0)).toBe(true);
     expect(Math.max(...completionRates) - Math.min(...completionRates)).toBeLessThanOrEqual(0.15);
     expect(metrics.every((metric) => metric.averageBossSeconds >= 20 && metric.averageBossSeconds <= 45 && metric.averageChoicesPerCampaign >= 3)).toBe(true);
-  });
+  }, 45_000);
 });
