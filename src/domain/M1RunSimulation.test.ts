@@ -22,6 +22,7 @@ describe('M1RunSimulation', () => {
 
     advanceToDistance(simulation, 77.9);
     expect(simulation.snapshot().boss).toBeUndefined();
+    simulation.setTargetX(0);
     advanceToDistance(simulation, 78);
     simulation.tick(1 / 30);
     expect(simulation.snapshot().phase).toBe('playing');
@@ -142,7 +143,7 @@ describe('M1RunSimulation', () => {
     const simulation = new M1RunSimulation();
     simulation.start();
     simulation.setTargetX(5);
-    for (let index = 0; index < 2500 && simulation.snapshot().phase === 'playing'; index += 1) simulation.tick(1 / 30);
+    for (let index = 0; index < 2500 && simulation.snapshot().phase === 'playing'; index += 1) { if (simulation.snapshot().distanceMeters >= 42) simulation.setTargetX(0); simulation.tick(1 / 30); }
 
     expect(simulation.snapshot().phase).toBe('reward');
     expect(simulation.snapshot().earnedGold).toBe(30);
@@ -159,7 +160,7 @@ describe('M1RunSimulation', () => {
     const source = new M1RunSimulation();
     source.start();
     source.setTargetX(5);
-    for (let index = 0; index < 2500 && source.snapshot().phase === 'playing'; index += 1) source.tick(1 / 30);
+    for (let index = 0; index < 2500 && source.snapshot().phase === 'playing'; index += 1) { if (source.snapshot().distanceMeters >= 42) source.setTargetX(0); source.tick(1 / 30); }
     const restored = new M1RunSimulation();
     expect(restored.restore(source.snapshot())).toBe(true);
     expect(restored.snapshot().phase).toBe('reward');
@@ -173,7 +174,7 @@ describe('M1RunSimulation', () => {
 
     for (let chapterIndex = 1; chapterIndex <= 6; chapterIndex += 1) {
       simulation.setTargetX(5);
-      for (let tick = 0; tick < 12000 && simulation.snapshot().phase === 'playing'; tick += 1) simulation.tick(1 / 30);
+      for (let tick = 0; tick < 12000 && simulation.snapshot().phase === 'playing'; tick += 1) { if (simulation.snapshot().distanceMeters >= 42) simulation.setTargetX(0); simulation.tick(1 / 30); }
       const reward = simulation.snapshot();
       expect(reward.phase).toBe('reward');
       expect(reward.chapterId).toBe(`ch0${chapterIndex}_${['meadow', 'viaduct', 'forge', 'canopy', 'archive', 'horizon'][chapterIndex - 1]}`);
