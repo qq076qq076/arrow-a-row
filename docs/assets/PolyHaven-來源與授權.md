@@ -8,6 +8,8 @@
 | Street Lamp 01 | https://polyhaven.com/a/street_lamp_01 | Josh Dean | `public/assets/polyhaven/street_lamp_01/street_lamp_01.gltf`、1K JPG 貼圖與 BIN | CH02 鏡潮高架道路兩側的照明與高架地標 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 | Gothic Statue | https://polyhaven.com/a/gothic_statue | Benni Weimer | `public/assets/polyhaven/gothic_statue/gothic_statue.gltf`、1K JPG 貼圖與 BIN | CH01 苔冠守衛 Boss | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 | Lantern 01 | https://polyhaven.com/a/Lantern_01 | Rajil Jose Macatangay | `public/assets/polyhaven/lantern_01/Lantern_01.gltf`、1K JPG 貼圖與 BIN | 全類型 Buff：關卡門與戰利品採同一盞燈籠模型，以色彩區分能力 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
+| Power Box 01 | https://polyhaven.com/a/power_box_01 | Rico Cilliers（建模／貼圖）、Yann Kervran（rigging） | `public/assets/backlog/polyhaven/power_box_01/`、1K glTF／JPG／BIN | 已下載備用；預計用於 CH02 鏡潮高架的配電街景與校準裝置 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
+| Tree Small 02 | https://polyhaven.com/a/tree_small_02 | Rico Cilliers | `public/assets/backlog/polyhaven/tree_small_02/`、1K glTF／JPG／BIN | 已下載備用；預計用於 CH04 霧冠林海的樹冠側景 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 
 ## Quaternius 資產來源與授權
 
