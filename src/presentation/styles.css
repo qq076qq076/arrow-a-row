@@ -30,6 +30,10 @@ button { font: inherit; }
 }
 
 .hud > * { pointer-events: auto; }
+.build-hud { align-items: center; background: rgb(9 29 29 / 84%); border: 1px solid rgb(217 232 210 / 70%); border-radius: 10px; display: flex; flex-wrap: wrap; gap: 4px 8px; left: 16px; max-width: calc(100% - 32px); padding: 6px 9px; pointer-events: none; position: absolute; top: calc(env(safe-area-inset-top) + 62px); z-index: 1; }
+.build-hud strong { color: #f4c95d; }
+.build-hud span { font-size: 12px; }
+.aim-hint { background: rgb(9 29 29 / 88%); border: 1px solid #f4c95d; border-radius: 999px; font-size: 13px; left: 50%; margin: 0; padding: 8px 12px; position: absolute; text-align: center; top: calc(env(safe-area-inset-top) + 126px); transform: translateX(-50%); white-space: nowrap; z-index: 1; }
 .icon-button { min-height: 48px; min-width: 48px; }
 
 .main-menu {
@@ -53,9 +57,9 @@ button { font: inherit; }
 .modal-card button:disabled { cursor: not-allowed; opacity: .45; }
 .shop-item { align-items: center; border-top: 1px solid #49645e; display: flex; gap: 8px; justify-content: space-between; padding: 10px 0; text-align: left; }
 .shop-item button { margin: 0; min-height: 48px; width: auto; }
-.boss-hud { left: 16px; position: absolute; right: 16px; text-align: center; top: calc(env(safe-area-inset-top) + 70px); z-index: 1; }
+.boss-hud { left: 16px; position: absolute; right: 16px; text-align: center; top: calc(env(safe-area-inset-top) + 130px); z-index: 1; }
 .boss-hud progress { accent-color: #f4c95d; display: block; height: 16px; width: 100%; }
 .boss-hud p { background: #6f3d32; border-radius: 999px; margin: 8px auto; padding: 7px 12px; width: fit-content; }
 .eyebrow { color: #f4c95d; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .unsupported-screen { display: grid; min-height: 100dvh; place-content: center; padding: 24px; text-align: center; }
-.run-progress { left: 0; position: absolute; right: 0; text-align: center; top: calc(env(safe-area-inset-top) + 76px); z-index: 1; }
+.run-progress { left: 0; position: absolute; right: 0; text-align: center; top: calc(env(safe-area-inset-top) + 126px); z-index: 1; }

@@ -17,6 +17,8 @@ test('可開始第一章 Run 並選取左側第一個 Gate', async ({ page }) =>
   });
 
   await expect(page.getByText(/晨線草原｜HP 100 \/ 100/)).toBeVisible();
+  await expect(page.getByLabel('目前 Build')).toBeVisible();
+  await expect(page.getByText('箭矢只往正前方射出，拖曳角色對準敵人。')).toBeVisible();
   await expect(page.getByText(/箭｜晶塵/)).toBeVisible({ timeout: 5000 });
 });
 
