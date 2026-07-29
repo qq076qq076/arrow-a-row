@@ -99,6 +99,24 @@ describe('M1RunSimulation', () => {
     expect(pickup?.label).toMatch(/\+⅓|\+8%|\+4%|\+7%|\+5%/);
   });
 
+  it('fires multiple arrows in a forward fan rather than parallel lines', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start();
+    let gate = simulation.snapshot().gates[0]!;
+    for (let attempt = 0; gate.leftBuffId !== 'split_arrow' && gate.rightBuffId !== 'split_arrow'; attempt += 1) {
+      simulation.start();
+      gate = simulation.snapshot().gates[0]!;
+      if (attempt > 12) throw new Error('測試序列未提供箭矢 Buff。');
+    }
+    simulation.setTargetX(gate.leftBuffId === 'split_arrow' ? -5 : 5);
+    advanceToDistance(simulation, 11);
+    expect(simulation.snapshot().player.projectileCount).toBe(2);
+    for (let tick = 0; tick < 30 && !simulation.snapshot().arrows.some((arrow) => arrow.vx !== 0); tick += 1) simulation.tick(1 / 30);
+    const velocities = simulation.snapshot().arrows.map((arrow) => arrow.vx);
+    expect(velocities.some((velocity) => velocity < 0)).toBe(true);
+    expect(velocities.some((velocity) => velocity > 0)).toBe(true);
+  });
+
   it('reaches Boss reward and applies it exactly once', () => {
     const simulation = new M1RunSimulation();
     simulation.start();
