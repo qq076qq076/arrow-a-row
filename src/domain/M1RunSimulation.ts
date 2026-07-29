@@ -3,10 +3,10 @@ import { BUFF_CATALOG, BUFF_IDS, OFFENSIVE_BUFF_IDS, type BuffId } from '../cont
 
 export type RunPhase = 'menu' | 'playing' | 'reward' | 'dead' | 'complete';
 export type EnemyKind = 'melee' | 'ranged';
-export type RewardId = 'storm_bow' | 'blade_nexus' | 'heartwood' | 'deadeye' | 'gale_heart' | 'ironbark';
+export type RewardId = 'storm_bow' | 'lightning_core' | 'heartwood' | 'deadeye' | 'gale_heart' | 'ironbark';
 export interface RunModifiers { readonly healthLevel?: number; readonly damageLevel?: number; readonly fireRateLevel?: number; readonly arrowSpeedLevel?: number; readonly pierceLevel?: number; readonly movementLevel?: number; }
 
-export interface PlayerSnapshot { readonly x: number; readonly hp: number; readonly maxHp: number; readonly damage: number; readonly projectileCount: number; readonly arrowSpeed: number; readonly swordCount: number; readonly pierceCount: number; readonly movementSpeed: number; readonly damageReduction: number; readonly fireRateMultiplier: number; readonly arrowCharge: number; readonly pierceCharge: number; readonly swordCharge: number; }
+export interface PlayerSnapshot { readonly x: number; readonly hp: number; readonly maxHp: number; readonly damage: number; readonly projectileCount: number; readonly arrowSpeed: number; readonly pierceCount: number; readonly movementSpeed: number; readonly damageReduction: number; readonly fireRateMultiplier: number; readonly arrowCharge: number; readonly pierceCharge: number; readonly lightningTargetCount: number; readonly lightningDamagePerSecond: number; readonly lightningRange: number; readonly lightningTargetCharge: number; }
 export interface EnemySnapshot { readonly id: string; readonly kind: EnemyKind; readonly x: number; readonly z: number; readonly hp: number; readonly telegraphSeconds: number; readonly deathSeconds: number; }
 export interface GateSnapshot { readonly groupId: string; readonly leftLabel: string; readonly rightLabel: string; readonly leftBuffId: BuffId; readonly rightBuffId: BuffId; readonly z: number; readonly isChosen: boolean; }
 export interface ArrowSnapshot { readonly id: number; readonly x: number; readonly z: number; readonly vx: number; readonly piercesRemaining: number; readonly hitEnemyIds: readonly string[]; readonly hitBoss: boolean; }
@@ -15,7 +15,7 @@ export interface PickupSnapshot { readonly id: number; readonly x: number; reado
 export interface BossSnapshot { readonly id: 'bos_moss_crown_a'; readonly hp: number; readonly maxHp: number; readonly z: number; readonly phase: 1 | 2; readonly telegraphSeconds: number; readonly telegraphText: string; readonly isDefeated: boolean; }
 export interface M1RunSnapshot {
   readonly phase: RunPhase; readonly chapterId: ChapterId; readonly chapterTitle: string; readonly elapsedSeconds: number; readonly distanceMeters: number; readonly player: PlayerSnapshot;
-  readonly enemies: readonly EnemySnapshot[]; readonly gates: readonly GateSnapshot[]; readonly arrows: readonly ArrowSnapshot[]; readonly hits: readonly HitSnapshot[]; readonly pickups: readonly PickupSnapshot[]; readonly collectedShards: number; readonly selectedGateIds: readonly string[];
+  readonly enemies: readonly EnemySnapshot[]; readonly gates: readonly GateSnapshot[]; readonly arrows: readonly ArrowSnapshot[]; readonly hits: readonly HitSnapshot[]; readonly pickups: readonly PickupSnapshot[]; readonly lightningTargetIds: readonly string[]; readonly collectedShards: number; readonly selectedGateIds: readonly string[];
   readonly boss: BossSnapshot | undefined; readonly rewardOptions: readonly RewardId[]; readonly selectedReward: RewardId | undefined; readonly earnedGold: number;
 }
 
@@ -30,16 +30,16 @@ const WORLD_SPEED = 4;
 const PLAYER_MAX_X = 5;
 const PLAYER_MOVE_SPEED = 10;
 const BOSS_START_DISTANCE = 78;
-const REWARDS: readonly RewardId[] = ['storm_bow', 'blade_nexus', 'heartwood', 'deadeye', 'gale_heart', 'ironbark'];
+const REWARDS: readonly RewardId[] = ['storm_bow', 'lightning_core', 'heartwood', 'deadeye', 'gale_heart', 'ironbark'];
 
 export class M1RunSimulation {
   private phase: RunPhase = 'menu'; private chapterId: ChapterId = 'ch01_meadow'; private elapsedSeconds = 0; private distanceMeters = 0; private targetX = 0;
-  private player = { x: 0, hp: 100, maxHp: 100, damage: 1, projectileCount: 1, arrowSpeed: 24, swordCount: 0, pierceCount: 0, movementSpeed: PLAYER_MOVE_SPEED, damageReduction: 0, fireRateMultiplier: 1, arrowCharge: 0, pierceCharge: 0, swordCharge: 0 };
-  private attackCooldownSeconds = 0; private attackIntervalSeconds = 0.45; private nextArrowId = 1; private nextEffectId = 1; private earnedGold = 0; private collectedShards = 0; private boss: MutableBoss | undefined;
-  private selectedReward: RewardId | undefined; private rewardOptions: RewardId[] = []; private randomState = 1; private runNumber = 0; private readonly selectedGateIds = new Set<string>(); private readonly spawnedWaveIds = new Set<string>(); private readonly positionedEnemyIds = new Set<string>(); private readonly enemies: MutableEnemy[] = []; private readonly arrows: MutableArrow[] = []; private readonly hits: MutableHit[] = []; private readonly pickups: MutablePickup[] = [];
+  private player = { x: 0, hp: 100, maxHp: 100, damage: 1, projectileCount: 1, arrowSpeed: 24, pierceCount: 0, movementSpeed: PLAYER_MOVE_SPEED, damageReduction: 0, fireRateMultiplier: 1, arrowCharge: 0, pierceCharge: 0, lightningTargetCount: 2, lightningDamagePerSecond: 4, lightningRange: 18, lightningTargetCharge: 0 };
+  private attackCooldownSeconds = 0; private attackIntervalSeconds = 0.45; private lightningCooldownSeconds = 0; private nextArrowId = 1; private nextEffectId = 1; private earnedGold = 0; private collectedShards = 0; private boss: MutableBoss | undefined;
+  private selectedReward: RewardId | undefined; private rewardOptions: RewardId[] = []; private randomState = 1; private runNumber = 0; private readonly selectedGateIds = new Set<string>(); private readonly spawnedWaveIds = new Set<string>(); private readonly positionedEnemyIds = new Set<string>(); private readonly enemies: MutableEnemy[] = []; private readonly arrows: MutableArrow[] = []; private readonly hits: MutableHit[] = []; private readonly pickups: MutablePickup[] = []; private lightningTargetIds: string[] = [];
   private readonly gates: MutableGate[] = [
     { groupId: 'g01', leftLabel: '+1 箭矢', rightLabel: '箭傷 +25%', leftBuffId: 'split_arrow', rightBuffId: 'power_shot', z: 10, isChosen: false },
-    { groupId: 'g02', leftLabel: '箭速 +25%', rightLabel: '飛劍 +1', leftBuffId: 'swift_shot', rightBuffId: 'flying_sword', z: 28, isChosen: false },
+    { groupId: 'g02', leftLabel: '箭速 +25%', rightLabel: '電擊目標 +1', leftBuffId: 'swift_shot', rightBuffId: 'lightning_targets', z: 28, isChosen: false },
     { groupId: 'g03', leftLabel: '+1 箭矢', rightLabel: '箭傷 +25%', leftBuffId: 'split_arrow', rightBuffId: 'power_shot', z: 42, isChosen: false },
   ];
 
@@ -49,8 +49,8 @@ export class M1RunSimulation {
     this.randomState = (chapter.index * 2654435761 + ++this.runNumber) >>> 0;
     this.phase = 'playing'; this.elapsedSeconds = 0; this.distanceMeters = 0; this.targetX = 0; this.earnedGold = 0; this.boss = undefined; this.selectedReward = undefined; this.rewardOptions = [];
     const maxHp = 100 + (modifiers.healthLevel ?? 0) * 10;
-    this.player = { x: 0, hp: maxHp, maxHp, damage: 1 + (modifiers.damageLevel ?? 0) * 0.2, projectileCount: 1, arrowSpeed: 24 + (modifiers.arrowSpeedLevel ?? 0) * 2, swordCount: 0, pierceCount: modifiers.pierceLevel ?? 0, movementSpeed: PLAYER_MOVE_SPEED + (modifiers.movementLevel ?? 0), damageReduction: 0, fireRateMultiplier: 1, arrowCharge: 0, pierceCharge: 0, swordCharge: 0 }; this.attackCooldownSeconds = 0; this.attackIntervalSeconds = Math.max(0.25, 0.45 - (modifiers.fireRateLevel ?? 0) * 0.04); this.nextArrowId = 1; this.nextEffectId = 1; this.collectedShards = 0;
-    this.selectedGateIds.clear(); this.spawnedWaveIds.clear(); this.positionedEnemyIds.clear(); this.enemies.length = 0; this.arrows.length = 0; this.hits.length = 0; this.pickups.length = 0;
+    this.player = { x: 0, hp: maxHp, maxHp, damage: 1 + (modifiers.damageLevel ?? 0) * 0.2, projectileCount: 1, arrowSpeed: 24 + (modifiers.arrowSpeedLevel ?? 0) * 2, pierceCount: modifiers.pierceLevel ?? 0, movementSpeed: PLAYER_MOVE_SPEED + (modifiers.movementLevel ?? 0), damageReduction: 0, fireRateMultiplier: 1, arrowCharge: 0, pierceCharge: 0, lightningTargetCount: 2, lightningDamagePerSecond: 4, lightningRange: 18, lightningTargetCharge: 0 }; this.attackCooldownSeconds = 0; this.attackIntervalSeconds = Math.max(0.25, 0.45 - (modifiers.fireRateLevel ?? 0) * 0.04); this.lightningCooldownSeconds = 0; this.nextArrowId = 1; this.nextEffectId = 1; this.collectedShards = 0;
+    this.selectedGateIds.clear(); this.spawnedWaveIds.clear(); this.positionedEnemyIds.clear(); this.enemies.length = 0; this.arrows.length = 0; this.hits.length = 0; this.pickups.length = 0; this.lightningTargetIds = [];
     this.gates.splice(0, this.gates.length, ...this.createGates());
   }
 
@@ -58,9 +58,9 @@ export class M1RunSimulation {
   public restore(snapshot: M1RunSnapshot): boolean {
     if (snapshot.phase !== 'playing' && snapshot.phase !== 'reward') return false;
     this.phase = snapshot.phase; this.chapterId = snapshot.chapterId ?? 'ch01_meadow'; this.elapsedSeconds = snapshot.elapsedSeconds; this.distanceMeters = snapshot.distanceMeters; this.targetX = snapshot.player.x;
-    this.player = { ...snapshot.player, pierceCount: snapshot.player.pierceCount ?? 0, pierceCharge: snapshot.player.pierceCharge ?? 0 }; this.attackCooldownSeconds = 0.1; this.nextArrowId = Math.max(1, ...snapshot.arrows.map((arrow) => arrow.id + 1)); this.earnedGold = snapshot.earnedGold; this.collectedShards = snapshot.collectedShards ?? 0; this.selectedReward = snapshot.selectedReward; this.rewardOptions = [...snapshot.rewardOptions];
+    this.player = { ...snapshot.player, pierceCount: snapshot.player.pierceCount ?? 0, pierceCharge: snapshot.player.pierceCharge ?? 0, lightningTargetCount: snapshot.player.lightningTargetCount ?? 2, lightningDamagePerSecond: snapshot.player.lightningDamagePerSecond ?? 4, lightningRange: snapshot.player.lightningRange ?? 18, lightningTargetCharge: snapshot.player.lightningTargetCharge ?? 0 }; this.attackCooldownSeconds = 0.1; this.lightningCooldownSeconds = 0; this.nextArrowId = Math.max(1, ...snapshot.arrows.map((arrow) => arrow.id + 1)); this.earnedGold = snapshot.earnedGold; this.collectedShards = snapshot.collectedShards ?? 0; this.selectedReward = snapshot.selectedReward === ('blade_nexus' as never) ? 'lightning_core' : snapshot.selectedReward; this.rewardOptions = snapshot.rewardOptions.map((reward) => reward === ('blade_nexus' as never) ? 'lightning_core' : reward);
     this.selectedGateIds.clear(); snapshot.selectedGateIds.forEach((id) => this.selectedGateIds.add(id)); this.positionedEnemyIds.clear(); snapshot.enemies.forEach((enemy) => this.positionedEnemyIds.add(enemy.id)); this.enemies.splice(0, this.enemies.length, ...snapshot.enemies.map((enemy) => ({ ...enemy, deathSeconds: enemy.deathSeconds ?? 0, attackCooldownSeconds: 0.5 }))); this.arrows.splice(0, this.arrows.length, ...snapshot.arrows.map((arrow) => ({ ...arrow, vx: arrow.vx ?? 0, piercesRemaining: arrow.piercesRemaining ?? 0, hitEnemyIds: [...(arrow.hitEnemyIds ?? [])], hitBoss: arrow.hitBoss ?? false })));
-    this.gates.splice(0, this.gates.length, ...snapshot.gates.map((gate) => ({ ...gate }))); this.hits.splice(0, this.hits.length, ...(snapshot.hits ?? []).map((hit) => ({ ...hit }))); this.pickups.splice(0, this.pickups.length, ...(snapshot.pickups ?? []).map((pickup) => ({ ...pickup })));
+    this.gates.splice(0, this.gates.length, ...snapshot.gates.map((gate) => ({ ...gate, leftBuffId: gate.leftBuffId === ('flying_sword' as never) ? 'lightning_targets' : gate.leftBuffId, rightBuffId: gate.rightBuffId === ('flying_sword' as never) ? 'lightning_targets' : gate.rightBuffId, leftLabel: gate.leftBuffId === ('flying_sword' as never) ? '電擊目標 +1' : gate.leftLabel, rightLabel: gate.rightBuffId === ('flying_sword' as never) ? '電擊目標 +1' : gate.rightLabel }))); this.hits.splice(0, this.hits.length, ...(snapshot.hits ?? []).map((hit) => ({ ...hit }))); this.pickups.splice(0, this.pickups.length, ...(snapshot.pickups ?? []).map((pickup) => ({ ...pickup, buffId: pickup.buffId === ('flying_sword' as never) ? 'lightning_targets' : pickup.buffId, label: pickup.buffId === ('flying_sword' as never) ? '鎖定碎片 +⅓' : pickup.label }))); this.lightningTargetIds = [...(snapshot.lightningTargetIds ?? [])];
     this.boss = snapshot.boss === undefined ? undefined : { hp: snapshot.boss.hp, maxHp: snapshot.boss.maxHp, z: snapshot.boss.z ?? 15, phase: snapshot.boss.phase, telegraphSeconds: snapshot.boss.telegraphSeconds, telegraphText: snapshot.boss.telegraphText, attackCooldownSeconds: 1, isDefeated: snapshot.boss.isDefeated };
     return true;
   }
@@ -70,7 +70,7 @@ export class M1RunSimulation {
     if (this.phase !== 'reward' || this.selectedReward !== undefined || !this.rewardOptions.includes(rewardId)) return false;
     this.selectedReward = rewardId;
     if (rewardId === 'storm_bow') { this.player.projectileCount += 2; this.player.damage *= 1.4; }
-    if (rewardId === 'blade_nexus') this.player.swordCount += 2;
+    if (rewardId === 'lightning_core') { this.player.lightningTargetCount += 1; this.player.lightningDamagePerSecond += 3; this.player.lightningRange += 6; }
     if (rewardId === 'heartwood') { this.player.maxHp += 60; this.player.hp += 60; }
     if (rewardId === 'deadeye') this.player.damage *= 1.35;
     if (rewardId === 'gale_heart') this.player.arrowSpeed *= 1.4;
@@ -84,7 +84,7 @@ export class M1RunSimulation {
     const next = getNextChapterDefinition(this.chapterId);
     if (next === undefined) return false;
     this.chapterId = next.id; this.phase = 'playing'; this.elapsedSeconds = 0; this.distanceMeters = 0; this.targetX = 0; this.boss = undefined; this.selectedReward = undefined; this.rewardOptions = []; this.earnedGold = 0; this.attackCooldownSeconds = 0;
-    this.enemies.length = 0; this.arrows.length = 0; this.hits.length = 0; this.pickups.length = 0; this.selectedGateIds.clear(); this.spawnedWaveIds.clear(); this.positionedEnemyIds.clear();
+    this.enemies.length = 0; this.arrows.length = 0; this.hits.length = 0; this.pickups.length = 0; this.lightningTargetIds = []; this.selectedGateIds.clear(); this.spawnedWaveIds.clear(); this.positionedEnemyIds.clear();
     this.randomState = (getChapterDefinition(next.id).index * 2654435761 + ++this.runNumber) >>> 0;
     this.gates.splice(0, this.gates.length, ...this.createGates());
     return true;
@@ -95,14 +95,14 @@ export class M1RunSimulation {
     this.elapsedSeconds += deltaSeconds; this.movePlayer(deltaSeconds); this.resolveGates(); this.spawnEnemies(); this.spawnExtraWaves(); this.updateEnemies(deltaSeconds);
     if (this.boss === undefined && this.distanceMeters >= BOSS_START_DISTANCE) this.spawnBoss();
     this.updateBoss(deltaSeconds); this.attackCooldownSeconds -= deltaSeconds;
-    if (this.attackCooldownSeconds <= 0) this.fireAtNearestTarget(); this.updateArrows(deltaSeconds); this.updateEffects(deltaSeconds); this.updatePickups(deltaSeconds);
+    if (this.attackCooldownSeconds <= 0) this.fireAtNearestTarget(); this.updateArrows(deltaSeconds); this.updateLightning(deltaSeconds); this.updateEffects(deltaSeconds); this.updatePickups(deltaSeconds);
     if (this.player.hp <= 0) this.phase = 'dead';
     if (this.boss === undefined) this.distanceMeters += WORLD_SPEED * deltaSeconds;
   }
 
   public snapshot(): M1RunSnapshot {
     const chapter = getChapterDefinition(this.chapterId);
-    return { phase: this.phase, chapterId: chapter.id, chapterTitle: chapter.title, elapsedSeconds: this.elapsedSeconds, distanceMeters: this.distanceMeters, player: { ...this.player }, enemies: this.enemies.map((enemy) => ({ ...enemy })), gates: this.gates.map((gate) => ({ ...gate })), arrows: this.arrows.map((arrow) => ({ ...arrow })), hits: this.hits.map((hit) => ({ ...hit })), pickups: this.pickups.map((pickup) => ({ ...pickup })), collectedShards: this.collectedShards, selectedGateIds: [...this.selectedGateIds], boss: this.boss === undefined ? undefined : { id: 'bos_moss_crown_a', hp: this.boss.hp, maxHp: this.boss.maxHp, z: this.boss.z, phase: this.boss.phase, telegraphSeconds: this.boss.telegraphSeconds, telegraphText: this.boss.telegraphText, isDefeated: this.boss.isDefeated }, rewardOptions: this.rewardOptions, selectedReward: this.selectedReward, earnedGold: this.earnedGold };
+    return { phase: this.phase, chapterId: chapter.id, chapterTitle: chapter.title, elapsedSeconds: this.elapsedSeconds, distanceMeters: this.distanceMeters, player: { ...this.player }, enemies: this.enemies.map((enemy) => ({ ...enemy })), gates: this.gates.map((gate) => ({ ...gate })), arrows: this.arrows.map((arrow) => ({ ...arrow })), hits: this.hits.map((hit) => ({ ...hit })), pickups: this.pickups.map((pickup) => ({ ...pickup })), lightningTargetIds: [...this.lightningTargetIds], collectedShards: this.collectedShards, selectedGateIds: [...this.selectedGateIds], boss: this.boss === undefined ? undefined : { id: 'bos_moss_crown_a', hp: this.boss.hp, maxHp: this.boss.maxHp, z: this.boss.z, phase: this.boss.phase, telegraphSeconds: this.boss.telegraphSeconds, telegraphText: this.boss.telegraphText, isDefeated: this.boss.isDefeated }, rewardOptions: this.rewardOptions, selectedReward: this.selectedReward, earnedGold: this.earnedGold };
   }
 
   private movePlayer(deltaSeconds: number): void { const delta = this.targetX - this.player.x; const maxMove = this.player.movementSpeed * deltaSeconds; this.player.x += Math.max(-maxMove, Math.min(maxMove, delta)); }
@@ -121,7 +121,9 @@ export class M1RunSimulation {
     if (buffId === 'swift_shot') this.player.arrowSpeed *= 1 + 0.25 * scale;
     if (buffId === 'rapid_fire') this.player.fireRateMultiplier *= 1 - 0.12 * scale;
     if (buffId === 'piercing_arrow') { this.player.pierceCharge += scale; while (this.player.pierceCharge >= 1) { this.player.pierceCount += 1; this.player.pierceCharge -= 1; } }
-    if (buffId === 'flying_sword') { this.player.swordCharge += scale; while (this.player.swordCharge >= 1) { this.player.swordCount += 1; this.player.swordCharge -= 1; } }
+    if (buffId === 'lightning_targets') { this.player.lightningTargetCharge += scale; while (this.player.lightningTargetCharge >= 1) { this.player.lightningTargetCount += 1; this.player.lightningTargetCharge -= 1; } }
+    if (buffId === 'lightning_damage') this.player.lightningDamagePerSecond += 2 * scale;
+    if (buffId === 'lightning_range') this.player.lightningRange += 6 * scale;
     if (buffId === 'vitality') { const amount = 20 * scale; this.player.maxHp += amount; this.player.hp = Math.min(this.player.maxHp, this.player.hp + amount); }
     if (buffId === 'windstep') this.player.movementSpeed *= 1 + 0.2 * scale;
     if (buffId === 'barkskin') this.player.damageReduction = Math.min(0.6, this.player.damageReduction + 0.15 * scale);
@@ -132,7 +134,19 @@ export class M1RunSimulation {
   private spawnBoss(): void { const hp = getChapterDefinition(this.chapterId).bossHp; const messages: Record<ChapterId, string> = { ch01_meadow: '苔冠守衛被靜滯困住了。', ch02_viaduct: '鏡潮校準者正在鎖定航線！', ch03_forge: '熔脈監工正在蓄積震波！', ch04_canopy: '枝語母體正在喚醒霧冠！', ch05_archive: '無光抄錄者正在改寫星圖！', ch06_horizon: '靜滯之核正在撕裂地平！' }; this.boss = { hp, maxHp: hp, z: 46, phase: 1, telegraphSeconds: 0.8, telegraphText: messages[this.chapterId], attackCooldownSeconds: 2.5, isDefeated: false }; }
   private updateBoss(deltaSeconds: number): void { const boss = this.boss; if (boss === undefined || boss.isDefeated) return; if (boss.z > 15) { boss.z = Math.max(15, boss.z - WORLD_SPEED * deltaSeconds); return; } if (boss.hp <= boss.maxHp / 2 && boss.phase === 1) { boss.phase = 2; boss.telegraphSeconds = 0.8; boss.telegraphText = '靜滯正在加深！'; boss.attackCooldownSeconds = 2.2; } boss.attackCooldownSeconds -= deltaSeconds; if (boss.telegraphSeconds > 0) { boss.telegraphSeconds -= deltaSeconds; if (boss.telegraphSeconds <= 0 && boss.telegraphText !== '靜滯正在加深！') { if (Math.abs(this.player.x) < 2.3) this.takeDamage(boss.phase === 1 ? 14 : 20); boss.attackCooldownSeconds = boss.phase === 1 ? 2.7 : 2.1; } return; } if (boss.attackCooldownSeconds <= 0) { boss.telegraphSeconds = 0.75; boss.telegraphText = boss.phase === 1 ? '藤刺正在瞄準！' : '震波正在擴散！'; } }
   private fireAtNearestTarget(): void { this.attackCooldownSeconds = this.attackIntervalSeconds * this.player.fireRateMultiplier; for (let index = 0; index < this.player.projectileCount; index += 1) { const spreadIndex = index - (this.player.projectileCount - 1) / 2; const angleRadians = spreadIndex * 0.14; const offset = spreadIndex * 0.18; this.arrows.push({ id: this.nextArrowId++, x: this.player.x + offset, z: 1, vx: Math.sin(angleRadians) * this.player.arrowSpeed, piercesRemaining: this.player.pierceCount, hitEnemyIds: [], hitBoss: false }); } }
+  private updateLightning(deltaSeconds: number): void {
+    const targets = this.enemies.filter((enemy) => enemy.deathSeconds <= 0 && enemy.z > 0 && Math.hypot(enemy.x - this.player.x, enemy.z) <= this.player.lightningRange).sort((left, right) => Math.hypot(left.x - this.player.x, left.z) - Math.hypot(right.x - this.player.x, right.z)).slice(0, this.player.lightningTargetCount);
+    const boss = this.boss;
+    const canLockBoss = boss !== undefined && !boss.isDefeated && boss.z > 0 && Math.hypot(this.player.x, boss.z) <= this.player.lightningRange && targets.length < this.player.lightningTargetCount;
+    this.lightningTargetIds = [...targets.map((target) => target.id), ...(canLockBoss ? ['boss'] : [])];
+    this.lightningCooldownSeconds -= deltaSeconds;
+    if (this.lightningCooldownSeconds > 0 || (targets.length === 0 && !canLockBoss)) return;
+    for (const target of targets) this.damageEnemy(target, this.player.lightningDamagePerSecond);
+    if (canLockBoss && boss !== undefined) this.damageBoss(boss, this.player.lightningDamagePerSecond);
+    this.lightningCooldownSeconds += 1;
+  }
   private damageEnemy(enemy: MutableEnemy, damage: number): void { enemy.hp -= damage; this.addHit(enemy.x, enemy.z); if (enemy.hp <= 0) { enemy.hp = 0; enemy.deathSeconds = 0.45; const buffId = BUFF_IDS[this.nextRandomIndex(BUFF_IDS.length)]!; this.pickups.push({ id: this.nextEffectId++, x: enemy.x, z: enemy.z, buffId, label: BUFF_CATALOG[buffId].pickupLabel }); } }
+  private damageBoss(boss: MutableBoss, damage: number): void { boss.hp -= damage; this.addHit(0, boss.z); if (boss.hp <= 0) { boss.hp = 0; boss.isDefeated = true; this.earnedGold = 30; this.rewardOptions = this.drawRewards(); this.phase = 'reward'; } }
   private takeDamage(amount: number): void { this.player.hp -= amount * (1 - this.player.damageReduction); }
   private addHit(x: number, z: number): void { this.hits.push({ id: this.nextEffectId++, x, z, seconds: 0.2 }); }
   private updateArrows(deltaSeconds: number): void { for (let index = this.arrows.length - 1; index >= 0; index -= 1) { const arrow = this.arrows[index]; if (arrow === undefined) continue; arrow.x += arrow.vx * deltaSeconds; arrow.z += Math.sqrt(Math.max(0, this.player.arrowSpeed ** 2 - arrow.vx ** 2)) * deltaSeconds; if (this.tryArrowHit(arrow)) { if (arrow.piercesRemaining <= 0) { this.arrows.splice(index, 1); continue; } arrow.piercesRemaining -= 1; } if (arrow.z > 45 || Math.abs(arrow.x) > 12) this.arrows.splice(index, 1); } for (let index = this.enemies.length - 1; index >= 0; index -= 1) { const enemy = this.enemies[index]; if (enemy !== undefined && (enemy.z < -2 || (enemy.hp <= 0 && enemy.deathSeconds <= 0))) this.enemies.splice(index, 1); } }

@@ -25,7 +25,7 @@ const ENEMY_MATERIALS = {
 };
 
 const BUFF_ICON_GLYPHS: Record<BuffId, string> = {
-  split_arrow: '↗', power_shot: '✦', swift_shot: '➤', rapid_fire: '≋', piercing_arrow: '⊹', flying_sword: '⚔', vitality: '✚', windstep: '➟', barkskin: '◆',
+  split_arrow: '↗', power_shot: '✦', swift_shot: '➤', rapid_fire: '≋', piercing_arrow: '⊹', lightning_targets: '⚡', lightning_damage: '✹', lightning_range: '⌁', vitality: '✚', windstep: '➟', barkskin: '◆',
 };
 
 export class ThreeRuntime {
@@ -42,6 +42,7 @@ export class ThreeRuntime {
   private readonly arrowMeshes = new Map<number, Mesh>();
   private readonly hitMeshes = new Map<number, Mesh>();
   private readonly pickupMeshes = new Map<number, Mesh>();
+  private readonly lightningMeshes = new Map<string, Mesh>();
   private readonly gateGroups = new Map<string, Group>();
   private bossChapterId: M1RunSnapshot['chapterId'] = 'ch01_meadow';
 
@@ -85,6 +86,7 @@ export class ThreeRuntime {
     this.syncArrows(snapshot);
     this.syncHits(snapshot);
     this.syncPickups(snapshot);
+    this.syncLightning(snapshot);
     this.syncBoss(snapshot);
   }
 
@@ -113,6 +115,7 @@ export class ThreeRuntime {
     for (const mesh of this.arrowMeshes.values()) this.disposeMesh(mesh);
     for (const mesh of this.hitMeshes.values()) this.disposeMesh(mesh);
     for (const mesh of this.pickupMeshes.values()) this.disposeMesh(mesh);
+    for (const mesh of this.lightningMeshes.values()) this.disposeMesh(mesh);
     for (const group of this.gateGroups.values()) group.traverse((child) => {
       if (child instanceof Mesh) this.disposeMesh(child);
       if (child instanceof Sprite) {
@@ -313,6 +316,26 @@ export class ThreeRuntime {
     });
   }
 
+  private syncLightning(snapshot: M1RunSnapshot): void {
+    const targets = new Set(snapshot.lightningTargetIds);
+    for (const [id, mesh] of this.lightningMeshes) {
+      if (!targets.has(id)) { this.scene.remove(mesh); this.disposeMesh(mesh); this.lightningMeshes.delete(id); }
+    }
+    for (const enemy of snapshot.enemies) {
+      if (!targets.has(enemy.id)) continue;
+      let mesh = this.lightningMeshes.get(enemy.id);
+      if (mesh === undefined) {
+        mesh = new Mesh(new OctahedronGeometry(0.52, 1), new MeshBasicMaterial({ color: '#a9ecff', transparent: true, opacity: 0.8 }));
+        this.lightningMeshes.set(enemy.id, mesh);
+        this.scene.add(mesh);
+      }
+      mesh.position.set(enemy.x, 1.1, enemy.z);
+      mesh.rotation.y += 0.18;
+      const pulse = 0.9 + Math.sin(performance.now() / 55) * 0.2;
+      mesh.scale.setScalar(pulse);
+    }
+  }
+
   private syncPickups(snapshot: M1RunSnapshot): void {
     this.syncTransientMeshes(snapshot.pickups, this.pickupMeshes, () => this.createPickupMesh(), (mesh, pickup) => {
       mesh.position.set(pickup.x, 0.45, pickup.z);
@@ -351,7 +374,7 @@ export class ThreeRuntime {
   }
 
   private drawPickupIcon(context: CanvasRenderingContext2D, buffId: BuffId, x: number, y: number): void {
-    const icons: Record<BuffId, readonly [string, string]> = { split_arrow: ['➤', '#f4c95d'], power_shot: ['✦', '#ff9a6b'], swift_shot: ['≫', '#71e6d1'], rapid_fire: ['⚡', '#fff4ba'], piercing_arrow: ['⇥', '#a986ef'], flying_sword: ['†', '#d8d0ff'], vitality: ['+', '#ff8d9b'], windstep: ['➜', '#83d7ff'], barkskin: ['⬡', '#8fe39a'] };
+    const icons: Record<BuffId, readonly [string, string]> = { split_arrow: ['➤', '#f4c95d'], power_shot: ['✦', '#ff9a6b'], swift_shot: ['≫', '#71e6d1'], rapid_fire: ['⚡', '#fff4ba'], piercing_arrow: ['⇥', '#a986ef'], lightning_targets: ['⚡', '#9ee8ff'], lightning_damage: ['✹', '#b3a6ff'], lightning_range: ['⌁', '#71e6d1'], vitality: ['+', '#ff8d9b'], windstep: ['➜', '#83d7ff'], barkskin: ['⬡', '#8fe39a'] };
     const [glyph, color] = icons[buffId];
     context.fillStyle = color; context.beginPath(); context.arc(x, y, 72, 0, Math.PI * 2); context.fill();
     context.fillStyle = '#102c2a'; context.font = '800 104px system-ui, sans-serif'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(glyph, x, y + 4);

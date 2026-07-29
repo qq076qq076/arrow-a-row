@@ -4,7 +4,7 @@ chapter.ch01.intro,光軌在草浪間延伸，第一道裂隙就在前方。,The
 chapter.ch01.boss_intro,苔冠守衛被靜滯困住了。讓它重新聽見風吧。,The Moss-Crown Warden is trapped in stasis. Let it hear the wind again.,30,BossHUD,boss_intro,堅定,false,Boss 前
 chapter.ch01.phase_two,靜滯正在加深！,The stasis deepens!,12,BossHUD,boss_phase_two,警示,false,Phase 轉換
 chapter.ch01.boss_outro,苔冠重新聽見了風；鏡潮高架的光線正在召喚你。,The crown hears the wind again. A light calls from Mirror Tide Viaduct.,32,Reward,boss_defeated,收束,false,Boss 後
-gate.sword_orbit.subtitle,自動追擊附近敵人。,Seeks nearby enemies automatically.,14,Gate,first_seen,說明,true,首次顯示才出現
+gate.lightning.subtitle,每秒鎖定前方最近敵人。,Locks the nearest enemies ahead each second.,18,Gate,first_seen,說明,true,首次顯示才出現
 reward.title,選擇一份回響,Choose an Echo,10,Reward,boss_defeated,鼓勵,true,獎勵標題
 result.death.generic,光軌尚未熄滅。帶著晶塵回到曙站，再走一次。,The lightway remains. Return to Dawn Station with your dust and try again.,32,Result,death,鼓勵,true,一般死亡
 result.death.projectile,下次留意蓄力亮光；橫向移動能避開直線攻擊。,Watch for charging light next time. Move sideways to evade straight attacks.,31,Result,projectile_death,指引,true,敵彈死亡
@@ -16,7 +16,7 @@ boss.moss_crown.attack.vine,藤刺正在瞄準！,Vines are taking aim!,12,BossH
 boss.moss_crown.attack.roots,根鬚正在掃掠！,Roots are sweeping in!,12,BossHUD,boss_attack_roots,警示,true,Boss 預警
 boss.moss_crown.attack.wave,震波正在擴散！,A shockwave is spreading!,14,BossHUD,boss_attack_wave,警示,true,Boss 預警
 reward.storm_bow,風暴弓,Storm Bow,12,Reward,reward_card,鼓勵,true,箭數 +2、箭傷 +40%
-reward.blade_nexus,刃環核心,Blade Nexus,8,Reward,reward_card,鼓勵,true,飛劍 Build
+reward.lightning_core,雷網核心,Storm Lattice,10,Reward,reward_card,鼓勵,true,目標 +1、傷害 +3、距離 +6
 reward.heartwood,心木護佑,Heartwood Guard,8,Reward,reward_card,鼓勵,true,生存 Build
 shop.title,永久強化,Permanent Upgrades,10,Shop,open_shop,安定,true,商店標題
 shop.health,曙光體魄,Dawn Vitality,8,Shop,upgrade_name,鼓勵,true,最大生命
@@ -37,7 +37,9 @@ buff.power_shot,箭傷回響,Power Echo,8,Pickup,pickup,清楚,true,+8% 箭傷
 buff.swift_shot,箭速回響,Swift Echo,8,Pickup,pickup,清楚,true,+8% 箭速
 buff.rapid_fire,迅捷回響,Rapid Echo,8,Pickup,pickup,清楚,true,+4% 射速
 buff.piercing_arrow,穿透碎片,Piercing Fragment,10,Pickup,pickup,清楚,true,+1/3 穿透
-buff.flying_sword,飛劍碎片,Blade Fragment,8,Pickup,pickup,清楚,true,+1/3 飛劍
+buff.lightning_targets,鎖定碎片,Lock Fragment,10,Pickup,pickup,清楚,true,+1/3 鎖定目標
+buff.lightning_damage,電能,Volt Charge,8,Pickup,pickup,清楚,true,+1 每秒傷害
+buff.lightning_range,電距,Arc Reach,8,Pickup,pickup,清楚,true,+2 鎖定距離
 buff.vitality,生命回響,Vitality Echo,8,Pickup,pickup,鼓勵,true,+7 生命
 buff.windstep,步伐回響,Windstep Echo,8,Pickup,pickup,鼓勵,true,+7% 移速
 buff.barkskin,樹甲回響,Barkskin Echo,8,Pickup,pickup,鼓勵,true,+5% 減傷

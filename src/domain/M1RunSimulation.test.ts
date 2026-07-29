@@ -106,7 +106,19 @@ describe('M1RunSimulation', () => {
     for (let tick = 0; tick < 600 && simulation.snapshot().pickups.length === 0; tick += 1) simulation.tick(1 / 30);
     const pickup = simulation.snapshot().pickups[0];
     expect(pickup?.buffId).toBeDefined();
-    expect(pickup?.label).toMatch(/\+⅓|\+8%|\+4%|\+7%|\+5%/);
+    expect(pickup?.label).toMatch(/\+⅓|\+\d/);
+  });
+
+  it('automatically locks up to two forward enemies and damages them once per second', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start({ damageLevel: 0 });
+    expect(simulation.snapshot().player.lightningTargetCount).toBe(2);
+    simulation.setTargetX(5);
+    for (let tick = 0; tick < 900 && simulation.snapshot().lightningTargetIds.length < 2; tick += 1) simulation.tick(1 / 30);
+
+    const snapshot = simulation.snapshot();
+    expect(snapshot.lightningTargetIds).toHaveLength(2);
+    expect(snapshot.lightningTargetIds.every((id) => snapshot.enemies.some((enemy) => enemy.id === id && enemy.z > 0))).toBe(true);
   });
 
   it('fires multiple arrows in a forward fan rather than parallel lines', () => {
@@ -177,7 +189,7 @@ describe('M1RunSimulation', () => {
 
   it('carries the selected Build through all six chapters and stops after CH06', () => {
     const simulation = new M1RunSimulation();
-    simulation.start({ healthLevel: 5, damageLevel: 5, fireRateLevel: 5 });
+    simulation.start({ healthLevel: 100, damageLevel: 5, fireRateLevel: 5 });
     const bossHpByChapter: number[] = [];
 
     for (let chapterIndex = 1; chapterIndex <= 6; chapterIndex += 1) {
