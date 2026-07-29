@@ -30,8 +30,8 @@ export class M1RunSimulation {
   private attackCooldownSeconds = 0; private nextArrowId = 1; private earnedGold = 0; private boss: MutableBoss | undefined;
   private selectedReward: RewardId | undefined; private readonly selectedGateIds = new Set<string>(); private readonly enemies: MutableEnemy[] = []; private readonly arrows: MutableArrow[] = [];
   private readonly gates: MutableGate[] = [
-    { groupId: 'g01', leftLabel: '+1 箭矢', rightLabel: '最大 HP +25', z: 10, isChosen: false },
-    { groupId: 'g02', leftLabel: '箭傷 +25%', rightLabel: '回復 25 HP', z: 28, isChosen: false },
+    { groupId: 'g01', leftLabel: '+1 箭矢', rightLabel: '箭傷 +25%', z: 10, isChosen: false },
+    { groupId: 'g02', leftLabel: '+1 箭矢', rightLabel: '箭傷 +25%', z: 28, isChosen: false },
   ];
 
   public start(): void {
@@ -39,8 +39,8 @@ export class M1RunSimulation {
     this.player = { x: 0, hp: 100, maxHp: 100, damage: 1, projectileCount: 1, swordCount: 0 }; this.attackCooldownSeconds = 0; this.nextArrowId = 1;
     this.selectedGateIds.clear(); this.enemies.length = 0; this.arrows.length = 0;
     this.gates.splice(0, this.gates.length,
-      { groupId: 'g01', leftLabel: '+1 箭矢', rightLabel: '最大 HP +25', z: 10, isChosen: false },
-      { groupId: 'g02', leftLabel: '箭傷 +25%', rightLabel: '回復 25 HP', z: 28, isChosen: false });
+      { groupId: 'g01', leftLabel: '+1 箭矢', rightLabel: '箭傷 +25%', z: 10, isChosen: false },
+      { groupId: 'g02', leftLabel: '+1 箭矢', rightLabel: '箭傷 +25%', z: 28, isChosen: false });
   }
 
   /** Restores only data produced by snapshot(); cooldowns restart safely on resume. */
@@ -80,7 +80,7 @@ export class M1RunSimulation {
   }
 
   private movePlayer(deltaSeconds: number): void { const delta = this.targetX - this.player.x; const maxMove = PLAYER_MOVE_SPEED * deltaSeconds; this.player.x += Math.max(-maxMove, Math.min(maxMove, delta)); }
-  private resolveGates(): void { for (const gate of this.gates) { if (gate.isChosen || this.distanceMeters < gate.z) continue; const isLeft = this.player.x < 0; gate.isChosen = true; this.selectedGateIds.add(gate.groupId); if (gate.groupId === 'g01' && isLeft) this.player.projectileCount += 1; if (gate.groupId === 'g01' && !isLeft) { this.player.maxHp += 25; this.player.hp += 25; } if (gate.groupId === 'g02' && isLeft) this.player.damage *= 1.25; if (gate.groupId === 'g02' && !isLeft) this.player.hp = Math.min(this.player.maxHp, this.player.hp + 25); } }
+  private resolveGates(): void { for (const gate of this.gates) { if (gate.isChosen || this.distanceMeters < gate.z) continue; const isLeft = this.player.x < 0; gate.isChosen = true; this.selectedGateIds.add(gate.groupId); if (isLeft) this.player.projectileCount += 1; else this.player.damage *= 1.25; } }
   private spawnEnemies(): void { if (this.distanceMeters >= 15 && !this.hasEnemy('melee-1')) this.enemies.push({ id: 'melee-1', kind: 'melee', x: -2, z: 30, hp: 8, attackCooldownSeconds: 0, telegraphSeconds: 0 }, { id: 'melee-2', kind: 'melee', x: 0, z: 34, hp: 8, attackCooldownSeconds: 0, telegraphSeconds: 0 }, { id: 'melee-3', kind: 'melee', x: 2, z: 38, hp: 8, attackCooldownSeconds: 0, telegraphSeconds: 0 }); if (this.distanceMeters >= 35 && !this.hasEnemy('ranged-1')) this.enemies.push({ id: 'ranged-1', kind: 'ranged', x: 0, z: 38, hp: 12, attackCooldownSeconds: 2, telegraphSeconds: 0 }); }
   private updateEnemies(deltaSeconds: number): void { for (const enemy of this.enemies) { enemy.z -= WORLD_SPEED * deltaSeconds; enemy.attackCooldownSeconds -= deltaSeconds; if (enemy.kind === 'melee' && enemy.z <= 1.2 && enemy.attackCooldownSeconds <= 0) { this.player.hp -= 10; enemy.attackCooldownSeconds = 1; } if (enemy.kind === 'ranged') { if (enemy.attackCooldownSeconds <= 0 && enemy.telegraphSeconds <= 0) enemy.telegraphSeconds = 0.6; if (enemy.telegraphSeconds > 0) { enemy.telegraphSeconds -= deltaSeconds; if (enemy.telegraphSeconds <= 0) { if (Math.abs(this.player.x - enemy.x) < 1.2) this.player.hp -= 12; enemy.attackCooldownSeconds = 3.5; } } } } }
   private spawnBoss(): void { this.enemies.length = 0; this.boss = { hp: 36, maxHp: 36, phase: 1, telegraphSeconds: 0.8, telegraphText: '苔冠守衛被靜滯困住了。', attackCooldownSeconds: 2.5, isDefeated: false }; }

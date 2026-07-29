@@ -51,8 +51,8 @@
 
 | group ID | 左門（首局） | 右門（首局） | 設計意圖 | 重玩替換池 |
 | --- | --- | --- | --- | --- |
-| `g01` | `arrow_count`：`+1 箭矢` | `vital_reserve`：`最大 HP +25，回復 25` | 第一個門無風險，展示輸出／生存。 | arrow_count、arrow_damage、vital_reserve、field_mend |
-| `g02` | `arrow_damage`：`箭傷 +25%` | `field_mend`：`回復 25 HP` | 戰鬥後讓玩家讀懂傷害與治療。 | arrow_damage、rapid_fire、field_mend、windstep |
+| `g01` | `arrow_count`：`+1 箭矢` | `arrow_damage`：`箭傷 +25%` | 第一個門只展示兩種輸出成長。 | arrow_count、arrow_damage |
+| `g02` | `arrow_count`：`+1 箭矢` | `arrow_damage`：`箭傷 +25%` | 第二個門延續純輸出選擇，不提供生命／治療。 | arrow_count、arrow_damage |
 | `g03` | `rapid_fire`：`攻速 +12%` | `sword_orbit`：`獲得 1 把飛劍` | 首個 Build 分岔：弓箭或飛劍。 | rapid_fire、sword_orbit、longshot、iron_skin |
 | `g04` | `piercing_tip`：`穿透 +1` | `iron_skin`：`傷害減免 +8%` | 精英後給明確強化。 | piercing_tip、arrow_count、iron_skin、vital_reserve |
 | `g05` | `critical_eye`：`暴擊 +12%` | `ward_shard`：`獲得 20 護盾` | Boss 前最後選擇；展示短期防護。 | critical_eye、rapid_fire、ward_shard、longshot |

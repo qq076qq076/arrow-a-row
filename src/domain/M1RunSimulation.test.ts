@@ -6,6 +6,12 @@ function advanceToDistance(simulation: M1RunSimulation, distanceMeters: number):
 }
 
 describe('M1RunSimulation', () => {
+  it('starts every run with exactly one arrow', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start();
+    expect(simulation.snapshot().player.projectileCount).toBe(1);
+  });
+
   it('applies the left gate once even after more ticks', () => {
     const simulation = new M1RunSimulation();
     simulation.start();
@@ -31,6 +37,14 @@ describe('M1RunSimulation', () => {
       second.tick(1 / 30);
     }
     expect(first.snapshot()).toEqual(second.snapshot());
+  });
+
+  it('offers no health reward in either of the first two gates', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start();
+    const gates = simulation.snapshot().gates;
+    expect(gates).toHaveLength(2);
+    expect(gates.flatMap((gate) => [gate.leftLabel, gate.rightLabel]).join(' ')).not.toMatch(/HP|生命|回復|治療/);
   });
 
   it('reaches Boss reward and applies it exactly once', () => {
