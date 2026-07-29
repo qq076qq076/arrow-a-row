@@ -11,6 +11,9 @@
 | Ammo Box | https://polyhaven.com/a/ammo_box | DanKit | `public/assets/polyhaven/ammo_box/ammo_box.gltf`、1K JPG 貼圖與 BIN | CH02 磁軌獵犬的低矮近戰底盤 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 | Cannon 01 | https://polyhaven.com/a/cannon_01 | Yann Kervran、James Ray Cock | `public/assets/polyhaven/cannon_01/cannon_01.gltf`、1K JPG 貼圖與 BIN | CH02 鏡翼炮台的遠程砲身 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 | Drill Press 01 | https://polyhaven.com/a/drill_press_01 | Viktor | `public/assets/polyhaven/drill_press_01/drill_press_01.gltf`、1K JPG 貼圖與 BIN | CH02 鏡潮校準者的機械主體 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
+| Barrel 01 | https://polyhaven.com/a/Barrel_01 | Jorge Camacho | `public/assets/polyhaven/barrel_01/barrel_01.gltf`、1K JPG 貼圖與 BIN | CH03 熔殼步兵與熔爐旁的炭火桶 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
+| Barrel Stove | https://polyhaven.com/a/barrel_stove | MP | `public/assets/polyhaven/barrel_stove/barrel_stove.gltf`、1K JPG 貼圖與 BIN | CH03 熔脈監工 Boss 的鍛爐主體 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
+| Modular Industrial Pipes 01 | https://polyhaven.com/a/modular_industrial_pipes_01 | Jorge Camacho | `public/assets/polyhaven/modular_industrial_pipes_01/modular_industrial_pipes_01.gltf`、1K JPG 貼圖與 BIN | CH03 熔庭道路兩側的工業管線 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 | Power Box 01 | https://polyhaven.com/a/power_box_01 | Rico Cilliers（建模／貼圖）、Yann Kervran（rigging） | `public/assets/backlog/polyhaven/power_box_01/`、1K glTF／JPG／BIN | CH02 鏡潮高架的配電街景與藍色導引光 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 | Tree Small 02 | https://polyhaven.com/a/tree_small_02 | Rico Cilliers | `public/assets/backlog/polyhaven/tree_small_02/`、1K glTF／JPG／BIN | 已下載備用；預計用於 CH04 霧冠林海的樹冠側景 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 
@@ -20,6 +23,6 @@
 | --- | --- | --- | --- | --- | --- |
 | Platformer Game Kit — Character | https://quaternius.com/packs/ultimateplatformer.html | Quaternius（laulhet@gmail.com） | `public/assets/quaternius/platformer/character.gltf` | 所有關卡共用的玩家角色 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)；可自由使用、修改與商用，不要求署名。 |
 | Platformer Game Kit — Enemy | https://quaternius.com/packs/ultimateplatformer.html | Quaternius（laulhet@gmail.com） | `public/assets/quaternius/platformer/enemy.gltf` | CH01 的近戰與遠程小怪；後續章節可依主題另換型 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)；可自由使用、修改與商用，不要求署名。 |
-| Platformer Game Kit — Cube Grass Center Tall | https://quaternius.com/packs/ultimateplatformer.html | Quaternius（laulhet@gmail.com） | `public/assets/quaternius/platformer/grass_road_tile.gltf` | CH01 可重複使用的草地道路平台模型；CH02 沿用其立體邊緣並調成藍鋼高架路徑色 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)；可自由使用、修改與商用，不要求署名。 |
+| Platformer Game Kit — Cube Grass Center Tall | https://quaternius.com/packs/ultimateplatformer.html | Quaternius（laulhet@gmail.com） | `public/assets/quaternius/platformer/grass_road_tile.gltf` | CH01 可重複使用的草地道路平台模型；CH02 調成藍鋼高架、CH03 調成玄武岩板道 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)；可自由使用、修改與商用，不要求署名。 |
 
 採用 1K glTF 版本（約 2.1 MB，含幾何與貼圖），在場景中共享同一份幾何／材質並建立四個位置與尺寸變體；它們會隨關卡距離移動，低畫質模式只保留前兩個景物，不另下載高解析貼圖。

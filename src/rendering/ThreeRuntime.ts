@@ -10,6 +10,7 @@ import {
   IcosahedronGeometry,
   Line,
   LineBasicMaterial,
+  LoadingManager,
   Mesh,
   MeshBasicMaterial,
   OctahedronGeometry,
@@ -51,6 +52,7 @@ const POLYHAVEN_POWER_BOX_URL = `${import.meta.env.BASE_URL}assets/backlog/polyh
 const POLYHAVEN_BARREL_URL = `${import.meta.env.BASE_URL}assets/polyhaven/barrel_01/barrel_01.gltf`;
 const POLYHAVEN_BARREL_STOVE_URL = `${import.meta.env.BASE_URL}assets/polyhaven/barrel_stove/barrel_stove.gltf`;
 const POLYHAVEN_INDUSTRIAL_PIPES_URL = `${import.meta.env.BASE_URL}assets/polyhaven/modular_industrial_pipes_01/modular_industrial_pipes_01.gltf`;
+const UNLIT_TEXTURE_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL8kwAAAABJRU5ErkJggg==';
 
 export class ThreeRuntime {
   private readonly scene = new Scene();
@@ -164,14 +166,17 @@ export class ThreeRuntime {
     this.sunLight.color.set(isForge ? '#ff8e63' : isMirrorViaduct ? '#c4dcff' : '#fff0c4');
     this.sceneryGroup.visible = chapterId === 'ch01_meadow';
     this.viaductSceneryGroup.visible = chapterId === 'ch02_viaduct';
+    this.forgeSceneryGroup.visible = chapterId === 'ch03_forge';
     for (const road of this.roadMeshes) {
       const ch01Model = road.getObjectByName('ch01-road-model');
       const ch02Model = road.getObjectByName('ch02-road-model');
+      const ch03Model = road.getObjectByName('ch03-road-model');
       if (ch01Model !== undefined) ch01Model.visible = chapterId === 'ch01_meadow';
       if (ch02Model !== undefined) ch02Model.visible = chapterId === 'ch02_viaduct';
+      if (ch03Model !== undefined) ch03Model.visible = chapterId === 'ch03_forge';
       const material = road.material as MeshBasicMaterial;
-      material.colorWrite = chapterId !== 'ch01_meadow' && chapterId !== 'ch02_viaduct';
-      material.depthWrite = chapterId !== 'ch01_meadow' && chapterId !== 'ch02_viaduct';
+      material.colorWrite = chapterId !== 'ch01_meadow' && chapterId !== 'ch02_viaduct' && chapterId !== 'ch03_forge';
+      material.depthWrite = chapterId !== 'ch01_meadow' && chapterId !== 'ch02_viaduct' && chapterId !== 'ch03_forge';
     }
   }
 
@@ -206,6 +211,9 @@ export class ThreeRuntime {
     this.viaductSceneryGroup.traverse((child) => {
       if (child instanceof Mesh) this.disposeMesh(child);
     });
+    this.forgeSceneryGroup.traverse((child) => {
+      if (child instanceof Mesh) this.disposeMesh(child);
+    });
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
@@ -225,6 +233,7 @@ export class ThreeRuntime {
       for (const road of this.roadMeshes) {
         this.attachCh01RoadModel(road);
         this.attachCh02RoadModel(road);
+        this.attachCh03RoadModel(road);
       }
     });
   }
@@ -269,6 +278,25 @@ export class ThreeRuntime {
     road.add(model);
   }
 
+  private attachCh03RoadModel(road: Mesh): void {
+    if (this.roadModelTemplate === undefined || road.getObjectByName('ch03-road-model') !== undefined) return;
+    const model = this.roadModelTemplate.clone(true);
+    model.name = 'ch03-road-model';
+    model.scale.set(11, 0.16, 7);
+    model.position.y = 0.1;
+    model.traverse((child) => {
+      if (child instanceof Mesh) {
+        const material = (child.material as MeshBasicMaterial).clone();
+        material.map = null;
+        material.vertexColors = false;
+        if (material.color !== undefined) material.color.set('#4b2425');
+        child.material = material;
+      }
+    });
+    model.visible = false;
+    road.add(model);
+  }
+
   private loadPolyhavenScenery(): void {
     new GLTFLoader().load(POLYHAVEN_ROCK_URL, (gltf) => {
       if (this.isDisposed) return;
@@ -287,15 +315,18 @@ export class ThreeRuntime {
     }, undefined, (error: unknown) => console.warn('Poly Haven Rock 07 載入失敗。', error));
   }
 
-  private loadGltf(url: string, label: string, onLoad: (scene: Group) => void): void {
+  private loadGltf(url: string, label: string, onLoad: (scene: Group) => void, replaceTextures = false): void {
     const resourcePath = new URL('.', new URL(url, window.location.href)).href;
+    const manager = replaceTextures ? new LoadingManager() : undefined;
+    manager?.setURLModifier((resourceUrl) => /\.(?:jpe?g|png|webp)$/i.test(resourceUrl) ? UNLIT_TEXTURE_URL : resourceUrl);
+    const loader = new GLTFLoader(manager);
     void fetch(url)
       .then((response) => {
         if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
         return response.arrayBuffer();
       })
       .then((source) => new Promise<Group>((resolve, reject) => {
-        new GLTFLoader().parse(source, resourcePath, (gltf) => resolve(gltf.scene), reject);
+        loader.parse(source, resourcePath, (gltf) => resolve(gltf.scene), reject);
       }))
       .then((scene) => {
         if (!this.isDisposed) onLoad(scene);
@@ -329,18 +360,20 @@ export class ThreeRuntime {
   private attachEnemyModel(anchor: Mesh, kind: 'melee' | 'ranged', chapterId: ChapterId): void {
     const template = chapterId === 'ch02_viaduct'
       ? (kind === 'melee' ? this.ch02MeleeModelTemplate : this.ch02RangedModelTemplate)
+      : chapterId === 'ch03_forge'
+        ? (kind === 'melee' ? this.ch03MeleeModelTemplate : this.ch03RangedModelTemplate)
       : this.enemyModelTemplate;
     if (template === undefined || anchor.getObjectByName('enemy-model') !== undefined) return;
     const model = template.clone(true);
     model.name = 'enemy-model';
-    model.scale.setScalar(chapterId === 'ch02_viaduct' ? (kind === 'ranged' ? 0.68 : 0.82) : kind === 'ranged' ? 0.86 : 0.96);
-    model.position.set(0, chapterId === 'ch02_viaduct' ? -0.67 : -0.55, 0);
-    model.rotation.y = chapterId === 'ch02_viaduct' ? (kind === 'ranged' ? Math.PI : Math.PI / 2) : kind === 'ranged' ? Math.PI : 0;
+    model.scale.setScalar(chapterId === 'ch02_viaduct' ? (kind === 'ranged' ? 0.68 : 0.82) : chapterId === 'ch03_forge' ? (kind === 'ranged' ? 0.72 : 0.94) : kind === 'ranged' ? 0.86 : 0.96);
+    model.position.set(0, chapterId === 'ch02_viaduct' || chapterId === 'ch03_forge' ? -0.67 : -0.55, 0);
+    model.rotation.y = chapterId === 'ch02_viaduct' ? (kind === 'ranged' ? Math.PI : Math.PI / 2) : chapterId === 'ch03_forge' ? (kind === 'ranged' ? Math.PI / 2 : 0) : kind === 'ranged' ? Math.PI : 0;
     model.traverse((child) => {
       if (child instanceof Mesh) {
         const material = (child.material as MeshBasicMaterial).clone();
-        const tint = chapterId === 'ch02_viaduct' ? (kind === 'ranged' ? '#8cd7ff' : '#4d8ee8') : kind === 'ranged' ? '#a986ef' : '#f06b5e';
-        if (chapterId === 'ch02_viaduct') {
+        const tint = chapterId === 'ch02_viaduct' ? (kind === 'ranged' ? '#8cd7ff' : '#4d8ee8') : chapterId === 'ch03_forge' ? (kind === 'ranged' ? '#ff8b48' : '#b84d32') : kind === 'ranged' ? '#a986ef' : '#f06b5e';
+        if (chapterId === 'ch02_viaduct' || chapterId === 'ch03_forge') {
           material.map = null;
           material.vertexColors = false;
           if (material.color !== undefined) material.color.set(tint);
@@ -351,6 +384,11 @@ export class ThreeRuntime {
     anchor.add(model);
     if (chapterId === 'ch02_viaduct') {
       const glow = new PointLight(kind === 'ranged' ? '#b8e5ff' : '#4d8ee8', 0.85, 3.8, 2);
+      glow.position.set(0, 0.35, 0);
+      model.add(glow);
+    }
+    if (chapterId === 'ch03_forge') {
+      const glow = new PointLight(kind === 'ranged' ? '#ff9a45' : '#ff552d', 1.05, 4.2, 2);
       glow.position.set(0, 0.35, 0);
       model.add(glow);
     }
@@ -435,6 +473,53 @@ export class ThreeRuntime {
     });
   }
 
+  private loadPolyhavenForgeModels(): void {
+    this.loadGltf(POLYHAVEN_BARREL_URL, 'Poly Haven Barrel 01', (scene) => {
+      this.ch03MeleeModelTemplate = scene;
+      for (const enemy of this.enemyMeshes.values()) {
+        if (enemy.userData.chapterId === 'ch03_forge' && enemy.userData.kind === 'melee') this.attachEnemyModel(enemy, 'melee', 'ch03_forge');
+      }
+      const placements: ReadonlyArray<readonly [number, number, number]> = [[-5.4, 16, 0.2], [5.4, 44, -0.4], [-5.5, 62, 0.7]];
+      for (const [x, z, rotationY] of placements) {
+        const barrel = scene.clone(true);
+        barrel.position.set(x, 0.12, z);
+        barrel.rotation.y = rotationY;
+        barrel.scale.setScalar(1.35);
+        barrel.userData.worldZ = z;
+        barrel.userData.sceneryIndex = this.forgeSceneryGroup.children.length;
+        const glow = new PointLight('#ff6a2f', 1.1, 6, 2);
+        glow.position.set(0, 0.65, 0);
+        barrel.add(glow);
+        this.forgeSceneryGroup.add(barrel);
+      }
+    }, true);
+    this.loadGltf(POLYHAVEN_CANNON_URL, 'Poly Haven Cannon 01 (forge)', (scene) => {
+      this.ch03RangedModelTemplate = scene;
+      for (const enemy of this.enemyMeshes.values()) {
+        if (enemy.userData.chapterId === 'ch03_forge' && enemy.userData.kind === 'ranged') this.attachEnemyModel(enemy, 'ranged', 'ch03_forge');
+      }
+    });
+    this.loadGltf(POLYHAVEN_BARREL_STOVE_URL, 'Poly Haven Barrel Stove', (scene) => {
+      this.ch03BossModelTemplate = scene;
+      this.syncChapterBossModel(this.bossChapterId);
+    }, true);
+    this.loadGltf(POLYHAVEN_INDUSTRIAL_PIPES_URL, 'Poly Haven Modular Industrial Pipes 01', (scene) => {
+      const placements: ReadonlyArray<readonly [number, number, number, number]> = [[5.9, 10, -Math.PI / 2, 1.2], [-5.9, 30, Math.PI / 2, 1.05], [5.9, 52, -Math.PI / 2, 1.2]];
+      for (const [x, z, rotationY, scale] of placements) {
+        const pipes = scene.clone(true);
+        pipes.position.set(x, 0, z);
+        pipes.rotation.y = rotationY;
+        pipes.scale.setScalar(scale);
+        pipes.userData.worldZ = z;
+        pipes.userData.sceneryIndex = this.forgeSceneryGroup.children.length;
+        const glow = new PointLight('#f26a30', 1.25, 8, 2);
+        glow.position.set(0, 1.1, 0);
+        pipes.add(glow);
+        this.forgeSceneryGroup.add(pipes);
+      }
+    }, true);
+  }
+
   private loadPolyhavenBuffModel(): void {
     this.loadGltf(POLYHAVEN_BUFF_LANTERN_URL, 'Poly Haven Lantern 01', (scene) => {
       this.buffModelTemplate = scene;
@@ -466,7 +551,7 @@ export class ThreeRuntime {
   }
 
   private syncChapterBossModel(chapterId: M1RunSnapshot['chapterId']): void {
-    const template = chapterId === 'ch01_meadow' ? this.bossModelTemplate : chapterId === 'ch02_viaduct' ? this.ch02BossModelTemplate : undefined;
+    const template = chapterId === 'ch01_meadow' ? this.bossModelTemplate : chapterId === 'ch02_viaduct' ? this.ch02BossModelTemplate : chapterId === 'ch03_forge' ? this.ch03BossModelTemplate : undefined;
     const expectedName = `chapter-boss-model:${chapterId}`;
     for (const child of [...this.bossMesh.children]) {
       if (child.name.startsWith('chapter-boss-model:') && child.name !== expectedName) this.bossMesh.remove(child);
@@ -484,9 +569,10 @@ export class ThreeRuntime {
     const model = template.clone(true);
     model.name = expectedName;
     if (chapterId === 'ch02_viaduct') model.scale.set(14, 6, 14);
+    else if (chapterId === 'ch03_forge') model.scale.setScalar(1.8);
     else model.scale.setScalar(1.5);
-    model.position.set(0, chapterId === 'ch02_viaduct' ? -1.02 : -1.05, 0);
-    if (chapterId === 'ch02_viaduct') model.rotation.y = Math.PI;
+    model.position.set(0, chapterId === 'ch02_viaduct' ? -1.02 : chapterId === 'ch03_forge' ? -1.25 : -1.05, 0);
+    if (chapterId === 'ch02_viaduct' || chapterId === 'ch03_forge') model.rotation.y = Math.PI;
     if (chapterId === 'ch02_viaduct') {
       model.traverse((child) => {
         if (child instanceof Mesh) {
@@ -498,6 +584,11 @@ export class ThreeRuntime {
         }
       });
     }
+    if (chapterId === 'ch03_forge') {
+      const core = new PointLight('#ff642d', 2.5, 11, 2);
+      core.position.set(0, 1.1, 0.2);
+      model.add(core);
+    }
     this.bossMesh.add(model);
     const material = this.bossMesh.material as MeshBasicMaterial;
     material.colorWrite = false;
@@ -506,7 +597,7 @@ export class ThreeRuntime {
   }
 
   private syncScenery(snapshot: M1RunSnapshot): void {
-    for (const group of [this.sceneryGroup, this.viaductSceneryGroup]) {
+    for (const group of [this.sceneryGroup, this.viaductSceneryGroup, this.forgeSceneryGroup]) {
       for (const prop of group.children) {
         const worldZ = prop.userData.worldZ as number | undefined;
         const index = prop.userData.sceneryIndex as number | undefined;
@@ -657,7 +748,7 @@ export class ThreeRuntime {
     const mesh = new Mesh(geometry, ENEMY_MATERIALS[kind]);
     mesh.userData.kind = kind;
     mesh.userData.chapterId = chapterId;
-    const label = this.createEnemyLabel(chapterId === 'ch02_viaduct' ? (kind === 'melee' ? '磁軌獵犬' : '鏡翼炮台') : kind === 'melee' ? '衝鋒獸' : '芽砲手');
+    const label = this.createEnemyLabel(chapterId === 'ch02_viaduct' ? (kind === 'melee' ? '磁軌獵犬' : '鏡翼炮台') : chapterId === 'ch03_forge' ? (kind === 'melee' ? '熔殼步兵' : '炭火投擲者') : kind === 'melee' ? '衝鋒獸' : '芽砲手');
     label.position.set(0, 1.1, 0);
     const healthBackground = new Mesh(new BoxGeometry(1, 0.07, 0.04), new MeshBasicMaterial({ color: '#321d25' }));
     healthBackground.name = 'health-background';
