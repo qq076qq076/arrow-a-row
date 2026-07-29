@@ -60,3 +60,4 @@
 | 8 | 工程師 | 擴充箭速與飛劍 Gate Buff | Completed | [M3-ENG-008](M3-ENG-008-擴充GateBuff.md) | `工程(M3)：擴充箭速與飛劍Buff` |
 | 9 | 工程師 | 戰鬥節奏、遠距 Boss 進場與自動射箭 | Completed | [M3-ENG-009](M3-ENG-009-戰鬥節奏與Boss進場.md) | `工程(M3)：調整戰鬥節奏與Boss進場` |
 | 10 | 工程師 | 隨機八種 Buff、小怪掉落與遠距 Boss 受傷 | Completed | [M3-ENG-010](M3-ENG-010-隨機Buff與小怪掉落.md) | `工程(M3)：完成隨機Buff與小怪掉落` |
+| 11 | 測試人員 | 隨機 Buff、掉落與戰鬥可讀性回歸 | Completed（自動化）／Ready（實機） | [M3-QA-002](M3-QA-002-隨機Buff與戰鬥可讀性回歸.md) | `測試(M3)：完成隨機Buff戰鬥回歸` |
