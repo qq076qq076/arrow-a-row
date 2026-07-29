@@ -21,6 +21,7 @@
 | Shelf 01 | https://polyhaven.com/a/Shelf_01 | Gabriel Radić | `public/assets/polyhaven/Shelf_01/Shelf_01_1k.gltf`、1K JPG 貼圖與 BIN | CH05 星圖遺庫道路兩側的書架街景 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 | School Desk 01 | https://polyhaven.com/a/SchoolDesk_01 | Ethan Place | `public/assets/polyhaven/SchoolDesk_01/SchoolDesk_01_1k.gltf`、1K JPG 貼圖與 BIN | CH05 抄錄傀儡的低矮近戰模型 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 | Marble Bust 01 | https://polyhaven.com/a/marble_bust_01 | Rico Cilliers | `public/assets/polyhaven/marble_bust_01/marble_bust_01_1k.gltf`、1K JPG 貼圖與 BIN | CH05 無光抄錄者 Boss 與典藏雕像街景 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
+| Vintage Radio Transceiver | https://polyhaven.com/a/vintage_radio_transceiver | Mateusz Sadek | `public/assets/polyhaven/vintage_radio_transceiver/vintage_radio_transceiver_1k.gltf`、1K JPG 貼圖與 BIN | CH06 裂光地平的靜滯訊號核 Boss；放大天線、紫白色調與核心點光建立可讀剪影 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 | Power Box 01 | https://polyhaven.com/a/power_box_01 | Rico Cilliers（建模／貼圖）、Yann Kervran（rigging） | `public/assets/backlog/polyhaven/power_box_01/`、1K glTF／JPG／BIN | CH02 鏡潮高架的配電街景與藍色導引光 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 | Tree Small 02 | https://polyhaven.com/a/tree_small_02 | Rico Cilliers | `public/assets/backlog/polyhaven/tree_small_02/`、1K glTF／JPG／BIN | 已下載備用；預計用於 CH04 霧冠林海的樹冠側景 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 

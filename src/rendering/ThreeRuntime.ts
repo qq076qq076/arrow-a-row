@@ -59,12 +59,16 @@ const POLYHAVEN_TREE_SMALL_URL = `${import.meta.env.BASE_URL}assets/backlog/poly
 const POLYHAVEN_SHELF_URL = `${import.meta.env.BASE_URL}assets/polyhaven/Shelf_01/Shelf_01_1k.gltf`;
 const POLYHAVEN_SCHOOL_DESK_URL = `${import.meta.env.BASE_URL}assets/polyhaven/SchoolDesk_01/SchoolDesk_01_1k.gltf`;
 const POLYHAVEN_MARBLE_BUST_URL = `${import.meta.env.BASE_URL}assets/polyhaven/marble_bust_01/marble_bust_01_1k.gltf`;
+const POLYHAVEN_VINTAGE_RADIO_URL = `${import.meta.env.BASE_URL}assets/polyhaven/vintage_radio_transceiver/vintage_radio_transceiver_1k.gltf`;
 
 export class ThreeRuntime {
   private readonly scene = new Scene();
   private readonly camera = new PerspectiveCamera(45, 1, 0.1, 100);
   private readonly renderer: WebGLRenderer;
   private readonly playerMesh = new Mesh(new BoxGeometry(0.8, 1.2, 0.8), new MeshBasicMaterial({ color: '#f4c95d' }));
+  // Keep the visual avatar on its own anchor: it is updated with the runner
+  // position every frame and cannot be left behind by the invisible hitbox.
+  private readonly playerModelAnchor = new Group();
   private readonly bossMesh: Mesh = new Mesh(new BoxGeometry(2.4, 2.2, 1.4), new MeshBasicMaterial({ color: '#6ea65a' }));
   private readonly bossTelegraphRing = new Mesh(new TorusGeometry(2.1, 0.12, 8, 32), new MeshBasicMaterial({ color: '#f4c95d', transparent: true, opacity: 0.88 }));
   private readonly roadGeometry = new BoxGeometry(11, 0.12, 7);
@@ -115,7 +119,7 @@ export class ThreeRuntime {
     this.renderer.setClearColor(new Color('#173b3a'));
     this.container.append(this.renderer.domElement);
     this.updateCamera(0);
-    this.scene.add(this.playerMesh);
+    this.scene.add(this.playerMesh, this.playerModelAnchor);
     this.scene.add(this.bossMesh);
     this.scene.add(this.bossTelegraphRing);
     this.sunLight.position.set(-4, 9, -2);
@@ -159,6 +163,7 @@ export class ThreeRuntime {
   public sync(snapshot: M1RunSnapshot): void {
     this.syncChapterTheme(snapshot.chapterId);
     this.playerMesh.position.set(snapshot.player.x, 0.6, 0);
+    this.playerModelAnchor.position.set(snapshot.player.x, 0.6, 0);
     this.updateCamera(snapshot.player.x);
     this.syncScenery(snapshot);
     this.syncGates(snapshot);
@@ -218,6 +223,9 @@ export class ThreeRuntime {
     this.isDisposed = true;
     this.playerMesh.geometry.dispose();
     this.playerMesh.material.dispose();
+    this.playerModelAnchor.traverse((child) => {
+      if (child instanceof Mesh) this.disposeMesh(child);
+    });
     this.disposeMesh(this.bossMesh);
     this.disposeMesh(this.bossTelegraphRing);
     this.roadGeometry.dispose();
@@ -285,7 +293,7 @@ export class ThreeRuntime {
     const model = this.roadModelTemplate.clone(true);
     model.name = 'ch01-road-model';
     model.scale.set(11, 0.16, 7);
-    model.position.y = 0.1;
+    model.position.y = -0.16;
     model.traverse((child) => {
       if (child instanceof Mesh) {
         const material = (child.material as MeshBasicMaterial).clone();
@@ -306,7 +314,7 @@ export class ThreeRuntime {
     const model = this.roadModelTemplate.clone(true);
     model.name = 'ch02-road-model';
     model.scale.set(11, 0.16, 7);
-    model.position.y = 0.1;
+    model.position.y = -0.16;
     model.traverse((child) => {
       if (child instanceof Mesh) {
         const material = (child.material as MeshBasicMaterial).clone();
@@ -325,7 +333,7 @@ export class ThreeRuntime {
     const model = this.roadModelTemplate.clone(true);
     model.name = 'ch03-road-model';
     model.scale.set(11, 0.16, 7);
-    model.position.y = 0.1;
+    model.position.y = -0.16;
     model.traverse((child) => {
       if (child instanceof Mesh) {
         const material = (child.material as MeshBasicMaterial).clone();
@@ -344,7 +352,7 @@ export class ThreeRuntime {
     const model = this.roadModelTemplate.clone(true);
     model.name = 'ch04-road-model';
     model.scale.set(11, 0.16, 7);
-    model.position.y = 0.1;
+    model.position.y = -0.16;
     model.traverse((child) => {
       if (child instanceof Mesh) {
         const material = (child.material as MeshBasicMaterial).clone();
@@ -363,7 +371,7 @@ export class ThreeRuntime {
     const model = this.roadModelTemplate.clone(true);
     model.name = 'ch05-road-model';
     model.scale.set(11, 0.16, 7);
-    model.position.y = 0.1;
+    model.position.y = -0.16;
     model.traverse((child) => {
       if (child instanceof Mesh) {
         const material = (child.material as MeshBasicMaterial).clone();
@@ -382,7 +390,7 @@ export class ThreeRuntime {
     const model = this.roadModelTemplate.clone(true);
     model.name = 'ch06-road-model';
     model.scale.set(11, 0.16, 7);
-    model.position.y = 0.1;
+    model.position.y = -0.16;
     model.traverse((child) => {
       if (child instanceof Mesh) {
         const material = (child.material as MeshBasicMaterial).clone();
@@ -448,7 +456,7 @@ export class ThreeRuntime {
     model.name = 'player-model';
     model.scale.setScalar(0.2);
     model.position.set(0, -0.61, 0);
-    this.playerMesh.add(model);
+    this.playerModelAnchor.add(model);
     const material = this.playerMesh.material as MeshBasicMaterial;
     material.colorWrite = false;
     material.depthWrite = false;
@@ -742,9 +750,19 @@ export class ThreeRuntime {
   }
 
   private loadPolyhavenHorizonModels(): void {
-    this.loadGltf(POLYHAVEN_AMMO_BOX_URL, 'Poly Haven Ammo Box (horizon)', (scene) => { this.ch06MeleeModelTemplate = scene; });
-    this.loadGltf(POLYHAVEN_CANNON_URL, 'Poly Haven Cannon (horizon)', (scene) => { this.ch06RangedModelTemplate = scene; });
-    this.loadGltf(POLYHAVEN_DRILL_PRESS_URL, 'Poly Haven Drill Press (horizon)', (scene) => {
+    this.loadGltf(POLYHAVEN_AMMO_BOX_URL, 'Poly Haven Ammo Box (horizon)', (scene) => {
+      this.ch06MeleeModelTemplate = scene;
+      for (const enemy of this.enemyMeshes.values()) {
+        if (enemy.userData.chapterId === 'ch06_horizon' && enemy.userData.kind === 'melee') this.attachEnemyModel(enemy, 'melee', 'ch06_horizon');
+      }
+    });
+    this.loadGltf(POLYHAVEN_CANNON_URL, 'Poly Haven Cannon (horizon)', (scene) => {
+      this.ch06RangedModelTemplate = scene;
+      for (const enemy of this.enemyMeshes.values()) {
+        if (enemy.userData.chapterId === 'ch06_horizon' && enemy.userData.kind === 'ranged') this.attachEnemyModel(enemy, 'ranged', 'ch06_horizon');
+      }
+    });
+    this.loadGltf(POLYHAVEN_VINTAGE_RADIO_URL, 'Poly Haven Vintage Radio Transceiver (horizon)', (scene) => {
       this.ch06BossModelTemplate = scene;
       this.syncChapterBossModel(this.bossChapterId);
     });
@@ -815,10 +833,10 @@ export class ThreeRuntime {
     if (chapterId === 'ch02_viaduct') model.scale.set(14, 6, 14);
     else if (chapterId === 'ch03_forge') model.scale.setScalar(1.8);
     else if (chapterId === 'ch04_canopy') model.scale.setScalar(1.65);
-    else if (chapterId === 'ch05_archive') model.scale.setScalar(18);
-    else if (chapterId === 'ch06_horizon') model.scale.setScalar(1.7);
+    else if (chapterId === 'ch05_archive') model.scale.setScalar(11);
+    else if (chapterId === 'ch06_horizon') model.scale.setScalar(12);
     else model.scale.setScalar(1.5);
-    model.position.set(0, chapterId === 'ch02_viaduct' ? -1.02 : chapterId === 'ch03_forge' ? -1.25 : chapterId === 'ch04_canopy' ? -1.1 : chapterId === 'ch05_archive' ? -0.58 : chapterId === 'ch06_horizon' ? -1.1 : -1.05, 0);
+    model.position.set(0, chapterId === 'ch02_viaduct' ? -1.02 : chapterId === 'ch03_forge' ? -1.25 : chapterId === 'ch04_canopy' ? -1.1 : chapterId === 'ch05_archive' ? -0.79 : chapterId === 'ch06_horizon' ? 0.22 : -1.05, 0);
     if (chapterId === 'ch02_viaduct' || chapterId === 'ch03_forge') model.rotation.y = Math.PI;
     if (chapterId === 'ch02_viaduct') {
       model.traverse((child) => {
@@ -843,12 +861,19 @@ export class ThreeRuntime {
     }
     if (chapterId === 'ch05_archive') {
       const core = new PointLight('#f4d36c', 2.4, 11, 2);
-      core.position.set(0, 1.25, 0.2);
+      core.position.set(0, 0.22, 0.03);
       model.add(core);
     }
     if (chapterId === 'ch06_horizon') {
+      model.traverse((child) => {
+        if (child instanceof Mesh) {
+          const material = (child.material as MeshBasicMaterial).clone();
+          if (material.color !== undefined) material.color.lerp(new Color('#b58bff'), 0.42);
+          child.material = material;
+        }
+      });
       const core = new PointLight('#fff0a5', 2.6, 12, 2);
-      core.position.set(0, 1.3, 0.2);
+      core.position.set(0, 0.08, 0.12);
       model.add(core);
     }
     this.bossMesh.add(model);
