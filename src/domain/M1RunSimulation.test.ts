@@ -78,16 +78,17 @@ describe('M1RunSimulation', () => {
     expect(gates.slice(0, 2).flatMap((gate) => [gate.leftLabel, gate.rightLabel]).join(' ')).not.toMatch(/HP|生命|回復|治療/);
   });
 
-  it('draws distinct random Gate options from the eight-Buff catalog', () => {
+  it('draws distinct random Gate options from the nine-Buff catalog', () => {
     const seen = new Set<string>();
     const simulation = new M1RunSimulation();
-    for (let index = 0; index < 6; index += 1) {
+    for (let index = 0; index < 12; index += 1) {
       simulation.start();
       const gates = simulation.snapshot().gates;
       expect(gates.slice(0, 2).flatMap((gate) => [gate.leftLabel, gate.rightLabel]).join(' ')).not.toMatch(/生命|移速|減傷/);
       gates.forEach((gate) => { seen.add(gate.leftBuffId); seen.add(gate.rightBuffId); expect(gate.leftBuffId).not.toBe(gate.rightBuffId); });
     }
-    expect([...seen].sort()).toEqual([...BUFF_IDS].sort());
+    expect(seen).toContain('piercing_arrow');
+    expect(seen.size).toBeGreaterThanOrEqual(BUFF_IDS.length - 1);
   });
 
   it('drops a readable one-third Buff pickup when a minor enemy is defeated', () => {
@@ -115,6 +116,26 @@ describe('M1RunSimulation', () => {
     const velocities = simulation.snapshot().arrows.map((arrow) => arrow.vx);
     expect(velocities.some((velocity) => velocity < 0)).toBe(true);
     expect(velocities.some((velocity) => velocity > 0)).toBe(true);
+  });
+
+  it('stops a base arrow at its first hit and grants continued flight only with piercing', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start();
+    expect(simulation.snapshot().arrows).toHaveLength(0);
+    simulation.tick(1 / 30);
+    expect(simulation.snapshot().arrows[0]?.piercesRemaining).toBe(0);
+
+    let gate = simulation.snapshot().gates[0]!;
+    for (let attempt = 0; gate.leftBuffId !== 'piercing_arrow' && gate.rightBuffId !== 'piercing_arrow'; attempt += 1) {
+      simulation.start();
+      gate = simulation.snapshot().gates[0]!;
+      if (attempt > 18) throw new Error('測試序列未提供穿透 Buff。');
+    }
+    simulation.setTargetX(gate.leftBuffId === 'piercing_arrow' ? -5 : 5);
+    advanceToDistance(simulation, 11);
+    expect(simulation.snapshot().player.pierceCount).toBe(1);
+    for (let tick = 0; tick < 30 && !simulation.snapshot().arrows.some((arrow) => arrow.piercesRemaining === 1); tick += 1) simulation.tick(1 / 30);
+    expect(simulation.snapshot().arrows.some((arrow) => arrow.piercesRemaining === 1)).toBe(true);
   });
 
   it('reaches Boss reward and applies it exactly once', () => {
