@@ -4,4 +4,4 @@
 
 採用 Poly Haven `Rock 07` 的 CC0 1K glTF 模型，取代 CH01 道路兩側的灰盒景物；加入環境光與方向光，並依章節調整光色。來源、作者、檔案、使用位置及授權完整記錄於 `docs/assets/PolyHaven-來源與授權.md`。
 
-驗證：Vitest 25/25、production build 通過；以本機 Chrome 實際開始第一章，確認 Rock 07 在道路兩側載入、比例合理、光線可辨識，且 console 無錯誤或警告。
+驗證：Vitest 25/25、production build、Playwright Chrome／WebKit 12/12 passed；以本機 Chrome 實際開始第一章並持續推進，確認 Rock 07 在道路兩側載入、比例合理、會隨關卡距離移動、Gate 未受遮擋、光線可辨識，且 console 無錯誤或警告。
