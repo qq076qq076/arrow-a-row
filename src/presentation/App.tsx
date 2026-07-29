@@ -11,9 +11,19 @@ import { ACHIEVEMENTS } from '../content/Achievements';
 const INITIAL_SNAPSHOT = new M1RunSimulation().snapshot();
 const rewardNames: Record<RewardId, string> = { storm_bow: '風暴弓｜箭數 +2、箭傷 +40%', lightning_core: '雷網核心｜目標 +1、傷害 +3、距離 +6', heartwood: '心木護佑｜最大 HP +60', deadeye: '獵手印記｜箭傷 +35%', gale_heart: '疾風之心｜箭速 +40%', ironbark: '鐵木護甲｜減傷 +40%、最大 HP +30' };
 
+function getInitialChapterId(): ChapterId {
+  if (!import.meta.env.DEV) return 'ch01_meadow';
+  const requested = new URLSearchParams(window.location.search).get('chapter');
+  return CHAPTER_DEFINITIONS.some((chapter) => chapter.id === requested) ? requested as ChapterId : 'ch01_meadow';
+}
+
+function isBossPreviewEnabled(): boolean {
+  return import.meta.env.DEV && new URLSearchParams(window.location.search).get('preview') === 'boss';
+}
+
 export function App(): ReactElement {
   const canvasContainerRef = useRef<HTMLDivElement>(null); const runtimeRef = useRef<ThreeRuntime | null>(null); const simulationRef = useRef(new M1RunSimulation()); const checkpointRef = useRef(new RunCheckpointRepository()); const profileRef = useRef(new ProfileRepository()); const pendingCheckpointRef = useRef<M1RunSnapshot | undefined>(undefined); const isMouseDraggingRef = useRef(false);
-  const [snapshot, setSnapshot] = useState<M1RunSnapshot>(INITIAL_SNAPSHOT); const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE); const [screen, setScreen] = useState<'game' | 'shop' | 'achievements'>('game'); const [selectedChapterId, setSelectedChapterId] = useState<ChapterId>('ch01_meadow'); const [selectedCard, setSelectedCard] = useState<RewardId>(); const [hasCheckpoint, setHasCheckpoint] = useState(false); const [isWebGlSupported] = useState(() => document.createElement('canvas').getContext('webgl2') !== null);
+  const [snapshot, setSnapshot] = useState<M1RunSnapshot>(INITIAL_SNAPSHOT); const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE); const [screen, setScreen] = useState<'game' | 'shop' | 'achievements'>('game'); const [selectedChapterId, setSelectedChapterId] = useState<ChapterId>(getInitialChapterId); const [selectedCard, setSelectedCard] = useState<RewardId>(); const [hasCheckpoint, setHasCheckpoint] = useState(false); const [isWebGlSupported] = useState(() => document.createElement('canvas').getContext('webgl2') !== null);
   const isGameplaySceneActive = screen === 'game' && snapshot.phase !== 'menu';
 
   useEffect(() => { void profileRef.current.loadAsync().then(setProfile).catch(() => undefined); void checkpointRef.current.loadAsync().then((checkpoint) => { const saved = checkpoint?.payload as M1RunSnapshot | undefined; if (saved?.phase === 'playing' || saved?.phase === 'reward') { pendingCheckpointRef.current = saved; setHasCheckpoint(true); } }).catch(() => undefined); }, []);
@@ -30,7 +40,7 @@ export function App(): ReactElement {
   useEffect(() => { runtimeRef.current?.setQuality(profile.qualityMode); }, [profile.qualityMode]);
   useEffect(() => { const onKeyDown = (event: KeyboardEvent): void => { if (event.key === 'Escape' && simulationRef.current.togglePause()) setSnapshot(simulationRef.current.snapshot()); }; window.addEventListener('keydown', onKeyDown); return () => window.removeEventListener('keydown', onKeyDown); }, []);
 
-  const startRun = (): void => { setScreen('game'); setSelectedCard(undefined); setHasCheckpoint(false); simulationRef.current.start(profile, selectedChapterId); setSnapshot(simulationRef.current.snapshot()); };
+  const startRun = (): void => { setScreen('game'); setSelectedCard(undefined); setHasCheckpoint(false); simulationRef.current.start(profile, selectedChapterId); if (isBossPreviewEnabled()) simulationRef.current.enterBossPreview(); setSnapshot(simulationRef.current.snapshot()); };
   const continueChapter = (): void => { if (simulationRef.current.continueToNextChapter()) { setSelectedCard(undefined); setSnapshot(simulationRef.current.snapshot()); } };
   const resumeRun = (): void => { const saved = pendingCheckpointRef.current; if (saved === undefined || !simulationRef.current.restore(saved)) return; setScreen('game'); setHasCheckpoint(false); setSnapshot(simulationRef.current.snapshot()); };
   const movePlayerFromClientX = (clientX: number, element: HTMLDivElement): void => { if (simulationRef.current.snapshot().phase !== 'playing') return; const bounds = element.getBoundingClientRect(); simulationRef.current.setTargetX((1 - ((clientX - bounds.left) / bounds.width) * 2) * 5); };

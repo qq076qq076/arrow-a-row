@@ -26,6 +26,7 @@ import {
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import type { M1RunSnapshot } from '../domain/M1RunSimulation';
 import type { BuffId } from '../content/BuffCatalog';
+import type { ChapterId } from '../content/ChapterDefinitions';
 
 const ENEMY_MATERIALS = {
   melee: new MeshBasicMaterial({ color: '#f06b5e' }),
@@ -43,6 +44,13 @@ const POLYHAVEN_BUFF_LANTERN_URL = `${import.meta.env.BASE_URL}assets/polyhaven/
 const QUATERNIUS_PLAYER_URL = `${import.meta.env.BASE_URL}assets/quaternius/platformer/character.gltf`;
 const QUATERNIUS_ENEMY_URL = `${import.meta.env.BASE_URL}assets/quaternius/platformer/enemy.gltf`;
 const QUATERNIUS_GRASS_ROAD_URL = `${import.meta.env.BASE_URL}assets/quaternius/platformer/grass_road_tile.gltf`;
+const POLYHAVEN_CANNON_URL = `${import.meta.env.BASE_URL}assets/polyhaven/cannon_01/cannon_01.gltf`;
+const POLYHAVEN_AMMO_BOX_URL = `${import.meta.env.BASE_URL}assets/polyhaven/ammo_box/ammo_box.gltf`;
+const POLYHAVEN_DRILL_PRESS_URL = `${import.meta.env.BASE_URL}assets/polyhaven/drill_press_01/drill_press_01.gltf`;
+const POLYHAVEN_POWER_BOX_URL = `${import.meta.env.BASE_URL}assets/backlog/polyhaven/power_box_01/power_box_01.gltf`;
+const POLYHAVEN_BARREL_URL = `${import.meta.env.BASE_URL}assets/polyhaven/barrel_01/barrel_01.gltf`;
+const POLYHAVEN_BARREL_STOVE_URL = `${import.meta.env.BASE_URL}assets/polyhaven/barrel_stove/barrel_stove.gltf`;
+const POLYHAVEN_INDUSTRIAL_PIPES_URL = `${import.meta.env.BASE_URL}assets/polyhaven/modular_industrial_pipes_01/modular_industrial_pipes_01.gltf`;
 
 export class ThreeRuntime {
   private readonly scene = new Scene();
@@ -63,10 +71,17 @@ export class ThreeRuntime {
   private readonly gateGroups = new Map<string, Group>();
   private readonly sceneryGroup = new Group();
   private readonly viaductSceneryGroup = new Group();
+  private readonly forgeSceneryGroup = new Group();
   private bossModelTemplate: Group | undefined;
+  private ch02BossModelTemplate: Group | undefined;
+  private ch03BossModelTemplate: Group | undefined;
   private buffModelTemplate: Group | undefined;
   private playerModelTemplate: Group | undefined;
   private enemyModelTemplate: Group | undefined;
+  private ch02MeleeModelTemplate: Group | undefined;
+  private ch02RangedModelTemplate: Group | undefined;
+  private ch03MeleeModelTemplate: Group | undefined;
+  private ch03RangedModelTemplate: Group | undefined;
   private roadModelTemplate: Group | undefined;
   private readonly ambientLight = new AmbientLight('#cde4d0', 1.7);
   private readonly sunLight = new DirectionalLight('#fff0c4', 2.8);
@@ -84,14 +99,18 @@ export class ThreeRuntime {
     this.scene.add(this.bossMesh);
     this.scene.add(this.bossTelegraphRing);
     this.sunLight.position.set(-4, 9, -2);
-    this.scene.add(this.ambientLight, this.sunLight, this.sceneryGroup, this.viaductSceneryGroup);
+    this.scene.add(this.ambientLight, this.sunLight, this.sceneryGroup, this.viaductSceneryGroup, this.forgeSceneryGroup);
     this.createRoad();
     this.loadPolyhavenScenery();
     this.loadPolyhavenViaductScenery();
     this.loadPolyhavenBossModel();
+    this.loadPolyhavenCh02BossModel();
     this.loadPolyhavenBuffModel();
     this.loadQuaterniusActorModels();
     this.loadQuaterniusRoadModel();
+    this.loadPolyhavenViaductProps();
+    this.loadPolyhavenCh02EnemyModels();
+    this.loadPolyhavenForgeModels();
     this.bossMesh.visible = false;
     this.bossTelegraphRing.visible = false;
     this.resize();
@@ -146,11 +165,13 @@ export class ThreeRuntime {
     this.sceneryGroup.visible = chapterId === 'ch01_meadow';
     this.viaductSceneryGroup.visible = chapterId === 'ch02_viaduct';
     for (const road of this.roadMeshes) {
-      const model = road.getObjectByName('ch01-road-model');
-      if (model !== undefined) model.visible = chapterId === 'ch01_meadow';
+      const ch01Model = road.getObjectByName('ch01-road-model');
+      const ch02Model = road.getObjectByName('ch02-road-model');
+      if (ch01Model !== undefined) ch01Model.visible = chapterId === 'ch01_meadow';
+      if (ch02Model !== undefined) ch02Model.visible = chapterId === 'ch02_viaduct';
       const material = road.material as MeshBasicMaterial;
-      material.colorWrite = chapterId !== 'ch01_meadow';
-      material.depthWrite = chapterId !== 'ch01_meadow';
+      material.colorWrite = chapterId !== 'ch01_meadow' && chapterId !== 'ch02_viaduct';
+      material.depthWrite = chapterId !== 'ch01_meadow' && chapterId !== 'ch02_viaduct';
     }
   }
 
@@ -201,7 +222,10 @@ export class ThreeRuntime {
   private loadQuaterniusRoadModel(): void {
     this.loadGltf(QUATERNIUS_GRASS_ROAD_URL, 'Quaternius Grass Road Tile', (scene) => {
       this.roadModelTemplate = scene;
-      for (const road of this.roadMeshes) this.attachCh01RoadModel(road);
+      for (const road of this.roadMeshes) {
+        this.attachCh01RoadModel(road);
+        this.attachCh02RoadModel(road);
+      }
     });
   }
 
@@ -224,6 +248,25 @@ export class ThreeRuntime {
     const material = road.material as MeshBasicMaterial;
     material.colorWrite = false;
     material.depthWrite = false;
+  }
+
+  private attachCh02RoadModel(road: Mesh): void {
+    if (this.roadModelTemplate === undefined || road.getObjectByName('ch02-road-model') !== undefined) return;
+    const model = this.roadModelTemplate.clone(true);
+    model.name = 'ch02-road-model';
+    model.scale.set(11, 0.16, 7);
+    model.position.y = 0.1;
+    model.traverse((child) => {
+      if (child instanceof Mesh) {
+        const material = (child.material as MeshBasicMaterial).clone();
+        material.map = null;
+        material.vertexColors = false;
+        if (material.color !== undefined) material.color.set('#274b7a');
+        child.material = material;
+      }
+    });
+    model.visible = false;
+    road.add(model);
   }
 
   private loadPolyhavenScenery(): void {
@@ -267,7 +310,7 @@ export class ThreeRuntime {
     });
     this.loadGltf(QUATERNIUS_ENEMY_URL, 'Quaternius Enemy', (scene) => {
       this.enemyModelTemplate = scene;
-      for (const enemy of this.enemyMeshes.values()) this.attachEnemyModel(enemy, enemy.userData.kind as 'melee' | 'ranged');
+      for (const enemy of this.enemyMeshes.values()) this.attachEnemyModel(enemy, enemy.userData.kind as 'melee' | 'ranged', enemy.userData.chapterId as ChapterId);
     });
   }
 
@@ -283,49 +326,112 @@ export class ThreeRuntime {
     material.depthWrite = false;
   }
 
-  private attachEnemyModel(anchor: Mesh, kind: 'melee' | 'ranged'): void {
-    if (this.enemyModelTemplate === undefined || anchor.getObjectByName('enemy-model') !== undefined) return;
-    const model = this.enemyModelTemplate.clone(true);
+  private attachEnemyModel(anchor: Mesh, kind: 'melee' | 'ranged', chapterId: ChapterId): void {
+    const template = chapterId === 'ch02_viaduct'
+      ? (kind === 'melee' ? this.ch02MeleeModelTemplate : this.ch02RangedModelTemplate)
+      : this.enemyModelTemplate;
+    if (template === undefined || anchor.getObjectByName('enemy-model') !== undefined) return;
+    const model = template.clone(true);
     model.name = 'enemy-model';
-    model.scale.setScalar(kind === 'ranged' ? 0.86 : 0.96);
-    model.position.set(0, -0.55, 0);
-    model.rotation.y = kind === 'ranged' ? Math.PI : 0;
+    model.scale.setScalar(chapterId === 'ch02_viaduct' ? (kind === 'ranged' ? 0.68 : 0.82) : kind === 'ranged' ? 0.86 : 0.96);
+    model.position.set(0, chapterId === 'ch02_viaduct' ? -0.67 : -0.55, 0);
+    model.rotation.y = chapterId === 'ch02_viaduct' ? (kind === 'ranged' ? Math.PI : Math.PI / 2) : kind === 'ranged' ? Math.PI : 0;
     model.traverse((child) => {
       if (child instanceof Mesh) {
         const material = (child.material as MeshBasicMaterial).clone();
-        if (material.color !== undefined) material.color.lerp(new Color(kind === 'ranged' ? '#a986ef' : '#f06b5e'), 0.22);
+        const tint = chapterId === 'ch02_viaduct' ? (kind === 'ranged' ? '#8cd7ff' : '#4d8ee8') : kind === 'ranged' ? '#a986ef' : '#f06b5e';
+        if (chapterId === 'ch02_viaduct') {
+          material.map = null;
+          material.vertexColors = false;
+          if (material.color !== undefined) material.color.set(tint);
+        } else if (material.color !== undefined) material.color.lerp(new Color(tint), 0.22);
         child.material = material;
       }
     });
     anchor.add(model);
+    if (chapterId === 'ch02_viaduct') {
+      const glow = new PointLight(kind === 'ranged' ? '#b8e5ff' : '#4d8ee8', 0.85, 3.8, 2);
+      glow.position.set(0, 0.35, 0);
+      model.add(glow);
+    }
     const material = anchor.material as MeshBasicMaterial;
     material.colorWrite = false;
     material.depthWrite = false;
   }
 
   private loadPolyhavenViaductScenery(): void {
-    new GLTFLoader().load(POLYHAVEN_STREET_LAMP_URL, (gltf) => {
-      if (this.isDisposed) return;
+    this.loadGltf(POLYHAVEN_STREET_LAMP_URL, 'Poly Haven Street Lamp 01', (scene) => {
       const placements: ReadonlyArray<readonly [number, number, number]> = [
         [-5.1, 12, Math.PI / 2], [5.1, 26, -Math.PI / 2], [-5.1, 40, Math.PI / 2], [5.1, 54, -Math.PI / 2],
       ];
       for (const [x, z, rotationY] of placements) {
-        const lamp = gltf.scene.clone(true);
+        const lamp = scene.clone(true);
         lamp.position.set(x, 0, z);
         lamp.rotation.y = rotationY;
         lamp.scale.setScalar(0.75);
+        lamp.userData.worldZ = z;
+        lamp.userData.sceneryIndex = this.viaductSceneryGroup.children.length;
         const glow = new PointLight('#9dc9ff', 1.5, 9, 2);
         glow.position.set(0, 3.2, 0);
         lamp.add(glow);
         this.viaductSceneryGroup.add(lamp);
       }
-    }, undefined, (error: unknown) => console.warn('Poly Haven Street Lamp 01 載入失敗。', error));
+    });
+  }
+
+  private loadPolyhavenViaductProps(): void {
+    this.loadGltf(POLYHAVEN_POWER_BOX_URL, 'Poly Haven Power Box 01', (scene) => {
+      const placements: ReadonlyArray<readonly [number, number, number]> = [
+        [5.4, 18, -Math.PI / 2], [-5.4, 34, Math.PI / 2], [5.4, 50, -Math.PI / 2],
+      ];
+      for (const [x, z, rotationY] of placements) {
+        const prop = scene.clone(true);
+        prop.name = 'viaduct-power-box';
+        prop.position.set(x, 0.18, z);
+        prop.rotation.y = rotationY;
+        prop.scale.setScalar(2.2);
+        prop.userData.worldZ = z;
+        prop.userData.sceneryIndex = this.viaductSceneryGroup.children.length;
+        const glow = new PointLight('#4fa9ff', 1.4, 7, 2);
+        glow.position.set(0, 0.5, 0);
+        prop.add(glow);
+        this.viaductSceneryGroup.add(prop);
+      }
+    });
   }
 
   private loadPolyhavenBossModel(): void {
     this.loadGltf(POLYHAVEN_GOTHIC_STATUE_URL, 'Poly Haven Gothic Statue', (scene) => {
       this.bossModelTemplate = scene;
       this.syncChapterBossModel(this.bossChapterId);
+    });
+  }
+
+  private loadPolyhavenCh02BossModel(): void {
+    this.loadGltf(POLYHAVEN_DRILL_PRESS_URL, 'Poly Haven Drill Press 01', (scene) => {
+      this.ch02BossModelTemplate = scene;
+      this.syncChapterBossModel(this.bossChapterId);
+    });
+  }
+
+  private loadPolyhavenCh02EnemyModels(): void {
+    this.loadGltf(POLYHAVEN_AMMO_BOX_URL, 'Poly Haven Ammo Box', (scene) => {
+      this.ch02MeleeModelTemplate = scene;
+      for (const enemy of this.enemyMeshes.values()) {
+        if (enemy.userData.chapterId === 'ch02_viaduct' && enemy.userData.kind === 'melee') {
+          enemy.getObjectByName('enemy-model')?.removeFromParent();
+          this.attachEnemyModel(enemy, 'melee', 'ch02_viaduct');
+        }
+      }
+    });
+    this.loadGltf(POLYHAVEN_CANNON_URL, 'Poly Haven Cannon 01', (scene) => {
+      this.ch02RangedModelTemplate = scene;
+      for (const enemy of this.enemyMeshes.values()) {
+        if (enemy.userData.chapterId === 'ch02_viaduct' && enemy.userData.kind === 'ranged') {
+          enemy.getObjectByName('enemy-model')?.removeFromParent();
+          this.attachEnemyModel(enemy, 'ranged', 'ch02_viaduct');
+        }
+      }
     });
   }
 
@@ -360,8 +466,13 @@ export class ThreeRuntime {
   }
 
   private syncChapterBossModel(chapterId: M1RunSnapshot['chapterId']): void {
-    const existingModel = this.bossMesh.getObjectByName('chapter-boss-model');
-    if (chapterId !== 'ch01_meadow' || this.bossModelTemplate === undefined) {
+    const template = chapterId === 'ch01_meadow' ? this.bossModelTemplate : chapterId === 'ch02_viaduct' ? this.ch02BossModelTemplate : undefined;
+    const expectedName = `chapter-boss-model:${chapterId}`;
+    for (const child of [...this.bossMesh.children]) {
+      if (child.name.startsWith('chapter-boss-model:') && child.name !== expectedName) this.bossMesh.remove(child);
+    }
+    const existingModel = this.bossMesh.getObjectByName(expectedName);
+    if (template === undefined) {
       if (existingModel !== undefined) this.bossMesh.remove(existingModel);
       this.bossMesh.userData.chapterBossAttached = false;
       const material = this.bossMesh.material as MeshBasicMaterial;
@@ -370,10 +481,23 @@ export class ThreeRuntime {
       return;
     }
     if (existingModel !== undefined) return;
-    const model = this.bossModelTemplate.clone(true);
-    model.name = 'chapter-boss-model';
-    model.scale.setScalar(1.5);
-    model.position.set(0, -1.05, 0);
+    const model = template.clone(true);
+    model.name = expectedName;
+    if (chapterId === 'ch02_viaduct') model.scale.set(14, 6, 14);
+    else model.scale.setScalar(1.5);
+    model.position.set(0, chapterId === 'ch02_viaduct' ? -1.02 : -1.05, 0);
+    if (chapterId === 'ch02_viaduct') model.rotation.y = Math.PI;
+    if (chapterId === 'ch02_viaduct') {
+      model.traverse((child) => {
+        if (child instanceof Mesh) {
+          const material = (child.material as MeshBasicMaterial).clone();
+          material.map = null;
+          material.vertexColors = false;
+          if (material.color !== undefined) material.color.set('#91c9ff');
+          child.material = material;
+        }
+      });
+    }
     this.bossMesh.add(model);
     const material = this.bossMesh.material as MeshBasicMaterial;
     material.colorWrite = false;
@@ -382,13 +506,15 @@ export class ThreeRuntime {
   }
 
   private syncScenery(snapshot: M1RunSnapshot): void {
-    for (const rock of this.sceneryGroup.children) {
-      const worldZ = rock.userData.worldZ as number | undefined;
-      const index = rock.userData.sceneryIndex as number | undefined;
-      if (worldZ === undefined || index === undefined) continue;
-      const relativeZ = worldZ - snapshot.distanceMeters;
-      rock.position.z = relativeZ;
-      rock.visible = relativeZ > -8 && relativeZ < 64 && (this.qualityMode === 'standard' || index < 2);
+    for (const group of [this.sceneryGroup, this.viaductSceneryGroup]) {
+      for (const prop of group.children) {
+        const worldZ = prop.userData.worldZ as number | undefined;
+        const index = prop.userData.sceneryIndex as number | undefined;
+        if (worldZ === undefined || index === undefined) continue;
+        const relativeZ = worldZ - snapshot.distanceMeters;
+        prop.position.z = relativeZ;
+        prop.visible = relativeZ > -8 && relativeZ < 64 && (this.qualityMode === 'standard' || index < 2);
+      }
     }
   }
 
@@ -408,7 +534,7 @@ export class ThreeRuntime {
     const material = this.bossMesh.material as MeshBasicMaterial;
     const baseColor = snapshot.chapterId === 'ch02_viaduct' ? '#7fa8ef' : snapshot.chapterId === 'ch03_forge' ? '#dc7449' : '#6ea65a';
     material.color.set(boss.telegraphSeconds > 0 ? '#f4c95d' : boss.phase === 2 ? '#b7774f' : baseColor);
-    const baseScale = snapshot.chapterId === 'ch02_viaduct' ? 0.9 : snapshot.chapterId === 'ch03_forge' ? 1.1 : 1;
+    const baseScale = snapshot.chapterId === 'ch02_viaduct' ? 1.05 : snapshot.chapterId === 'ch03_forge' ? 1.1 : 1;
     const isAttackTelegraph = boss.telegraphSeconds > 0 && boss.telegraphText !== '靜滯正在加深！';
     const pulse = isAttackTelegraph ? 1 + Math.sin(performance.now() / 70) * 0.12 : 1;
     this.bossMesh.scale.setScalar(baseScale * pulse);
@@ -501,8 +627,14 @@ export class ThreeRuntime {
     }
     for (const enemy of snapshot.enemies) {
       let mesh = this.enemyMeshes.get(enemy.id);
+      if (mesh !== undefined && mesh.userData.chapterId !== snapshot.chapterId) {
+        this.scene.remove(mesh);
+        this.disposeMesh(mesh);
+        this.enemyMeshes.delete(enemy.id);
+        mesh = undefined;
+      }
       if (mesh === undefined) {
-        mesh = this.createEnemyMesh(enemy.kind);
+        mesh = this.createEnemyMesh(enemy.kind, snapshot.chapterId);
         this.enemyMeshes.set(enemy.id, mesh);
         this.scene.add(mesh);
       }
@@ -520,11 +652,12 @@ export class ThreeRuntime {
     }
   }
 
-  private createEnemyMesh(kind: 'melee' | 'ranged'): Mesh {
+  private createEnemyMesh(kind: 'melee' | 'ranged', chapterId: ChapterId): Mesh {
     const geometry = kind === 'melee' ? new ConeGeometry(0.72, 1.45, 4) : new SphereGeometry(0.72, 10, 8);
     const mesh = new Mesh(geometry, ENEMY_MATERIALS[kind]);
     mesh.userData.kind = kind;
-    const label = this.createEnemyLabel(kind === 'melee' ? '衝鋒獸' : '芽砲手');
+    mesh.userData.chapterId = chapterId;
+    const label = this.createEnemyLabel(chapterId === 'ch02_viaduct' ? (kind === 'melee' ? '磁軌獵犬' : '鏡翼炮台') : kind === 'melee' ? '衝鋒獸' : '芽砲手');
     label.position.set(0, 1.1, 0);
     const healthBackground = new Mesh(new BoxGeometry(1, 0.07, 0.04), new MeshBasicMaterial({ color: '#321d25' }));
     healthBackground.name = 'health-background';
@@ -533,7 +666,7 @@ export class ThreeRuntime {
     healthFill.name = 'health-fill';
     healthFill.position.set(0, 1.28, -0.03);
     mesh.add(label, healthBackground, healthFill);
-    this.attachEnemyModel(mesh, kind);
+    this.attachEnemyModel(mesh, kind, chapterId);
     return mesh;
   }
 

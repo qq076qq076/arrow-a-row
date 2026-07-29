@@ -48,6 +48,16 @@ describe('M1RunSimulation', () => {
     expect(simulation.snapshot().boss?.hp).toBeLessThan(initialBossHp);
   });
 
+  it('offers a stable development-only Boss preview snapshot for renderer checks', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start({}, 'ch02_viaduct');
+    simulation.enterBossPreview();
+
+    const preview = simulation.snapshot();
+    expect(preview.distanceMeters).toBe(78);
+    expect(preview.boss).toMatchObject({ z: 10, hp: 9_999, maxHp: 9_999, isDefeated: false });
+  });
+
   it('applies permanent profile modifiers to a new run', () => {
     const simulation = new M1RunSimulation();
     simulation.start({ healthLevel: 2, damageLevel: 3, fireRateLevel: 4 });

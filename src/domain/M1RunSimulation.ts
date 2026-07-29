@@ -57,6 +57,19 @@ export class M1RunSimulation {
     this.gates.splice(0, this.gates.length, ...this.createGates());
   }
 
+  /** Development-only renderer aid; App exposes it only from a Vite DEV URL. */
+  public enterBossPreview(): void {
+    if (this.phase !== 'playing') return;
+    this.distanceMeters = BOSS_START_DISTANCE;
+    this.spawnBoss();
+    if (this.boss === undefined) return;
+    this.boss.z = 10;
+    this.boss.hp = 9_999;
+    this.boss.maxHp = 9_999;
+    this.boss.attackCooldownSeconds = 9_999;
+    this.boss.telegraphSeconds = 0;
+  }
+
   /** Restores only data produced by snapshot(); cooldowns restart safely on resume. */
   public restore(snapshot: M1RunSnapshot): boolean {
     if (snapshot.phase !== 'playing' && snapshot.phase !== 'reward') return false;
