@@ -74,9 +74,10 @@ export class ThreeRuntime {
 
   private syncChapterTheme(chapterId: M1RunSnapshot['chapterId']): void {
     const isMirrorViaduct = chapterId === 'ch02_viaduct';
-    this.renderer.setClearColor(new Color(isMirrorViaduct ? '#172849' : '#173b3a'));
-    this.roadMaterials[0]!.color.set(isMirrorViaduct ? '#243d69' : '#315f4a');
-    this.roadMaterials[1]!.color.set(isMirrorViaduct ? '#31528a' : '#3d7755');
+    const isForge = chapterId === 'ch03_forge';
+    this.renderer.setClearColor(new Color(isForge ? '#3b1e35' : isMirrorViaduct ? '#172849' : '#173b3a'));
+    this.roadMaterials[0]!.color.set(isForge ? '#64334e' : isMirrorViaduct ? '#243d69' : '#315f4a');
+    this.roadMaterials[1]!.color.set(isForge ? '#9a4f3b' : isMirrorViaduct ? '#31528a' : '#3d7755');
   }
 
   public render(): void {
