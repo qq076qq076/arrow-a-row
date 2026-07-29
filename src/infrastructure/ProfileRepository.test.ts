@@ -13,7 +13,7 @@ afterEach(async () => {
 describe('ProfileRepository', () => {
   it('persists gold and permanent upgrade levels', async () => {
     const repository = new ProfileRepository();
-    await repository.saveAsync({ gold: 30, healthLevel: 1, damageLevel: 0, fireRateLevel: 2, arrowSpeedLevel: 0, pierceLevel: 0, movementLevel: 0, unlockedChapterIndex: 3 });
-    await expect(repository.loadAsync()).resolves.toEqual({ gold: 30, healthLevel: 1, damageLevel: 0, fireRateLevel: 2, arrowSpeedLevel: 0, pierceLevel: 0, movementLevel: 0, unlockedChapterIndex: 3 });
+    await repository.saveAsync({ gold: 30, healthLevel: 1, damageLevel: 0, fireRateLevel: 2, arrowSpeedLevel: 0, pierceLevel: 0, movementLevel: 0, unlockedChapterIndex: 3, achievementIds: [] });
+    await expect(repository.loadAsync()).resolves.toEqual({ gold: 30, healthLevel: 1, damageLevel: 0, fireRateLevel: 2, arrowSpeedLevel: 0, pierceLevel: 0, movementLevel: 0, unlockedChapterIndex: 3, achievementIds: [] });
   });
 });
