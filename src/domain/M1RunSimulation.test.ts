@@ -53,8 +53,22 @@ describe('M1RunSimulation', () => {
     const simulation = new M1RunSimulation();
     simulation.start();
     const gates = simulation.snapshot().gates;
-    expect(gates).toHaveLength(2);
-    expect(gates.flatMap((gate) => [gate.leftLabel, gate.rightLabel]).join(' ')).not.toMatch(/HP|生命|回復|治療/);
+    expect(gates.slice(0, 2)).toHaveLength(2);
+    expect(gates.slice(0, 2).flatMap((gate) => [gate.leftLabel, gate.rightLabel]).join(' ')).not.toMatch(/HP|生命|回復|治療/);
+  });
+
+  it('applies arrow speed and flying sword buffs from the second gate', () => {
+    const speedRun = new M1RunSimulation();
+    speedRun.start();
+    speedRun.setTargetX(-4);
+    advanceToDistance(speedRun, 29);
+    expect(speedRun.snapshot().player.arrowSpeed).toBe(30);
+
+    const swordRun = new M1RunSimulation();
+    swordRun.start();
+    swordRun.setTargetX(4);
+    advanceToDistance(swordRun, 29);
+    expect(swordRun.snapshot().player.swordCount).toBe(1);
   });
 
   it('reaches Boss reward and applies it exactly once', () => {
