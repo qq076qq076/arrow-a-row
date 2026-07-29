@@ -38,6 +38,7 @@ const BUFF_ICON_GLYPHS: Record<BuffId, string> = {
 
 const POLYHAVEN_ROCK_URL = `${import.meta.env.BASE_URL}assets/polyhaven/rock_07/rock_07.gltf`;
 const POLYHAVEN_STREET_LAMP_URL = `${import.meta.env.BASE_URL}assets/polyhaven/street_lamp_01/street_lamp_01.gltf`;
+const POLYHAVEN_GOTHIC_STATUE_URL = `${import.meta.env.BASE_URL}assets/polyhaven/gothic_statue/gothic_statue.gltf`;
 
 export class ThreeRuntime {
   private readonly scene = new Scene();
@@ -59,6 +60,7 @@ export class ThreeRuntime {
   private readonly sceneryGroup = new Group();
   private readonly viaductSceneryGroup = new Group();
   private actorModelTemplate: Group | undefined;
+  private bossModelTemplate: Group | undefined;
   private readonly ambientLight = new AmbientLight('#cde4d0', 1.7);
   private readonly sunLight = new DirectionalLight('#fff0c4', 2.8);
   private isDisposed = false;
@@ -79,6 +81,7 @@ export class ThreeRuntime {
     this.createRoad();
     this.loadPolyhavenScenery();
     this.loadPolyhavenViaductScenery();
+    this.loadPolyhavenBossModel();
     this.bossMesh.visible = false;
     this.bossTelegraphRing.visible = false;
     this.resize();
@@ -204,6 +207,7 @@ export class ThreeRuntime {
   private attachActorModel(anchor: Mesh, scale: number, color: string): void {
     if (this.actorModelTemplate === undefined || anchor.userData.actorModelAttached === true) return;
     const model = this.actorModelTemplate.clone(true);
+    model.name = 'actor-model';
     model.scale.setScalar(scale);
     model.position.set(0, -0.55, 0);
     model.traverse((child) => {
@@ -237,6 +241,21 @@ export class ThreeRuntime {
         this.viaductSceneryGroup.add(lamp);
       }
     }, undefined, (error: unknown) => console.warn('Poly Haven Street Lamp 01 載入失敗。', error));
+  }
+
+  private loadPolyhavenBossModel(): void {
+    new GLTFLoader().load(POLYHAVEN_GOTHIC_STATUE_URL, (gltf) => {
+      if (this.isDisposed) return;
+      this.bossModelTemplate = gltf.scene;
+      if (this.bossMesh.userData.chapterBossAttached === true) return;
+      const model = gltf.scene.clone(true);
+      const genericModel = this.bossMesh.getObjectByName('actor-model');
+      if (genericModel !== undefined) this.bossMesh.remove(genericModel);
+      model.scale.setScalar(1.5);
+      model.position.set(0, -1.05, 0);
+      this.bossMesh.add(model);
+      this.bossMesh.userData.chapterBossAttached = true;
+    }, undefined, (error: unknown) => console.warn('Poly Haven Gothic Statue 載入失敗。', error));
   }
 
   private syncScenery(snapshot: M1RunSnapshot): void {
