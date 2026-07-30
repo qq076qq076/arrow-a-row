@@ -25,6 +25,11 @@
 | Vintage Radio Transceiver | https://polyhaven.com/a/vintage_radio_transceiver | Mateusz Sadek | `public/assets/polyhaven/vintage_radio_transceiver/vintage_radio_transceiver_1k.gltf`、1K JPG 貼圖與 BIN | CH06 裂光地平的靜滯訊號核 Boss；放大天線、紫白色調與核心點光建立可讀剪影 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 | Power Box 01 | https://polyhaven.com/a/power_box_01 | Rico Cilliers（建模／貼圖）、Yann Kervran（rigging） | `public/assets/backlog/polyhaven/power_box_01/`、1K glTF／JPG／BIN | CH02 鏡潮高架的配電街景與藍色導引光 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 | Tree Small 02 | https://polyhaven.com/a/tree_small_02 | Rico Cilliers | `public/assets/backlog/polyhaven/tree_small_02/`、1K glTF／JPG／BIN | 已下載備用；預計用於 CH04 霧冠林海的樹冠側景 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
+| Grass Medium 02 | https://polyhaven.com/a/grass_medium_02 | Rico Cilliers | `public/assets/polyhaven/grass_medium_02/grass_medium_02_1k.gltf`、1K JPG 貼圖與 BIN | CH01 晨線草原的低草／晨露花簇；可縮放變體後供 CH04 林下植被重用 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
+| Shrub 02 | https://polyhaven.com/a/shrub_02 | Rico Cilliers | `public/assets/polyhaven/shrub_02/shrub_02_1k.gltf`、1K JPG 貼圖與 BIN | CH01 道路邊緣灌木與 CH04 霧冠林海的低矮林下層 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
+| Modular Airduct Circular 01 | https://polyhaven.com/a/modular_airduct_circular_01 | Riley Queen | `public/assets/polyhaven/modular_airduct_circular_01/modular_airduct_circular_01_1k.gltf`、1K JPG 貼圖與 BIN | CH02 懸掛電纜／鏡面接點、CH03 熔庭通風口；可作 CH06 高位訊號管線變體 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
+| Steel Frame Shelves 01 | https://polyhaven.com/a/steel_frame_shelves_01 | James Ray Cock | `public/assets/polyhaven/steel_frame_shelves_01/steel_frame_shelves_01_1k.gltf`、1K JPG 貼圖與 BIN | CH05 星圖遺庫的金屬書架變體，與既有 Shelf 01 交錯形成遠近書架層次 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
+| Crystalline Iceplant | https://polyhaven.com/a/crystalline_iceplant | James Ray Cock、Jenelle van Heerden | `public/assets/polyhaven/crystalline_iceplant/crystalline_iceplant_1k.gltf`、1K JPG 貼圖與 BIN | CH06 裂光地平的晶化地被／浮島邊緣；以白金／紫色材質變體呼應裂光晶板 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 
 ## Quaternius 資產來源與授權
 

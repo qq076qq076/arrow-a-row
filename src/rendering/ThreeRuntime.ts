@@ -60,6 +60,11 @@ const POLYHAVEN_SHELF_URL = `${import.meta.env.BASE_URL}assets/polyhaven/Shelf_0
 const POLYHAVEN_SCHOOL_DESK_URL = `${import.meta.env.BASE_URL}assets/polyhaven/SchoolDesk_01/SchoolDesk_01_1k.gltf`;
 const POLYHAVEN_MARBLE_BUST_URL = `${import.meta.env.BASE_URL}assets/polyhaven/marble_bust_01/marble_bust_01_1k.gltf`;
 const POLYHAVEN_VINTAGE_RADIO_URL = `${import.meta.env.BASE_URL}assets/polyhaven/vintage_radio_transceiver/vintage_radio_transceiver_1k.gltf`;
+const POLYHAVEN_GRASS_MEDIUM_URL = `${import.meta.env.BASE_URL}assets/polyhaven/grass_medium_02/grass_medium_02_1k.gltf`;
+const POLYHAVEN_SHRUB_URL = `${import.meta.env.BASE_URL}assets/polyhaven/shrub_02/shrub_02_1k.gltf`;
+const POLYHAVEN_AIRDUCT_URL = `${import.meta.env.BASE_URL}assets/polyhaven/modular_airduct_circular_01/modular_airduct_circular_01_1k.gltf`;
+const POLYHAVEN_STEEL_SHELVES_URL = `${import.meta.env.BASE_URL}assets/polyhaven/steel_frame_shelves_01/steel_frame_shelves_01_1k.gltf`;
+const POLYHAVEN_CRYSTALLINE_ICEPLANT_URL = `${import.meta.env.BASE_URL}assets/polyhaven/crystalline_iceplant/crystalline_iceplant_1k.gltf`;
 
 export class ThreeRuntime {
   private readonly scene = new Scene();
@@ -145,6 +150,7 @@ export class ThreeRuntime {
     this.loadPolyhavenPickupModel();
     this.loadPlayerModel();
     this.loadQuaterniusRoadModel();
+    this.loadPolyhavenBackgroundKit();
     this.loadPolyhavenViaductProps();
     this.loadPolyhavenCh02EnemyModels();
     this.loadPolyhavenForgeModels();
@@ -445,6 +451,78 @@ export class ThreeRuntime {
         this.sceneryGroup.add(rock);
       }
     }, undefined, (error: unknown) => console.warn('Poly Haven Rock 07 載入失敗。', error));
+  }
+
+  private loadPolyhavenBackgroundKit(): void {
+    this.loadGltf(POLYHAVEN_GRASS_MEDIUM_URL, 'Poly Haven Grass Medium 02', (scene) => {
+      this.addSceneryModels(scene, this.sceneryGroup, 'ch01-grass', [
+        [-6.65, 14, 0.2, 0.35, 0], [6.7, 30, -0.75, 0.3, 0], [-6.7, 46, 0.55, 0.32, 0], [6.7, 62, -1.2, 0.35, 0],
+      ], '#7aa86c', 0.2);
+    });
+    this.loadGltf(POLYHAVEN_SHRUB_URL, 'Poly Haven Shrub 02 (meadow and canopy)', (scene) => {
+      this.addSceneryModels(scene, this.sceneryGroup, 'ch01-shrub', [
+        [-7.6, 18, 0.2, 0.42, 0], [7.6, 34, -0.6, 0.38, 0], [-7.5, 50, 0.8, 0.45, 0],
+      ], '#5f9567', 0.18);
+      this.addSceneryModels(scene, this.canopySceneryGroup, 'ch04-shrub', [
+        [6.5, 16, -0.25, 0.42, 0], [-6.5, 30, 0.45, 0.38, 0], [6.5, 54, -0.7, 0.45, 0], [-6.5, 68, 0.15, 0.4, 0],
+      ], '#4d8f70', 0.22);
+    });
+    this.loadGltf(POLYHAVEN_AIRDUCT_URL, 'Poly Haven Modular Airduct Circular 01', (scene) => {
+      this.addSceneryModels(scene, this.viaductSceneryGroup, 'ch02-airduct', [
+        [-6, 18, Math.PI / 2, 0.55, 2.4], [6, 34, -Math.PI / 2, 0.5, 2.4], [-6, 50, Math.PI / 2, 0.55, 2.4],
+      ], '#5e94bf', 0.2);
+      this.addSceneryModels(scene, this.forgeSceneryGroup, 'ch03-airduct', [
+        [5.8, 20, -Math.PI / 2, 0.62, 2.1], [-5.8, 42, Math.PI / 2, 0.58, 2.1], [5.8, 64, -Math.PI / 2, 0.62, 2.1],
+      ], '#c15d43', 0.25);
+      this.addSceneryModels(scene, this.horizonSceneryGroup, 'ch06-airduct', [
+        [-6.2, 22, Math.PI / 2, 0.55, 2.4], [6.2, 46, -Math.PI / 2, 0.5, 2.4],
+      ], '#a995d4', 0.28);
+    });
+    this.loadGltf(POLYHAVEN_STEEL_SHELVES_URL, 'Poly Haven Steel Frame Shelves 01', (scene) => {
+      this.addSceneryModels(scene, this.archiveSceneryGroup, 'ch05-steel-shelf', [
+        [5.6, 22, -Math.PI / 2, 1.1, 0], [-5.6, 48, Math.PI / 2, 1.05, 0], [5.6, 70, -Math.PI / 2, 1.1, 0],
+      ], '#4b6995', 0.28);
+    });
+    this.loadGltf(POLYHAVEN_CRYSTALLINE_ICEPLANT_URL, 'Poly Haven Crystalline Iceplant', (scene) => {
+      this.addSceneryModels(scene, this.horizonSceneryGroup, 'ch06-crystal-groundcover', [
+        [-6.4, 16, 0.2, 0.8, 0.08], [6.4, 34, -0.4, 0.72, 0.08], [-6.4, 52, 0.5, 0.78, 0.08], [6.4, 70, -0.8, 0.68, 0.08],
+      ], '#c4b4ff', 0.38);
+    });
+  }
+
+  private addSceneryModels(
+    template: Group,
+    targetGroup: Group,
+    name: string,
+    placements: ReadonlyArray<readonly [number, number, number, number, number?]>,
+    tint: string,
+    tintAmount: number,
+  ): void {
+    for (const [x, z, rotationY, scale, y = 0] of placements) {
+      const model = template.clone(true);
+      model.name = `${name}:${targetGroup.children.length}`;
+      model.position.set(x, y, z);
+      model.rotation.y = rotationY;
+      model.scale.setScalar(scale);
+      this.tintSceneryModel(model, tint, tintAmount);
+      model.userData.worldZ = z;
+      model.userData.sceneryIndex = targetGroup.children.length;
+      targetGroup.add(model);
+    }
+  }
+
+  private tintSceneryModel(model: Group, tint: string, amount: number): void {
+    const color = new Color(tint);
+    model.traverse((child) => {
+      if (!(child instanceof Mesh)) return;
+      const sourceMaterials = Array.isArray(child.material) ? child.material : [child.material];
+      const materials = sourceMaterials.map((source) => {
+        const material = source.clone();
+        if ('color' in material && material.color instanceof Color) material.color.lerp(color, amount);
+        return material;
+      });
+      child.material = materials.length === 1 ? materials[0]! : materials;
+    });
   }
 
   private loadGltf(url: string, label: string, onLoad: (scene: Group) => void): void {
