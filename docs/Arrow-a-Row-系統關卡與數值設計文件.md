@@ -4,7 +4,7 @@
 
 本文件是可量產遊戲內容的設計基線。所有數值是 MVP 起始值，必須集中於 JSON／CSV 內容資料表並經 Zod schema 驗證，不可硬編碼。任何改動均需提高 `contentVersion`、附 playtest 或 simulation 證據。
 
-> M6 現行實作同步：目前程式的箭矢基礎傷害為 `0.8 / 3 ≈ 0.267`，開局箭數為 `0`；自動電擊為 `5 / 3 ≈ 1.667` 傷害／秒、初始 2 個鎖定目標。第一個 Gate 固定提供「+1 箭矢／火砲 +1／電擊目標 +1」左中右三選一；電擊只有在敵人進入 1 單位鎖定距離後才會開始作用。另有慢速範圍火砲，可由 `cannon_weapon` 解鎖，並以 `cannon_damage`（傷害 +35%）、`cannon_radius`（爆炸範圍 +10%）與 `cannon_fire_rate`（射速 +25%）獨立強化。一般 Buff 的傷害加成也縮為原值三分之一。前 5／10 波只靠地面掉落 Buff，15 波完成後才提供 3 張不重複回響候選供玩家三選一，地面掉落 Buff 使用 Treasure Chest。小怪於道路最遠端 `z = 64` 生成；Boss 擊敗後須等小怪死亡或跑出玩家身後 `z < -2` 才進入結算。新增 `life_steal` Buff，初始吸血為 0%，依實際傷害比例回復生命。精確行為以 `src/domain/M1RunSimulation.ts`、`src/content/BuffCatalog.ts` 與 `src/rendering/ThreeRuntime.ts` 為準。
+> M6 現行實作同步：目前程式的箭矢基礎傷害為 `0.8 / 3 ≈ 0.267`，開局箭數為 `0`；自動電擊為 `5 / 3 ≈ 1.667` 傷害／秒、初始 2 個鎖定目標、初始鎖定距離為 3。第一個 Gate 固定提供「+1 箭矢／火砲 +1／電擊目標 +1」左中右三選一；電擊會在敵人進入 3 單位鎖定距離後開始作用。第一個 Gate 以外的 Gate 與怪物掉落都從完整十六種 Buff 等機率抽取。另有慢速範圍火砲，可由 `cannon_weapon` 解鎖，並以 `cannon_damage`（傷害 +35%）、`cannon_radius`（爆炸範圍 +10%）與 `cannon_fire_rate`（射速 +25%）獨立強化。一般 Buff 的傷害加成也縮為原值三分之一。前 5／10 波只靠地面掉落 Buff，15 波完成後才提供 3 張不重複回響候選供玩家三選一，地面掉落 Buff 使用 Treasure Chest。小怪於道路最遠端 `z = 64` 生成；Boss 擊敗後須等小怪死亡或跑出玩家身後 `z < -2` 才進入結算。新增 `life_steal` Buff，初始吸血為 0%，依實際傷害比例回復生命。精確行為以 `src/domain/M1RunSimulation.ts`、`src/content/BuffCatalog.ts` 與 `src/rendering/ThreeRuntime.ts` 為準。
 
 ## 1. 設計目標與運行條件
 

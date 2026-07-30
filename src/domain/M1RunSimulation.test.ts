@@ -47,10 +47,10 @@ describe('M1RunSimulation', () => {
     expect(centerChoice.snapshot().player.cannonUnlocked).toBe(true);
   });
 
-  it('starts lightning with a one-unit lock range', () => {
+  it('starts lightning with a three-unit lock range', () => {
     const simulation = new M1RunSimulation();
     simulation.start();
-    expect(simulation.snapshot().player.lightningRange).toBe(1);
+    expect(simulation.snapshot().player.lightningRange).toBe(3);
   });
 
   it('freezes simulation state while paused and resumes from the same state', () => {
@@ -388,12 +388,16 @@ describe('M1RunSimulation', () => {
     expect(first.snapshot()).toEqual(second.snapshot());
   });
 
-  it('offers no health reward in either of the first two gates', () => {
+  it('keeps the first Gate fixed while later Gates allow defensive Buffs', () => {
     const simulation = new M1RunSimulation();
-    simulation.start();
-    const gates = simulation.snapshot().gates;
-    expect(gates.slice(0, 2)).toHaveLength(2);
-    expect(gates.slice(0, 2).flatMap((gate) => [gate.leftLabel, gate.rightLabel]).join(' ')).not.toMatch(/HP|生命|回復|治療/);
+    const laterBuffs = new Set<string>();
+    for (let index = 0; index < 12; index += 1) {
+      simulation.start();
+      const gates = simulation.snapshot().gates;
+      expect(new Set([gates[0]?.leftBuffId, gates[0]?.centerBuffId, gates[0]?.rightBuffId])).toEqual(new Set(['split_arrow', 'cannon_weapon', 'lightning_targets']));
+      gates.slice(1).forEach((gate) => { laterBuffs.add(gate.leftBuffId); laterBuffs.add(gate.rightBuffId); });
+    }
+    expect([...laterBuffs].some((id) => id === 'vitality' || id === 'windstep' || id === 'barkskin')).toBe(true);
   });
 
   it('draws distinct random Gate options from the expanded Buff catalog', () => {
@@ -402,8 +406,7 @@ describe('M1RunSimulation', () => {
     for (let index = 0; index < 12; index += 1) {
       simulation.start();
       const gates = simulation.snapshot().gates;
-      expect(gates.slice(0, 2).flatMap((gate) => [gate.leftLabel, gate.rightLabel]).join(' ')).not.toMatch(/生命|移速|減傷/);
-      gates.forEach((gate) => { seen.add(gate.leftBuffId); seen.add(gate.rightBuffId); expect(gate.leftBuffId).not.toBe(gate.rightBuffId); });
+      gates.forEach((gate) => { seen.add(gate.leftBuffId); seen.add(gate.rightBuffId); if (gate.centerBuffId !== undefined) seen.add(gate.centerBuffId); expect(gate.leftBuffId).not.toBe(gate.rightBuffId); });
     }
     expect(seen).toContain('piercing_arrow');
     expect(seen.size).toBeGreaterThanOrEqual(BUFF_IDS.length - 1);

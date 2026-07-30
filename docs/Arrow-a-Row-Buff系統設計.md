@@ -30,8 +30,8 @@ Gate 用於建立當局 Build；一般小怪死亡後掉落小型 Buff，玩家�
 ## 生成規則
 
 - 每章有三組 Gate；一般 Gate 提供左右兩個不重複 Buff，第一組開場 Gate 特別提供左／中／右三個不重複 Buff。
-- 第一組 Gate 固定提供 `split_arrow`、`cannon_weapon` 與 `lightning_targets`，確保箭數從 0 開始的玩家能在第一個選擇取得主要武器；電擊保留既有 2 個初始鎖定目標。
-- 第二組只從輸出／電擊／火砲型 Buff 抽取，第三組從全部十六種 Buff 抽取。
+- 第一組 Gate 固定提供 `split_arrow`、`cannon_weapon` 與 `lightning_targets`，確保箭數從 0 開始的玩家能在第一個選擇取得主要武器；電擊保留既有 2 個初始鎖定目標，初始鎖定距離為 3。
+- 第一組以外的 Gate 與每隻怪物掉落都從全部十六種 Buff 等機率抽取，不限制為箭矢或輸出類型。
 - 每隻一般小怪死亡必掉一個 Buff 拾取物，類型從十六種 Buff 等機率抽取；角色接近時自動拾取並套用三分之一效果。
 - Gate 的 Buff 視覺使用燈籠；小怪掉落的地面 Buff 使用 Poly Haven Treasure Chest 寶箱模型。兩者的文字提示均顯示對應能力與數值。
 - 每次新 Run／進入下一章，都以可重現的偽隨機序列重新產生 Gate。

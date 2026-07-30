@@ -28,5 +28,3 @@ export const BUFF_CATALOG: Record<BuffId, BuffDefinition> = {
   windstep: { id: 'windstep', gateLabel: '移速 +20%', pickupLabel: '移速 +7%', isOffensive: false },
   barkskin: { id: 'barkskin', gateLabel: '減傷 +15%', pickupLabel: '減傷 +5%', isOffensive: false },
 };
-
-export const OFFENSIVE_BUFF_IDS = BUFF_IDS.filter((id) => BUFF_CATALOG[id].isOffensive);
