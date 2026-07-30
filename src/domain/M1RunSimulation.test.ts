@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BUFF_IDS } from '../content/BuffCatalog';
-import { BASE_ARROW_DAMAGE, BASE_LIGHTNING_DAMAGE_PER_SECOND, getArrowDamageMultiplier, M1RunSimulation } from './M1RunSimulation';
+import { BASE_ARROW_DAMAGE, BASE_LIGHTNING_DAMAGE_PER_SECOND, BOSS_START_DISTANCE, BOSS_STOP_DISTANCE, BOSS_WARNING_SECONDS, BOSS_WARNING_START_DISTANCE, getArrowDamageMultiplier, M1RunSimulation } from './M1RunSimulation';
 
 function advanceToDistance(simulation: M1RunSimulation, distanceMeters: number): void {
   while (simulation.snapshot().distanceMeters < distanceMeters) simulation.tick(1 / 30);
@@ -32,25 +32,35 @@ describe('M1RunSimulation', () => {
     expect(simulation.snapshot().distanceMeters).toBeGreaterThan(beforePause.distanceMeters);
   });
 
-  it('fires immediately, then makes the Boss approach from beyond the fifth wave', () => {
+  it('warns for five seconds after the last minion wave, then brings the Boss to three units', () => {
     const simulation = new M1RunSimulation();
-    simulation.start();
+    simulation.start({ healthLevel: 100 });
     simulation.setTargetX(5);
     simulation.tick(1 / 30);
     expect(simulation.snapshot().arrows).toHaveLength(1);
 
-    advanceToDistance(simulation, 77.9);
+    advanceToDistance(simulation, BOSS_WARNING_START_DISTANCE - 0.1);
     expect(simulation.snapshot().boss).toBeUndefined();
-    simulation.setTargetX(0);
-    advanceToDistance(simulation, 78);
-    simulation.tick(1 / 30);
+    expect(simulation.snapshot().bossWarningSeconds).toBe(0);
+    advanceToDistance(simulation, BOSS_WARNING_START_DISTANCE);
+    while (simulation.snapshot().bossWarningSeconds === 0) simulation.tick(1 / 30);
+    const warning = simulation.snapshot();
+    expect(warning.boss).toBeUndefined();
+    expect(warning.bossWarningSeconds).toBe(BOSS_WARNING_SECONDS);
+    expect(warning.enemies.some((enemy) => enemy.id === 'wave-7a')).toBe(true);
+
+    simulation.tick(BOSS_WARNING_SECONDS - 0.1);
+    expect(simulation.snapshot().boss).toBeUndefined();
+    simulation.tick(0.1);
     expect(simulation.snapshot().phase).toBe('playing');
     const arrivingBoss = simulation.snapshot().boss;
-    expect(arrivingBoss?.z).toBeGreaterThan(15);
+    expect(simulation.snapshot().distanceMeters).toBeLessThanOrEqual(BOSS_START_DISTANCE);
+    expect(arrivingBoss?.z).toBeGreaterThan(BOSS_STOP_DISTANCE);
 
+    simulation.setTargetX(0);
     const initialBossHp = arrivingBoss?.hp ?? 0;
     for (let tick = 0; tick < 360; tick += 1) simulation.tick(1 / 30);
-    expect(simulation.snapshot().boss?.z).toBeGreaterThanOrEqual(15);
+    expect(simulation.snapshot().boss?.z).toBe(BOSS_STOP_DISTANCE);
     expect(simulation.snapshot().boss?.hp).toBeLessThan(initialBossHp);
   });
 
@@ -60,8 +70,47 @@ describe('M1RunSimulation', () => {
     simulation.enterBossPreview();
 
     const preview = simulation.snapshot();
-    expect(preview.distanceMeters).toBe(78);
-    expect(preview.boss).toMatchObject({ z: 10, hp: 9_999, maxHp: 9_999, isDefeated: false });
+    expect(preview.distanceMeters).toBe(BOSS_START_DISTANCE);
+    expect(preview.boss).toMatchObject({ z: BOSS_STOP_DISTANCE, hp: 9_999, maxHp: 9_999, isDefeated: false });
+  });
+
+  it('randomly offers the swarm echo and doubles minions in the next chapter', () => {
+    const simulation = new M1RunSimulation();
+    let swarmReward: ReturnType<M1RunSimulation['snapshot']> | undefined;
+
+    for (let attempt = 0; attempt < 24 && swarmReward === undefined; attempt += 1) {
+      simulation.start();
+      const setup = simulation.snapshot();
+      simulation.restore({
+        ...setup,
+        enemies: [],
+        boss: { id: 'bos_moss_crown_a', hp: 1, maxHp: 1, z: BOSS_STOP_DISTANCE, phase: 1, telegraphSeconds: 0, telegraphText: 'Boss 進場！', isDefeated: false },
+      });
+      for (let tick = 0; tick < 12 && simulation.snapshot().phase === 'playing'; tick += 1) simulation.tick(1 / 30);
+      const reward = simulation.snapshot();
+      if (reward.rewardOptions.includes('enemy_swarm')) swarmReward = reward;
+    }
+
+    expect(swarmReward).toBeDefined();
+    expect(simulation.chooseReward('enemy_swarm')).toBe(true);
+    expect(simulation.snapshot().player.enemyCountMultiplier).toBe(2);
+    expect(simulation.continueToNextChapter()).toBe(true);
+    advanceToDistance(simulation, 16);
+    expect(simulation.snapshot().enemies).toHaveLength(4);
+  });
+
+  it('restores an unexpanded swarm run without losing the doubling effect', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start();
+    const setup = simulation.snapshot();
+    simulation.restore({
+      ...setup,
+      player: { ...setup.player, enemyCountMultiplier: 2 },
+      enemies: [{ id: 'restore-minion', kind: 'melee', x: 0, z: 20, hp: 10, telegraphSeconds: 0, deathSeconds: 0 }],
+    });
+    simulation.tick(1 / 30);
+
+    expect(simulation.snapshot().enemies.map((enemy) => enemy.id)).toEqual(['restore-minion', 'restore-minion-swarm-1']);
   });
 
   it('applies permanent profile modifiers to a new run', () => {

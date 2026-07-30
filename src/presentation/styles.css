@@ -66,6 +66,9 @@ button { font: inherit; }
 .boss-hud { left: 16px; position: absolute; right: 16px; text-align: center; top: calc(env(safe-area-inset-top) + 130px); z-index: 1; }
 .boss-hud progress { accent-color: #f4c95d; display: block; height: 16px; width: 100%; }
 .boss-hud p { background: #6f3d32; border-radius: 999px; margin: 8px auto; padding: 7px 12px; width: fit-content; }
+.boss-warning { animation: boss-warning-flash .62s steps(2, end) infinite; background: #8c3028; border: 2px solid #f4c95d; border-radius: 999px; box-shadow: 0 0 24px rgb(244 201 93 / 72%); font-size: 16px; font-weight: 800; left: 50%; margin: 0; padding: 10px 18px; position: absolute; text-align: center; top: calc(env(safe-area-inset-top) + 124px); transform: translateX(-50%); white-space: nowrap; z-index: 2; }
+@keyframes boss-warning-flash { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .boss-warning { animation: none; } }
 .eyebrow { color: #f4c95d; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .unsupported-screen { display: grid; min-height: 100dvh; place-content: center; padding: 24px; text-align: center; }
 .run-progress { left: 0; position: absolute; right: 0; text-align: center; top: calc(env(safe-area-inset-top) + 126px); z-index: 1; }
