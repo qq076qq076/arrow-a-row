@@ -34,7 +34,7 @@ const ENEMY_MATERIALS = {
 };
 
 const BUFF_ICON_GLYPHS: Record<BuffId, string> = {
-  split_arrow: '↗', power_shot: '✦', swift_shot: '➤', rapid_fire: '≋', piercing_arrow: '⊹', lightning_targets: '⚡', lightning_damage: '✹', lightning_range: '⌁', cannon_weapon: '◉', cannon_damage: '✹', cannon_fire_rate: '➶', life_steal: '♥', vitality: '✚', windstep: '➟', barkskin: '◆',
+  split_arrow: '↗', power_shot: '✦', swift_shot: '➤', rapid_fire: '≋', piercing_arrow: '⊹', lightning_targets: '⚡', lightning_damage: '✹', lightning_range: '⌁', cannon_weapon: '◉', cannon_damage: '✹', cannon_radius: '◎', cannon_fire_rate: '➶', life_steal: '♥', vitality: '✚', windstep: '➟', barkskin: '◆',
 };
 
 const POLYHAVEN_ROCK_URL = `${import.meta.env.BASE_URL}assets/polyhaven/rock_07/rock_07.gltf`;
@@ -1281,7 +1281,7 @@ export class ThreeRuntime {
   }
 
   private drawPickupIcon(context: CanvasRenderingContext2D, buffId: BuffId, x: number, y: number): void {
-    const icons: Record<BuffId, readonly [string, string]> = { split_arrow: ['➤', '#f4c95d'], power_shot: ['✦', '#ff9a6b'], swift_shot: ['≫', '#71e6d1'], rapid_fire: ['⚡', '#fff4ba'], piercing_arrow: ['⇥', '#a986ef'], lightning_targets: ['⚡', '#9ee8ff'], lightning_damage: ['✹', '#b3a6ff'], lightning_range: ['⌁', '#71e6d1'], cannon_weapon: ['◉', '#ff9a6b'], cannon_damage: ['✹', '#ff795d'], cannon_fire_rate: ['➶', '#ffd16b'], life_steal: ['♥', '#ff6b9d'], vitality: ['+', '#ff8d9b'], windstep: ['➜', '#83d7ff'], barkskin: ['⬡', '#8fe39a'] };
+    const icons: Record<BuffId, readonly [string, string]> = { split_arrow: ['➤', '#f4c95d'], power_shot: ['✦', '#ff9a6b'], swift_shot: ['≫', '#71e6d1'], rapid_fire: ['⚡', '#fff4ba'], piercing_arrow: ['⇥', '#a986ef'], lightning_targets: ['⚡', '#9ee8ff'], lightning_damage: ['✹', '#b3a6ff'], lightning_range: ['⌁', '#71e6d1'], cannon_weapon: ['◉', '#ff9a6b'], cannon_damage: ['✹', '#ff795d'], cannon_radius: ['◎', '#ffb04a'], cannon_fire_rate: ['➶', '#ffd16b'], life_steal: ['♥', '#ff6b9d'], vitality: ['+', '#ff8d9b'], windstep: ['➜', '#83d7ff'], barkskin: ['⬡', '#8fe39a'] };
     const [glyph, color] = icons[buffId];
     context.fillStyle = color; context.beginPath(); context.arc(x, y, 72, 0, Math.PI * 2); context.fill();
     context.fillStyle = '#102c2a'; context.font = '800 104px system-ui, sans-serif'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(glyph, x, y + 4);

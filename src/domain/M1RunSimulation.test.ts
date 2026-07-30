@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BUFF_IDS } from '../content/BuffCatalog';
-import { BASE_ARROW_DAMAGE, BASE_CANNON_DAMAGE, BASE_LIGHTNING_DAMAGE_PER_SECOND, BOSS_START_DISTANCE, BOSS_STOP_DISTANCE, BOSS_WARNING_SECONDS, BOSS_WARNING_START_DISTANCE, CANNON_BLAST_RADIUS, ENEMY_SPAWN_Z, LIFE_STEAL_BONUS, getArrowDamageMultiplier, M1RunSimulation } from './M1RunSimulation';
+import { BASE_ARROW_DAMAGE, BASE_CANNON_DAMAGE, BASE_LIGHTNING_DAMAGE_PER_SECOND, BOSS_START_DISTANCE, BOSS_STOP_DISTANCE, BOSS_WARNING_SECONDS, BOSS_WARNING_START_DISTANCE, CANNON_BLAST_RADIUS, CANNON_DAMAGE_BONUS, CANNON_RADIUS_BONUS, ENEMY_SPAWN_Z, LIFE_STEAL_BONUS, getArrowDamageMultiplier, M1RunSimulation } from './M1RunSimulation';
 
 function advanceToDistance(simulation: M1RunSimulation, distanceMeters: number): void {
   while (simulation.snapshot().distanceMeters < distanceMeters) {
@@ -543,6 +543,30 @@ describe('M1RunSimulation', () => {
     const result = simulation.snapshot();
     expect(result.arrows).toHaveLength(0);
     expect(result.enemies.every((enemy) => enemy.hp < 3)).toBe(true);
+  });
+
+  it('scales cannon damage and blast radius from full and dropped Buffs', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start();
+    const started = simulation.snapshot();
+    simulation.restore({
+      ...started,
+      player: { ...started.player, x: 0, cannonUnlocked: true },
+      pickups: [
+        { id: 901, x: 0, z: 1.2, buffId: 'cannon_damage', label: '砲彈傷害 +11.7%' },
+        { id: 902, x: 0, z: 1.2, buffId: 'cannon_radius', label: '砲擊範圍 +3.3%' },
+      ],
+    });
+
+    simulation.tick(1 / 30);
+    const upgraded = simulation.snapshot();
+    expect(upgraded.player.cannonDamage).toBeCloseTo(BASE_CANNON_DAMAGE * (1 + CANNON_DAMAGE_BONUS / 3));
+    expect(upgraded.player.cannonBlastRadius).toBeCloseTo(CANNON_BLAST_RADIUS * (1 + CANNON_RADIUS_BONUS / 3));
+
+    simulation.tick(0.1);
+    const cannonShot = simulation.snapshot().arrows.find((arrow) => arrow.weapon === 'cannon');
+    expect(cannonShot?.damage).toBeCloseTo(upgraded.player.cannonDamage);
+    expect(cannonShot?.blastRadius).toBeCloseTo(upgraded.player.cannonBlastRadius);
   });
 
   it('reaches Boss reward and applies it exactly once', () => {

@@ -1,4 +1,4 @@
-export const BUFF_IDS = ['split_arrow', 'power_shot', 'swift_shot', 'rapid_fire', 'piercing_arrow', 'lightning_targets', 'lightning_damage', 'lightning_range', 'cannon_weapon', 'cannon_damage', 'cannon_fire_rate', 'life_steal', 'vitality', 'windstep', 'barkskin'] as const;
+export const BUFF_IDS = ['split_arrow', 'power_shot', 'swift_shot', 'rapid_fire', 'piercing_arrow', 'lightning_targets', 'lightning_damage', 'lightning_range', 'cannon_weapon', 'cannon_damage', 'cannon_fire_rate', 'life_steal', 'vitality', 'windstep', 'barkskin', 'cannon_radius'] as const;
 
 export type BuffId = (typeof BUFF_IDS)[number];
 
@@ -20,7 +20,8 @@ export const BUFF_CATALOG: Record<BuffId, BuffDefinition> = {
   lightning_damage: { id: 'lightning_damage', gateLabel: '電擊傷害 +0.67', pickupLabel: '電能 +0.22', isOffensive: true },
   lightning_range: { id: 'lightning_range', gateLabel: '電擊距離 +6', pickupLabel: '電距 +2', isOffensive: true },
   cannon_weapon: { id: 'cannon_weapon', gateLabel: '火砲 +1', pickupLabel: '火砲核心 +⅓', isOffensive: true },
-  cannon_damage: { id: 'cannon_damage', gateLabel: '火砲傷害 +25%', pickupLabel: '砲彈傷害 +8%', isOffensive: true },
+  cannon_damage: { id: 'cannon_damage', gateLabel: '火砲傷害 +35%', pickupLabel: '砲彈傷害 +11.7%', isOffensive: true },
+  cannon_radius: { id: 'cannon_radius', gateLabel: '火砲範圍 +10%', pickupLabel: '砲擊範圍 +3.3%', isOffensive: true },
   cannon_fire_rate: { id: 'cannon_fire_rate', gateLabel: '火砲射速 +25%', pickupLabel: '砲擊射速 +8%', isOffensive: true },
   life_steal: { id: 'life_steal', gateLabel: '吸血 +10%', pickupLabel: '吸血 +3.3%', isOffensive: true },
   vitality: { id: 'vitality', gateLabel: '生命 +20', pickupLabel: '生命 +7', isOffensive: false },
