@@ -310,6 +310,22 @@ describe('M1RunSimulation', () => {
     expect(simulation.snapshot().player.lifeSteal).toBeCloseTo(LIFE_STEAL_BONUS / 3);
   });
 
+  it('collecting a Buff pickup does not damage the player', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start();
+    const initial = simulation.snapshot();
+    simulation.restore({
+      ...initial,
+      player: { ...initial.player, hp: 47 },
+      enemies: [],
+      pickups: [{ id: 1000, x: 0, z: 1.2, buffId: 'life_steal', label: '吸血 +3.3%' }],
+    });
+    simulation.tick(1 / 30);
+
+    expect(simulation.snapshot().player.hp).toBe(47);
+    expect(simulation.snapshot().pickups).toHaveLength(0);
+  });
+
   it('applies the three additional permanent upgrades to a new run', () => {
     const simulation = new M1RunSimulation();
     simulation.start({ arrowSpeedLevel: 2, pierceLevel: 1, movementLevel: 3 });

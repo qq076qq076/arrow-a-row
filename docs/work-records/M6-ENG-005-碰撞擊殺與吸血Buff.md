@@ -16,6 +16,6 @@
 
 ## 驗證
 
-- `npm test -- --run`：Vitest 7 files／37 tests passed。
+- `npm test -- --run`：Vitest 7 files／38 tests passed。
 - `npm run build`：production build passed；保留既有 Vite chunk size warning。
 - `npm run test:e2e`：Playwright mobile Chrome／Safari 12/12 passed。
