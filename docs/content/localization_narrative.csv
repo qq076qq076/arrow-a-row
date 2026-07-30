@@ -40,6 +40,7 @@ buff.piercing_arrow,穿透碎片,Piercing Fragment,10,Pickup,pickup,清楚,true,
 buff.lightning_targets,鎖定碎片,Lock Fragment,10,Pickup,pickup,清楚,true,+1/3 鎖定目標
 buff.lightning_damage,電能,Volt Charge,8,Pickup,pickup,清楚,true,+1 每秒傷害
 buff.lightning_range,電距,Arc Reach,8,Pickup,pickup,清楚,true,+2 鎖定距離
+buff.life_steal,吸血碎片,Lifesteal Fragment,8,Pickup,pickup,鼓勵,true,+3.3% 吸血
 buff.vitality,生命回響,Vitality Echo,8,Pickup,pickup,鼓勵,true,+7 生命
 buff.windstep,步伐回響,Windstep Echo,8,Pickup,pickup,鼓勵,true,+7% 移速
 buff.barkskin,樹甲回響,Barkskin Echo,8,Pickup,pickup,鼓勵,true,+5% 減傷

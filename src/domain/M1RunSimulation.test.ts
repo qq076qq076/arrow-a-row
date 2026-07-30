@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BUFF_IDS } from '../content/BuffCatalog';
-import { BASE_ARROW_DAMAGE, BASE_LIGHTNING_DAMAGE_PER_SECOND, BOSS_START_DISTANCE, BOSS_STOP_DISTANCE, BOSS_WARNING_SECONDS, BOSS_WARNING_START_DISTANCE, ENEMY_SPAWN_Z, getArrowDamageMultiplier, M1RunSimulation } from './M1RunSimulation';
+import { BASE_ARROW_DAMAGE, BASE_LIGHTNING_DAMAGE_PER_SECOND, BOSS_START_DISTANCE, BOSS_STOP_DISTANCE, BOSS_WARNING_SECONDS, BOSS_WARNING_START_DISTANCE, ENEMY_SPAWN_Z, LIFE_STEAL_BONUS, getArrowDamageMultiplier, M1RunSimulation } from './M1RunSimulation';
 
 function advanceToDistance(simulation: M1RunSimulation, distanceMeters: number): void {
   while (simulation.snapshot().distanceMeters < distanceMeters) {
@@ -222,10 +222,48 @@ describe('M1RunSimulation', () => {
     const simulation = new M1RunSimulation();
     simulation.start();
     expect(simulation.snapshot().player.damage).toBe(BASE_ARROW_DAMAGE);
+    expect(simulation.snapshot().player.lifeSteal).toBe(0);
     expect(simulation.snapshot().player.lightningDamagePerSecond).toBe(BASE_LIGHTNING_DAMAGE_PER_SECOND);
     expect(getArrowDamageMultiplier(6)).toBe(1.5);
     expect(getArrowDamageMultiplier(14)).toBe(0.9);
     expect(getArrowDamageMultiplier(24)).toBe(0.55);
+  });
+
+  it('takes current enemy HP on collision and kills the colliding enemy', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start();
+    const initial = simulation.snapshot();
+    simulation.restore({
+      ...initial,
+      player: { ...initial.player, hp: 80 },
+      enemies: [{ id: 'collision-enemy', kind: 'melee', x: 0, z: 0.9, hp: 17, telegraphSeconds: 0, deathSeconds: 0 }],
+      arrows: [],
+      lightningTargetIds: [],
+    });
+    simulation.tick(1 / 30);
+
+    const snapshot = simulation.snapshot();
+    expect(snapshot.player.hp).toBe(63);
+    expect(snapshot.enemies[0]).toMatchObject({ id: 'collision-enemy', hp: 0 });
+    expect(snapshot.enemies[0]?.deathSeconds).toBeGreaterThan(0);
+  });
+
+  it('heals by the actual damage multiplied by life steal', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start();
+    const initial = simulation.snapshot();
+    simulation.restore({
+      ...initial,
+      player: { ...initial.player, hp: 50, lifeSteal: 0.2, lightningRange: 6 },
+      enemies: [{ id: 'life-steal-target', kind: 'melee', x: 0, z: 5, hp: 100, telegraphSeconds: 0, deathSeconds: 0 }],
+      arrows: [],
+      lightningTargetIds: [],
+    });
+    simulation.tick(1 / 30);
+
+    const snapshot = simulation.snapshot();
+    expect(snapshot.player.hp).toBeCloseTo(50 + BASE_LIGHTNING_DAMAGE_PER_SECOND * 0.2);
+    expect(snapshot.enemies[0]?.hp).toBeCloseTo(100 - BASE_LIGHTNING_DAMAGE_PER_SECOND);
   });
 
   it('applies one-third damage bonuses for regular arrow and lightning Buffs', () => {
@@ -245,6 +283,31 @@ describe('M1RunSimulation', () => {
     expect(simulation.snapshot().player.damage).toBeCloseTo(BASE_ARROW_DAMAGE * (1 + 0.25 / 3));
     advanceToDistance(simulation, 19);
     expect(simulation.snapshot().player.lightningDamagePerSecond).toBeCloseTo(BASE_LIGHTNING_DAMAGE_PER_SECOND + 2 / 3);
+  });
+
+  it('applies full and one-third life steal from Gate and pickup Buffs', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start();
+    const started = simulation.snapshot();
+    simulation.restore({
+      ...started,
+      gates: [
+        { ...started.gates[0]!, leftBuffId: 'life_steal', rightBuffId: 'split_arrow', leftLabel: '吸血 +10%', rightLabel: '+1 箭矢' },
+        ...started.gates.slice(1),
+      ],
+    });
+    simulation.setTargetX(-5);
+    advanceToDistance(simulation, 11);
+    expect(simulation.snapshot().player.lifeSteal).toBeCloseTo(LIFE_STEAL_BONUS);
+
+    const afterGate = simulation.snapshot();
+    simulation.restore({
+      ...afterGate,
+      player: { ...afterGate.player, x: 0, lifeSteal: 0 },
+      pickups: [{ id: 999, x: 0, z: 1.2, buffId: 'life_steal', label: '吸血 +3.3%' }],
+    });
+    simulation.tick(1 / 30);
+    expect(simulation.snapshot().player.lifeSteal).toBeCloseTo(LIFE_STEAL_BONUS / 3);
   });
 
   it('applies the three additional permanent upgrades to a new run', () => {
@@ -289,7 +352,7 @@ describe('M1RunSimulation', () => {
     expect(gates.slice(0, 2).flatMap((gate) => [gate.leftLabel, gate.rightLabel]).join(' ')).not.toMatch(/HP|生命|回復|治療/);
   });
 
-  it('draws distinct random Gate options from the nine-Buff catalog', () => {
+  it('draws distinct random Gate options from the twelve-Buff catalog', () => {
     const seen = new Set<string>();
     const simulation = new M1RunSimulation();
     for (let index = 0; index < 12; index += 1) {
@@ -340,9 +403,10 @@ describe('M1RunSimulation', () => {
     const initial = simulation.snapshot();
     simulation.restore({
       ...initial,
+      player: { ...initial.player, lightningRange: 2 },
       enemies: [
-        { id: 'test-near-left', kind: 'melee', x: -0.2, z: 0.9, hp: 100, telegraphSeconds: 0, deathSeconds: 0 },
-        { id: 'test-near-right', kind: 'melee', x: 0.2, z: 0.9, hp: 100, telegraphSeconds: 0, deathSeconds: 0 },
+        { id: 'test-near-left', kind: 'melee', x: -0.2, z: 2, hp: 100, telegraphSeconds: 0, deathSeconds: 0 },
+        { id: 'test-near-right', kind: 'melee', x: 0.2, z: 2, hp: 100, telegraphSeconds: 0, deathSeconds: 0 },
       ],
       arrows: [],
       lightningTargetIds: [],
@@ -351,7 +415,7 @@ describe('M1RunSimulation', () => {
 
     const snapshot = simulation.snapshot();
     expect(snapshot.lightningTargetIds).toHaveLength(2);
-    expect(snapshot.player.lightningRange).toBe(1);
+    expect(snapshot.player.lightningRange).toBe(2);
     expect(snapshot.lightningTargetIds.every((id) => snapshot.enemies.some((enemy) => enemy.id === id && enemy.z > 0))).toBe(true);
   });
 

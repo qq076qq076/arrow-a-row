@@ -115,3 +115,4 @@
 | 3 | 工程師 | 初始輸出與 Buff 傷害縮放、地面掉落寶箱 | Completed | [M6-ENG-002](M6-ENG-002-輸出與Buff傷害縮放.md) | `feat：縮減初始輸出與Buff傷害` |
 | 4 | 工程師 | 場景效能、固定模型朝向與怪物血條可讀性 | Completed | [M6-ENG-003](M6-ENG-003-場景效能與可讀性優化.md) | `feat：關卡回響與場景效能優化` |
 | 5 | 工程師 | Boss 後怪物清場與道路最遠端生成 | Completed | [M6-ENG-004](M6-ENG-004-怪物清場與遠端生成.md) | `feat：怪物清場與遠端生成` |
+| 6 | 工程師 | 碰撞擊殺與吸血 Buff | Completed | [M6-ENG-005](M6-ENG-005-碰撞擊殺與吸血Buff.md) | `feat：加入碰撞擊殺與吸血Buff` |

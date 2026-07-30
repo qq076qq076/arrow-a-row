@@ -4,7 +4,7 @@
 
 本文件是可量產遊戲內容的設計基線。所有數值是 MVP 起始值，必須集中於 JSON／CSV 內容資料表並經 Zod schema 驗證，不可硬編碼。任何改動均需提高 `contentVersion`、附 playtest 或 simulation 證據。
 
-> M6 現行實作同步：目前程式的箭矢基礎傷害為 `0.8 / 3 ≈ 0.267`，自動電擊為 `5 / 3 ≈ 1.667` 傷害／秒；一般 Buff 的傷害加成也縮為原值三分之一。前 5／10 波只靠地面掉落 Buff，15 波完成後才提供 3 張不重複回響候選供玩家三選一，地面掉落 Buff 使用 Treasure Chest。小怪於道路最遠端 `z = 64` 生成；Boss 擊敗後須等小怪死亡或跑出玩家身後 `z < -2` 才進入結算。精確行為以 `src/domain/M1RunSimulation.ts`、`src/content/BuffCatalog.ts` 與 `src/rendering/ThreeRuntime.ts` 為準。
+> M6 現行實作同步：目前程式的箭矢基礎傷害為 `0.8 / 3 ≈ 0.267`，自動電擊為 `5 / 3 ≈ 1.667` 傷害／秒；一般 Buff 的傷害加成也縮為原值三分之一。前 5／10 波只靠地面掉落 Buff，15 波完成後才提供 3 張不重複回響候選供玩家三選一，地面掉落 Buff 使用 Treasure Chest。小怪於道路最遠端 `z = 64` 生成；Boss 擊敗後須等小怪死亡或跑出玩家身後 `z < -2` 才進入結算。新增 `life_steal` Buff，初始吸血為 0%，依實際傷害比例回復生命。精確行為以 `src/domain/M1RunSimulation.ts`、`src/content/BuffCatalog.ts` 與 `src/rendering/ThreeRuntime.ts` 為準。
 
 ## 1. 設計目標與運行條件
 
