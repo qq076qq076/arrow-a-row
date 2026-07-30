@@ -8,7 +8,7 @@ export interface RunModifiers { readonly healthLevel?: number; readonly damageLe
 
 export interface PlayerSnapshot { readonly x: number; readonly hp: number; readonly maxHp: number; readonly damage: number; readonly projectileCount: number; readonly arrowSpeed: number; readonly pierceCount: number; readonly movementSpeed: number; readonly damageReduction: number; readonly lifeSteal: number; readonly fireRateMultiplier: number; readonly arrowCharge: number; readonly pierceCharge: number; readonly lightningTargetCount: number; readonly lightningDamagePerSecond: number; readonly lightningRange: number; readonly lightningTargetCharge: number; readonly cannonUnlocked: boolean; readonly cannonDamage: number; readonly cannonFireRateMultiplier: number; readonly enemyCountMultiplier: number; }
 export interface EnemySnapshot { readonly id: string; readonly kind: EnemyKind; readonly x: number; readonly z: number; readonly hp: number; readonly telegraphSeconds: number; readonly deathSeconds: number; }
-export interface GateSnapshot { readonly groupId: string; readonly leftLabel: string; readonly rightLabel: string; readonly leftBuffId: BuffId; readonly rightBuffId: BuffId; readonly z: number; readonly isChosen: boolean; }
+export interface GateSnapshot { readonly groupId: string; readonly leftLabel: string; readonly rightLabel: string; readonly leftBuffId: BuffId; readonly rightBuffId: BuffId; readonly centerLabel?: string; readonly centerBuffId?: BuffId; readonly z: number; readonly isChosen: boolean; }
 export interface ArrowSnapshot { readonly id: number; readonly weapon: 'bow' | 'cannon'; readonly x: number; readonly z: number; readonly vx: number; readonly damage: number; readonly blastRadius: number; readonly piercesRemaining: number; readonly hitEnemyIds: readonly string[]; readonly hitBoss: boolean; }
 export interface HitSnapshot { readonly id: number; readonly x: number; readonly z: number; readonly seconds: number; }
 export interface PickupSnapshot { readonly id: number; readonly x: number; readonly z: number; readonly buffId: BuffId; readonly label: string; }
@@ -20,7 +20,7 @@ export interface M1RunSnapshot {
 }
 
 interface MutableEnemy { id: string; kind: EnemyKind; x: number; z: number; hp: number; attackCooldownSeconds: number; telegraphSeconds: number; deathSeconds: number; }
-interface MutableGate { groupId: string; leftLabel: string; rightLabel: string; leftBuffId: BuffId; rightBuffId: BuffId; z: number; isChosen: boolean; }
+interface MutableGate { groupId: string; leftLabel: string; rightLabel: string; leftBuffId: BuffId; rightBuffId: BuffId; centerLabel?: string; centerBuffId?: BuffId; z: number; isChosen: boolean; }
 interface MutableArrow { id: number; weapon: 'bow' | 'cannon'; x: number; z: number; vx: number; damage: number; blastRadius: number; piercesRemaining: number; hitEnemyIds: string[]; hitBoss: boolean; }
 interface MutableHit { id: number; x: number; z: number; seconds: number; }
 interface MutablePickup { id: number; x: number; z: number; buffId: BuffId; label: string; }
@@ -76,7 +76,7 @@ export class M1RunSimulation {
   private attackCooldownSeconds = 0; private attackIntervalSeconds = 0.45; private cannonCooldownSeconds = 0; private lightningCooldownSeconds = 0; private nextArrowId = 1; private nextEffectId = 1; private earnedGold = 0; private collectedShards = 0; private bossWarningSeconds = 0; private boss: MutableBoss | undefined;
   private selectedReward: RewardId | undefined; private rewardOptions: RewardId[] = []; private wavesCompleted = 0; private echoRound = 0; private randomState = 1; private runNumber = 0; private readonly selectedGateIds = new Set<string>(); private readonly positionedEnemyIds = new Set<string>(); private readonly swarmDuplicatedIds = new Set<string>(); private readonly enemies: MutableEnemy[] = []; private readonly arrows: MutableArrow[] = []; private readonly hits: MutableHit[] = []; private readonly pickups: MutablePickup[] = []; private lightningTargetIds: string[] = [];
   private readonly gates: MutableGate[] = [
-    { groupId: 'g01', leftLabel: '+1 箭矢', rightLabel: '箭傷 +25%', leftBuffId: 'split_arrow', rightBuffId: 'power_shot', z: 10, isChosen: false },
+    { groupId: 'g01', leftLabel: '+1 箭矢', rightLabel: '電擊目標 +1', centerLabel: '火砲 +1', leftBuffId: 'split_arrow', centerBuffId: 'cannon_weapon', rightBuffId: 'lightning_targets', z: 10, isChosen: false },
     { groupId: 'g02', leftLabel: '箭速 +25%', rightLabel: '電擊目標 +1', leftBuffId: 'swift_shot', rightBuffId: 'lightning_targets', z: 52, isChosen: false },
     { groupId: 'g03', leftLabel: '+1 箭矢', rightLabel: '箭傷 +25%', leftBuffId: 'split_arrow', rightBuffId: 'power_shot', z: 92, isChosen: false },
   ];
@@ -178,13 +178,13 @@ export class M1RunSimulation {
   }
 
   private movePlayer(deltaSeconds: number): void { const delta = this.targetX - this.player.x; const maxMove = this.player.movementSpeed * deltaSeconds; this.player.x += Math.max(-maxMove, Math.min(maxMove, delta)); }
-  private resolveGates(): void { for (const gate of this.gates) { if (gate.isChosen || this.distanceMeters < gate.z) continue; gate.isChosen = true; this.selectedGateIds.add(gate.groupId); this.applyBuff(this.player.x < 0 ? gate.leftBuffId : gate.rightBuffId, 1); } }
+  private resolveGates(): void { for (const gate of this.gates) { if (gate.isChosen || this.distanceMeters < gate.z) continue; gate.isChosen = true; this.selectedGateIds.add(gate.groupId); const selectedBuff = gate.centerBuffId !== undefined && this.player.x >= -1.7 && this.player.x <= 1.7 ? gate.centerBuffId : this.player.x < 0 ? gate.leftBuffId : gate.rightBuffId; this.applyBuff(selectedBuff, 1); } }
   private createGates(): MutableGate[] {
     const drawPair = (pool: readonly BuffId[]): readonly [BuffId, BuffId] => { const first = pool[this.nextRandomIndex(pool.length)]!; const alternatives = pool.filter((id) => id !== first); return [first, alternatives[this.nextRandomIndex(alternatives.length)]!]; };
-    const first: readonly [BuffId, BuffId] = ['split_arrow', 'lightning_targets']; const second = drawPair(OFFENSIVE_BUFF_IDS); const third = drawPair(BUFF_IDS);
-    return [this.makeGate('g01', 10, first), this.makeGate('g02', 52, second), this.makeGate('g03', 92, third)];
+    const second = drawPair(OFFENSIVE_BUFF_IDS); const third = drawPair(BUFF_IDS);
+    return [this.makeGate('g01', 10, ['split_arrow', 'lightning_targets'], 'cannon_weapon'), this.makeGate('g02', 52, second), this.makeGate('g03', 92, third)];
   }
-  private makeGate(groupId: string, z: number, pair: readonly [BuffId, BuffId]): MutableGate { return { groupId, z, leftBuffId: pair[0], rightBuffId: pair[1], leftLabel: BUFF_CATALOG[pair[0]].gateLabel, rightLabel: BUFF_CATALOG[pair[1]].gateLabel, isChosen: false }; }
+  private makeGate(groupId: string, z: number, pair: readonly [BuffId, BuffId], centerBuffId?: BuffId): MutableGate { return { groupId, z, leftBuffId: pair[0], rightBuffId: pair[1], leftLabel: BUFF_CATALOG[pair[0]].gateLabel, rightLabel: BUFF_CATALOG[pair[1]].gateLabel, ...(centerBuffId === undefined ? {} : { centerBuffId, centerLabel: BUFF_CATALOG[centerBuffId].gateLabel }), isChosen: false }; }
   private nextRandomIndex(length: number): number { this.randomState = (1664525 * this.randomState + 1013904223) >>> 0; return this.randomState % length; }
   private drawRewards(): RewardId[] { const pool = [...REWARDS]; const choices: RewardId[] = []; while (choices.length < 3) choices.push(pool.splice(this.nextRandomIndex(pool.length), 1)[0]!); return choices; }
   private applyBuff(buffId: BuffId, scale: number): void {

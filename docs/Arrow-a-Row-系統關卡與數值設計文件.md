@@ -4,7 +4,7 @@
 
 本文件是可量產遊戲內容的設計基線。所有數值是 MVP 起始值，必須集中於 JSON／CSV 內容資料表並經 Zod schema 驗證，不可硬編碼。任何改動均需提高 `contentVersion`、附 playtest 或 simulation 證據。
 
-> M6 現行實作同步：目前程式的箭矢基礎傷害為 `0.8 / 3 ≈ 0.267`，開局箭數為 `0`；自動電擊為 `5 / 3 ≈ 1.667` 傷害／秒、初始 2 個鎖定目標。第一個 Gate 固定提供「+1 箭矢／電擊目標 +1」二選一；另有慢速範圍火砲，可由 `cannon_weapon` 解鎖並以獨立 Buff 強化傷害與射速。一般 Buff 的傷害加成也縮為原值三分之一。前 5／10 波只靠地面掉落 Buff，15 波完成後才提供 3 張不重複回響候選供玩家三選一，地面掉落 Buff 使用 Treasure Chest。小怪於道路最遠端 `z = 64` 生成；Boss 擊敗後須等小怪死亡或跑出玩家身後 `z < -2` 才進入結算。新增 `life_steal` Buff，初始吸血為 0%，依實際傷害比例回復生命。精確行為以 `src/domain/M1RunSimulation.ts`、`src/content/BuffCatalog.ts` 與 `src/rendering/ThreeRuntime.ts` 為準。
+> M6 現行實作同步：目前程式的箭矢基礎傷害為 `0.8 / 3 ≈ 0.267`，開局箭數為 `0`；自動電擊為 `5 / 3 ≈ 1.667` 傷害／秒、初始 2 個鎖定目標。第一個 Gate 固定提供「+1 箭矢／火砲 +1／電擊目標 +1」左中右三選一；電擊只有在敵人進入 1 單位鎖定距離後才會開始作用。另有慢速範圍火砲，可由 `cannon_weapon` 解鎖並以獨立 Buff 強化傷害與射速。一般 Buff 的傷害加成也縮為原值三分之一。前 5／10 波只靠地面掉落 Buff，15 波完成後才提供 3 張不重複回響候選供玩家三選一，地面掉落 Buff 使用 Treasure Chest。小怪於道路最遠端 `z = 64` 生成；Boss 擊敗後須等小怪死亡或跑出玩家身後 `z < -2` 才進入結算。新增 `life_steal` Buff，初始吸血為 0%，依實際傷害比例回復生命。精確行為以 `src/domain/M1RunSimulation.ts`、`src/content/BuffCatalog.ts` 與 `src/rendering/ThreeRuntime.ts` 為準。
 
 ## 1. 設計目標與運行條件
 
@@ -82,14 +82,14 @@ expectedArrowDps = projectileCount × shotsPerSecond × baseDamage
 | type | 長度／時間 | 目的 | 允許內容 |
 | --- | --- | --- |
 | `Safe` | 6–10 秒 | 閱讀、調整位置、預載 | 環境、金幣微粒，無命中傷害。 |
-| `Choice` | 5–8 秒 | 左右決策 | 兩門、明確數值／風險。 |
+| `Choice` | 5–8 秒 | 左／中／右決策 | 一般 Gate 兩門，開場主武器 Gate 三門、明確數值／風險。 |
 | `Combat` | 12–20 秒 | 輸出與走位 | 1–2 種敵人、可躲彈。 |
 | `Elite` | 20–30 秒 | 壓力與保證回報 | 1 精英＋支援敵或小型波次。 |
 | `Boss` | 45–75 秒 | Build 檢驗與章節高潮 | 2–3 phase、清楚空檔。 |
 
 ### 3.3 Gate 生成規則
 
-每個 `ChoiceGroup` 有固定左／右 Gate。候選先經「相容性篩選」再經權重抽取，最後套用保底。
+每個一般 `ChoiceGroup` 有固定左／右 Gate；開場主武器 `ChoiceGroup` 額外提供中央 Gate。候選先經「相容性篩選」再經權重抽取，最後套用保底。
 
 | 規則 | 數值／行為 |
 | --- | --- |

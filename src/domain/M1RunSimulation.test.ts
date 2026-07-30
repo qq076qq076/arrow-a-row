@@ -37,7 +37,14 @@ describe('M1RunSimulation', () => {
     const snapshot = simulation.snapshot();
     expect(snapshot.player.projectileCount).toBe(0);
     expect(snapshot.player.lightningTargetCount).toBe(2);
-    expect(new Set([snapshot.gates[0]?.leftBuffId, snapshot.gates[0]?.rightBuffId])).toEqual(new Set(['split_arrow', 'lightning_targets']));
+    expect(new Set([snapshot.gates[0]?.leftBuffId, snapshot.gates[0]?.centerBuffId, snapshot.gates[0]?.rightBuffId])).toEqual(new Set(['split_arrow', 'cannon_weapon', 'lightning_targets']));
+    expect(snapshot.gates[0]?.centerLabel).toBe('火砲 +1');
+
+    const centerChoice = new M1RunSimulation();
+    centerChoice.start();
+    centerChoice.setTargetX(0);
+    advanceToDistance(centerChoice, 11);
+    expect(centerChoice.snapshot().player.cannonUnlocked).toBe(true);
   });
 
   it('starts lightning with a one-unit lock range', () => {

@@ -5,7 +5,6 @@ import {
   Color,
   CanvasTexture,
   ConeGeometry,
-  CylinderGeometry,
   DirectionalLight,
   Group,
   IcosahedronGeometry,
@@ -999,7 +998,7 @@ export class ThreeRuntime {
   private syncGates(snapshot: M1RunSnapshot): void {
     for (const gate of snapshot.gates) {
       let group = this.gateGroups.get(gate.groupId);
-      const signature = `${gate.leftBuffId}:${gate.rightBuffId}`;
+      const signature = `${gate.leftBuffId}:${gate.centerBuffId ?? ''}:${gate.rightBuffId}`;
       if (group !== undefined && group.userData.signature !== signature) {
         this.scene.remove(group);
         group.traverse((child) => {
@@ -1013,15 +1012,16 @@ export class ThreeRuntime {
         group = new Group();
         group.userData.signature = signature;
         const left = this.createGateBuffAnchor('#5bb5d8');
+        const center = gate.centerBuffId === undefined ? undefined : this.createGateBuffAnchor('#f4c95d');
         const right = this.createGateBuffAnchor('#8ccf9b');
-        left.position.x = -2.5;
-        right.position.x = 2.5;
-        group.add(
-          left,
-          right,
-          this.createGateLabel(gate.leftBuffId, gate.leftLabel, '#5bb5d8', -2.5, gate.groupId === 'g01'),
-          this.createGateLabel(gate.rightBuffId, gate.rightLabel, '#8ccf9b', 2.5, gate.groupId === 'g01'),
-        );
+        const gateX = center === undefined ? [-2.5, 2.5] : [-3, 0, 3];
+        left.position.x = gateX[0]!;
+        right.position.x = center === undefined ? gateX[1]! : gateX[2]!;
+        group.add(left, right, this.createGateLabel(gate.leftBuffId, gate.leftLabel, '#5bb5d8', left.position.x, gate.groupId === 'g01'), this.createGateLabel(gate.rightBuffId, gate.rightLabel, '#8ccf9b', right.position.x, gate.groupId === 'g01'));
+        if (center !== undefined && gate.centerBuffId !== undefined && gate.centerLabel !== undefined) {
+          center.position.x = gateX[1]!;
+          group.add(center, this.createGateLabel(gate.centerBuffId, gate.centerLabel, '#f4c95d', center.position.x, gate.groupId === 'g01'));
+        }
         this.gateGroups.set(gate.groupId, group);
         this.scene.add(group);
       }
@@ -1159,7 +1159,7 @@ export class ThreeRuntime {
     for (const arrow of snapshot.arrows) {
       let mesh = this.arrowMeshes.get(arrow.id);
       if (mesh === undefined) {
-        mesh = this.arrowMeshPool.pop() ?? new Mesh(new SphereGeometry(0.12, 8, 8), new MeshBasicMaterial({ color: '#fff4ba' }));
+        mesh = this.arrowMeshPool.pop() ?? new Mesh(new BoxGeometry(0.05, 0.05, 0.72), new MeshBasicMaterial({ color: '#f4c95d' }));
         this.configureArrowMesh(mesh, arrow.weapon);
         mesh.visible = true;
         this.arrowMeshes.set(arrow.id, mesh);
@@ -1180,10 +1180,10 @@ export class ThreeRuntime {
     mesh.scale.setScalar(1);
     mesh.userData.weapon = weapon;
     if (weapon === 'bow') {
-      mesh.geometry = new CylinderGeometry(0.035, 0.035, 0.72, 6);
+      mesh.geometry = new BoxGeometry(0.05, 0.05, 0.72);
       mesh.material = new MeshBasicMaterial({ color: '#f4c95d' });
-      mesh.rotation.x = Math.PI / 2;
       const arrowHead = new Mesh(new ConeGeometry(0.11, 0.26, 6), new MeshBasicMaterial({ color: '#fff4ba' }));
+      arrowHead.rotation.x = Math.PI / 2;
       arrowHead.position.z = 0.48;
       mesh.add(arrowHead);
       return;
