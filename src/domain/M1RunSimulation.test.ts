@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BUFF_IDS } from '../content/BuffCatalog';
-import { BASE_ARROW_DAMAGE, BASE_LIGHTNING_DAMAGE_PER_SECOND, BOSS_START_DISTANCE, BOSS_STOP_DISTANCE, BOSS_WARNING_SECONDS, BOSS_WARNING_START_DISTANCE, getArrowDamageMultiplier, M1RunSimulation } from './M1RunSimulation';
+import { BASE_ARROW_DAMAGE, BASE_LIGHTNING_DAMAGE_PER_SECOND, BOSS_START_DISTANCE, BOSS_STOP_DISTANCE, BOSS_WARNING_SECONDS, BOSS_WARNING_START_DISTANCE, ENEMY_SPAWN_Z, getArrowDamageMultiplier, M1RunSimulation } from './M1RunSimulation';
 
 function advanceToDistance(simulation: M1RunSimulation, distanceMeters: number): void {
   while (simulation.snapshot().distanceMeters < distanceMeters) {
@@ -15,7 +15,7 @@ function advanceToDistance(simulation: M1RunSimulation, distanceMeters: number):
   }
 }
 
-function advanceToBossReward(simulation: M1RunSimulation, maxTicks = 12_000): ReturnType<M1RunSimulation['snapshot']> {
+function advanceToBossReward(simulation: M1RunSimulation, maxTicks = 18_000): ReturnType<M1RunSimulation['snapshot']> {
   for (let tick = 0; tick < maxTicks; tick += 1) {
     const snapshot = simulation.snapshot();
     if (snapshot.phase === 'echo') {
@@ -311,6 +311,28 @@ describe('M1RunSimulation', () => {
     expect(pickup?.label).toMatch(/\+⅓|\+\d/);
   });
 
+  it('spawns enemies at the far road edge and waits for stragglers before reward', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start({ healthLevel: 100 });
+    while (simulation.snapshot().wavesCompleted < 1) simulation.tick(1 / 30);
+    expect(simulation.snapshot().enemies.every((enemy) => enemy.z >= ENEMY_SPAWN_Z - 0.3)).toBe(true);
+
+    const started = simulation.snapshot();
+    simulation.restore({
+      ...started,
+      enemies: [{ id: 'last-straggler', kind: 'melee', x: 0, z: 0.5, hp: 100, telegraphSeconds: 0, deathSeconds: 0 }],
+      boss: { id: 'bos_moss_crown_a', hp: 0, maxHp: 36, z: BOSS_STOP_DISTANCE, phase: 2, telegraphSeconds: 0, telegraphText: 'Boss 已擊敗', isDefeated: true },
+      rewardOptions: [],
+      selectedReward: undefined,
+      earnedGold: 30,
+    });
+    simulation.tick(1 / 30);
+    expect(simulation.snapshot().phase).toBe('playing');
+
+    for (let tick = 0; tick < 120 && simulation.snapshot().phase === 'playing'; tick += 1) simulation.tick(1 / 30);
+    expect(simulation.snapshot().phase).toBe('reward');
+  });
+
   it('automatically locks up to two forward enemies and damages them once per second', () => {
     const simulation = new M1RunSimulation();
     simulation.start({ damageLevel: 0 });
@@ -401,7 +423,7 @@ describe('M1RunSimulation', () => {
 
   it('carries the selected Build through all six chapters and stops after CH06', () => {
     const simulation = new M1RunSimulation();
-    simulation.start({ healthLevel: 100, damageLevel: 5, fireRateLevel: 5 });
+    simulation.start({ healthLevel: 125, damageLevel: 5, fireRateLevel: 5 });
     const bossHpByChapter: number[] = [];
 
     for (let chapterIndex = 1; chapterIndex <= 6; chapterIndex += 1) {

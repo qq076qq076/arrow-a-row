@@ -3,7 +3,7 @@ import { M1RunSimulation } from './M1RunSimulation';
 
 function clearChapter(simulation: M1RunSimulation): void {
   simulation.setTargetX(5);
-  for (let tick = 0; tick < 12_000 && simulation.snapshot().phase !== 'reward' && simulation.snapshot().phase !== 'dead'; tick += 1) {
+  for (let tick = 0; tick < 18_000 && simulation.snapshot().phase !== 'reward' && simulation.snapshot().phase !== 'dead'; tick += 1) {
     const snapshot = simulation.snapshot();
     if (snapshot.phase === 'echo') {
       expect(snapshot.rewardOptions).toHaveLength(3);

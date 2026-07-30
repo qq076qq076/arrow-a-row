@@ -37,6 +37,10 @@ export const BOSS_WARNING_SECONDS = 5;
 export const BOSS_STOP_DISTANCE = 3;
 export const BOSS_WARNING_START_DISTANCE = FIRST_WAVE_DISTANCE + (TOTAL_MINION_WAVES - 1) * WAVE_DISTANCE_INTERVAL;
 export const BOSS_START_DISTANCE = BOSS_WARNING_START_DISTANCE + BOSS_WARNING_SECONDS * WORLD_SPEED;
+export const ENEMY_SPAWN_Z = 64;
+export const ENEMY_BEHIND_PLAYER_Z = -2;
+// Keep the old z=38-to-player travel time while moving the visible spawn point to the far road edge.
+const ENEMY_APPROACH_SPEED = WORLD_SPEED * ENEMY_SPAWN_Z / 38;
 export const BASE_ARROW_DAMAGE = 0.8 / 3;
 export const BASE_LIGHTNING_DAMAGE_PER_SECOND = 5 / 3;
 export const POWER_SHOT_DAMAGE_BONUS = 0.25 / 3;
@@ -157,6 +161,7 @@ export class M1RunSimulation {
     this.updateBoss(deltaSeconds); this.attackCooldownSeconds -= deltaSeconds;
     if (this.attackCooldownSeconds <= 0) this.fireAtNearestTarget(); this.updateArrows(deltaSeconds); this.updateLightning(deltaSeconds); this.updateEffects(deltaSeconds); this.updatePickups(deltaSeconds);
     if (this.player.hp <= 0) this.phase = 'dead';
+    if (this.phase === 'playing') this.tryCompleteBossReward();
     if (this.boss === undefined) this.distanceMeters += WORLD_SPEED * deltaSeconds;
   }
 
@@ -198,7 +203,7 @@ export class M1RunSimulation {
     const waveScale = WAVE_HP_SCALES[waveIndex] ?? 1;
     for (const [enemyIndex, spec] of wave.enemies.entries()) {
       const baseHp = spec.kind === 'melee' ? 8 : 12;
-      this.enemies.push({ id: `wave-${this.wavesCompleted + 1}-${enemyIndex + 1}`, kind: spec.kind, x: spec.x, z: 38, hp: Math.round(baseHp * chapterScale * roundScale * waveScale), attackCooldownSeconds: spec.kind === 'ranged' ? 1 : 0, telegraphSeconds: 0, deathSeconds: 0 });
+      this.enemies.push({ id: `wave-${this.wavesCompleted + 1}-${enemyIndex + 1}`, kind: spec.kind, x: spec.x, z: ENEMY_SPAWN_Z, hp: Math.round(baseHp * chapterScale * roundScale * waveScale), attackCooldownSeconds: spec.kind === 'ranged' ? 1 : 0, telegraphSeconds: 0, deathSeconds: 0 });
     }
     this.wavesCompleted += 1;
     if (this.wavesCompleted === TOTAL_MINION_WAVES) {
@@ -209,12 +214,12 @@ export class M1RunSimulation {
     }
   }
   private duplicateSwarmEnemies(): void { if (this.player.enemyCountMultiplier <= 1) return; for (const enemy of [...this.enemies]) { if (enemy.id.includes('-swarm-') || this.swarmDuplicatedIds.has(enemy.id)) continue; this.swarmDuplicatedIds.add(enemy.id); for (let copy = 1; copy < this.player.enemyCountMultiplier; copy += 1) { const offset = copy % 2 === 1 ? -1.35 : 1.35; this.enemies.push({ ...enemy, id: `${enemy.id}-swarm-${copy}`, x: Math.max(-4.6, Math.min(4.6, enemy.x + offset)), z: enemy.z + 1.5 * copy }); } } }
-  private updateEnemies(deltaSeconds: number): void { for (const enemy of this.enemies) { if (!this.positionedEnemyIds.has(enemy.id)) { enemy.x = Math.max(-4.6, Math.min(4.6, enemy.x + (this.nextRandomIndex(17) - 8) / 10)); this.positionedEnemyIds.add(enemy.id); } if (enemy.deathSeconds > 0) { enemy.deathSeconds = Math.max(0, enemy.deathSeconds - deltaSeconds); continue; } enemy.z -= WORLD_SPEED * deltaSeconds; enemy.attackCooldownSeconds -= deltaSeconds; if (enemy.kind === 'melee' && enemy.z <= 1.2 && Math.abs(this.player.x - enemy.x) < 1.2 && enemy.attackCooldownSeconds <= 0) { this.takeDamage(10); enemy.attackCooldownSeconds = 1; } if (enemy.kind === 'ranged') { if (enemy.attackCooldownSeconds <= 0 && enemy.telegraphSeconds <= 0) enemy.telegraphSeconds = 0.6; if (enemy.telegraphSeconds > 0) { enemy.telegraphSeconds -= deltaSeconds; if (enemy.telegraphSeconds <= 0) { if (Math.abs(this.player.x - enemy.x) < 1.2) this.takeDamage(12); enemy.attackCooldownSeconds = 3.5; } } } } }
+  private updateEnemies(deltaSeconds: number): void { for (const enemy of this.enemies) { if (!this.positionedEnemyIds.has(enemy.id)) { enemy.x = Math.max(-4.6, Math.min(4.6, enemy.x + (this.nextRandomIndex(17) - 8) / 10)); this.positionedEnemyIds.add(enemy.id); } if (enemy.deathSeconds > 0) { enemy.deathSeconds = Math.max(0, enemy.deathSeconds - deltaSeconds); continue; } enemy.z -= ENEMY_APPROACH_SPEED * deltaSeconds; enemy.attackCooldownSeconds -= deltaSeconds; if (enemy.kind === 'melee' && enemy.z <= 1.2 && Math.abs(this.player.x - enemy.x) < 1.2 && enemy.attackCooldownSeconds <= 0) { this.takeDamage(10); enemy.attackCooldownSeconds = 1; } if (enemy.kind === 'ranged') { if (enemy.attackCooldownSeconds <= 0 && enemy.telegraphSeconds <= 0) enemy.telegraphSeconds = 0.6; if (enemy.telegraphSeconds > 0) { enemy.telegraphSeconds -= deltaSeconds; if (enemy.telegraphSeconds <= 0) { if (Math.abs(this.player.x - enemy.x) < 1.2) this.takeDamage(12); enemy.attackCooldownSeconds = 3.5; } } } } }
   private spawnBoss(): void { const hp = getChapterDefinition(this.chapterId).bossHp; const messages: Record<ChapterId, string> = { ch01_meadow: '苔冠守衛被靜滯困住了。', ch02_viaduct: '鏡潮校準者正在鎖定航線！', ch03_forge: '熔脈監工正在蓄積震波！', ch04_canopy: '枝語母體正在喚醒霧冠！', ch05_archive: '無光抄錄者正在改寫星圖！', ch06_horizon: '靜滯之核正在撕裂地平！' }; this.boss = { hp, maxHp: hp, z: 46, phase: 1, telegraphSeconds: 0.8, telegraphText: messages[this.chapterId], attackCooldownSeconds: 2.5, isDefeated: false }; }
   private updateBoss(deltaSeconds: number): void { const boss = this.boss; if (boss === undefined || boss.isDefeated) return; if (boss.z > BOSS_STOP_DISTANCE) { boss.z = Math.max(BOSS_STOP_DISTANCE, boss.z - WORLD_SPEED * deltaSeconds); return; } if (boss.hp <= boss.maxHp / 2 && boss.phase === 1) { boss.phase = 2; boss.telegraphSeconds = 0.8; boss.telegraphText = '靜滯正在加深！'; boss.attackCooldownSeconds = 2.2; } boss.attackCooldownSeconds -= deltaSeconds; if (boss.telegraphSeconds > 0) { boss.telegraphSeconds -= deltaSeconds; if (boss.telegraphSeconds <= 0 && boss.telegraphText !== '靜滯正在加深！') { if (Math.abs(this.player.x) < 2.3) this.takeDamage(boss.phase === 1 ? 14 : 20); boss.attackCooldownSeconds = boss.phase === 1 ? 2.7 : 2.1; } return; } if (boss.attackCooldownSeconds <= 0) { boss.telegraphSeconds = 0.75; boss.telegraphText = boss.phase === 1 ? '藤刺正在瞄準！' : '震波正在擴散！'; } }
   private fireAtNearestTarget(): void { this.attackCooldownSeconds = this.attackIntervalSeconds * this.player.fireRateMultiplier; for (let index = 0; index < this.player.projectileCount; index += 1) { const spreadIndex = index - (this.player.projectileCount - 1) / 2; const angleRadians = spreadIndex * 0.14; const offset = spreadIndex * 0.18; this.arrows.push({ id: this.nextArrowId++, x: this.player.x + offset, z: 1, vx: Math.sin(angleRadians) * this.player.arrowSpeed, piercesRemaining: this.player.pierceCount, hitEnemyIds: [], hitBoss: false }); } }
   private updateLightning(deltaSeconds: number): void {
-    const targets = this.enemies.filter((enemy) => enemy.deathSeconds <= 0 && enemy.z > 0 && Math.hypot(enemy.x - this.player.x, enemy.z) <= this.player.lightningRange).sort((left, right) => Math.hypot(left.x - this.player.x, left.z) - Math.hypot(right.x - this.player.x, right.z)).slice(0, this.player.lightningTargetCount);
+    const targets = this.enemies.filter((enemy) => enemy.hp > 0 && enemy.deathSeconds <= 0 && enemy.z > 0 && Math.hypot(enemy.x - this.player.x, enemy.z) <= this.player.lightningRange).sort((left, right) => Math.hypot(left.x - this.player.x, left.z) - Math.hypot(right.x - this.player.x, right.z)).slice(0, this.player.lightningTargetCount);
     const boss = this.boss;
     const canLockBoss = boss !== undefined && !boss.isDefeated && boss.z > 0 && Math.hypot(this.player.x, boss.z) <= this.player.lightningRange && targets.length < this.player.lightningTargetCount;
     this.lightningTargetIds = [...targets.map((target) => target.id), ...(canLockBoss ? ['boss'] : [])];
@@ -224,12 +229,20 @@ export class M1RunSimulation {
     if (canLockBoss && boss !== undefined) this.damageBoss(boss, this.player.lightningDamagePerSecond);
     this.lightningCooldownSeconds += 1;
   }
-  private damageEnemy(enemy: MutableEnemy, damage: number): void { enemy.hp -= damage; this.addHit(enemy.x, enemy.z); if (enemy.hp <= 0) { enemy.hp = 0; enemy.deathSeconds = 0.45; const buffId = BUFF_IDS[this.nextRandomIndex(BUFF_IDS.length)]!; this.pickups.push({ id: this.nextEffectId++, x: enemy.x, z: enemy.z, buffId, label: BUFF_CATALOG[buffId].pickupLabel }); } }
-  private damageBoss(boss: MutableBoss, damage: number): void { boss.hp -= damage; this.addHit(0, boss.z); if (boss.hp <= 0) { boss.hp = 0; boss.isDefeated = true; this.earnedGold = 30; this.rewardOptions = this.drawRewards(); this.phase = 'reward'; } }
+  private damageEnemy(enemy: MutableEnemy, damage: number): void { if (enemy.hp <= 0 || enemy.deathSeconds > 0) return; enemy.hp -= damage; this.addHit(enemy.x, enemy.z); if (enemy.hp <= 0) { enemy.hp = 0; enemy.deathSeconds = 0.45; const buffId = BUFF_IDS[this.nextRandomIndex(BUFF_IDS.length)]!; this.pickups.push({ id: this.nextEffectId++, x: enemy.x, z: enemy.z, buffId, label: BUFF_CATALOG[buffId].pickupLabel }); } }
+  private damageBoss(boss: MutableBoss, damage: number): void { boss.hp -= damage; this.addHit(0, boss.z); if (boss.hp <= 0) { boss.hp = 0; boss.isDefeated = true; this.earnedGold = 30; } }
+  private tryCompleteBossReward(): void {
+    if (this.boss === undefined || !this.boss.isDefeated || this.phase !== 'playing') return;
+    const hasUnclearedEnemy = this.enemies.some((enemy) => enemy.deathSeconds > 0 || (enemy.hp > 0 && enemy.z >= ENEMY_BEHIND_PLAYER_Z));
+    if (hasUnclearedEnemy) return;
+    this.rewardOptions = this.drawRewards();
+    this.selectedReward = undefined;
+    this.phase = 'reward';
+  }
   private takeDamage(amount: number): void { this.player.hp -= amount * (1 - this.player.damageReduction); }
   private addHit(x: number, z: number): void { this.hits.push({ id: this.nextEffectId++, x, z, seconds: 0.2 }); }
   private updateArrows(deltaSeconds: number): void { for (let index = this.arrows.length - 1; index >= 0; index -= 1) { const arrow = this.arrows[index]; if (arrow === undefined) continue; arrow.x += arrow.vx * deltaSeconds; arrow.z += Math.sqrt(Math.max(0, this.player.arrowSpeed ** 2 - arrow.vx ** 2)) * deltaSeconds; if (this.tryArrowHit(arrow)) { if (arrow.piercesRemaining <= 0) { this.arrows.splice(index, 1); continue; } arrow.piercesRemaining -= 1; } if (arrow.z > 45 || Math.abs(arrow.x) > 12) this.arrows.splice(index, 1); } for (let index = this.enemies.length - 1; index >= 0; index -= 1) { const enemy = this.enemies[index]; if (enemy !== undefined && (enemy.z < -2 || (enemy.hp <= 0 && enemy.deathSeconds <= 0))) this.enemies.splice(index, 1); } }
-  private tryArrowHit(arrow: MutableArrow): boolean { const enemy = this.enemies.filter((candidate) => !arrow.hitEnemyIds.includes(candidate.id) && candidate.deathSeconds <= 0 && Math.abs(candidate.z - arrow.z) < 0.75 && Math.abs(candidate.x - arrow.x) < 0.85).sort((left, right) => left.z - right.z)[0]; if (enemy !== undefined) { arrow.hitEnemyIds.push(enemy.id); this.damageEnemy(enemy, this.player.damage * getArrowDamageMultiplier(arrow.z)); return true; } const boss = this.boss; if (boss !== undefined && !arrow.hitBoss && !boss.isDefeated && Math.abs(boss.z - arrow.z) < 1 && Math.abs(arrow.x) < 1.5) { arrow.hitBoss = true; this.damageBoss(boss, this.player.damage * getArrowDamageMultiplier(arrow.z)); return true; } return false; }
+  private tryArrowHit(arrow: MutableArrow): boolean { const enemy = this.enemies.filter((candidate) => candidate.hp > 0 && !arrow.hitEnemyIds.includes(candidate.id) && candidate.deathSeconds <= 0 && Math.abs(candidate.z - arrow.z) < 0.75 && Math.abs(candidate.x - arrow.x) < 0.85).sort((left, right) => left.z - right.z)[0]; if (enemy !== undefined) { arrow.hitEnemyIds.push(enemy.id); this.damageEnemy(enemy, this.player.damage * getArrowDamageMultiplier(arrow.z)); return true; } const boss = this.boss; if (boss !== undefined && !arrow.hitBoss && !boss.isDefeated && Math.abs(boss.z - arrow.z) < 1 && Math.abs(arrow.x) < 1.5) { arrow.hitBoss = true; this.damageBoss(boss, this.player.damage * getArrowDamageMultiplier(arrow.z)); return true; } return false; }
   private updateEffects(deltaSeconds: number): void { for (let index = this.hits.length - 1; index >= 0; index -= 1) { const hit = this.hits[index]; if (hit === undefined) continue; hit.seconds -= deltaSeconds; if (hit.seconds <= 0) this.hits.splice(index, 1); } }
   private updatePickups(deltaSeconds: number): void { for (let index = this.pickups.length - 1; index >= 0; index -= 1) { const pickup = this.pickups[index]; if (pickup === undefined) continue; pickup.z -= WORLD_SPEED * deltaSeconds; if (pickup.z < 1.4 && Math.abs(pickup.x - this.player.x) < 1.5) { this.collectedShards += 1; this.applyBuff(pickup.buffId, 1 / 3); this.pickups.splice(index, 1); } else if (pickup.z < -2) this.pickups.splice(index, 1); } }
 }
