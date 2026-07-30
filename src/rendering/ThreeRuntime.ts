@@ -118,6 +118,9 @@ export class ThreeRuntime {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.setClearColor(new Color('#173b3a'));
     this.container.append(this.renderer.domElement);
+    // The box is a simulation hitbox only. Rendering it underneath the GLTF
+    // avatar can create coplanar depth noise that looks like clothing flicker.
+    this.playerMesh.visible = false;
     this.updateCamera(0);
     this.scene.add(this.playerMesh, this.playerModelAnchor);
     this.scene.add(this.bossMesh);
@@ -456,6 +459,18 @@ export class ThreeRuntime {
     model.name = 'player-model';
     model.scale.setScalar(0.2);
     model.position.set(0, -0.61, 0);
+    model.traverse((child) => {
+      if (!(child instanceof Mesh)) return;
+      const material = (child.material as MeshBasicMaterial).clone();
+      // Keep the avatar opaque and deterministic when several clothing shells
+      // share a nearly identical surface in the source GLTF.
+      material.depthWrite = false;
+      material.polygonOffset = true;
+      material.polygonOffsetFactor = -1;
+      material.polygonOffsetUnits = -1;
+      child.material = material;
+      child.renderOrder = 10;
+    });
     this.playerModelAnchor.add(model);
     const material = this.playerMesh.material as MeshBasicMaterial;
     material.colorWrite = false;
@@ -897,10 +912,11 @@ export class ThreeRuntime {
   }
 
   private updateCamera(playerX: number): void {
-    // Keep the runner in the lower third even on narrow portrait windows. The
-    // camera tracks laterally so moving to either edge cannot leave it offscreen.
-    this.camera.position.set(playerX * 0.75, 7, -6);
-    this.camera.lookAt(playerX * 0.45, 0, 6);
+    // Keep a stable world-space frame so lateral input visibly moves the avatar
+    // instead of the camera cancelling the movement on screen.
+    void playerX;
+    this.camera.position.set(0, 7, -6);
+    this.camera.lookAt(0, 0, 6);
   }
 
   private syncBoss(snapshot: M1RunSnapshot): void {
