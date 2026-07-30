@@ -68,7 +68,7 @@ expectedArrowDps = projectileCount × shotsPerSecond × baseDamage
 | 5 星圖遺庫 | 5–6 分 | 7 | 4 | 2 | 1 | 菁英 modifier 與窄安全縫。 |
 | 6 裂光地平 | 5–7 分 | 7 | 5 | 2 | 1 | 全 Build 終局與三段 Boss。 |
 
-每章的標準節奏：`Intro → Safe → Choice → Combat → Choice → Combat → Elite → Choice → Combat → Choice → Boss`。首局章 1 使用固定 sequence；其後每章在模板池抽樣，但不可打破「每 20–30 秒給一次選擇／回饋」節奏。
+每章的標準節奏：`5 波小怪 → 隨機回響` 重複三次，接著進入 `Boss → Reward`。首局章 1 使用固定 sequence；其後每章可在波次模板池抽樣，但不可跳過 5／10／15 波後的回響事件。
 
 ### 3.2 Segment 定義
 

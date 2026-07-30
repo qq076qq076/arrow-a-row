@@ -1,6 +1,6 @@
 # Arrow a Row：六章關卡與敵人生命成長設計
 
-版本：0.1｜Owner：PM（暫兼系統／關卡／數值設計）｜狀態：M3 設計鎖定
+版本：0.2｜Owner：PM（暫兼系統／關卡／數值設計）｜狀態：M6 設計鎖定
 
 ## 六章結構
 
@@ -13,28 +13,29 @@
 | 5 | `ch05_archive` | 星圖遺庫／深藍金線 | 菁英 modifier、窄安全縫 | 無光抄錄者 |
 | 6 | `ch06_horizon` | 裂光地平／白金虹彩 | 全 Build 終局檢定 | 靜滯之核 |
 
-每章固定節奏為 `Intro → Choice → Combat → Choice → Combat → Elite → Choice → Combat → Choice → Boss → Reward`。CH01 為固定教學 sequence；CH02–CH06 以同一資料 schema 配置。
+每章固定節奏為 `5 波小怪 → 隨機回響`，重複三輪後進入 `Boss → Reward`。第一波在 12m，之後每 8m 一波；第 5／10／15 波後各暫停一次並抽出 1 張隨機回響。CH01 為固定教學 sequence；CH02–CH06 以同一資料 schema 配置。
 
 ## 敵人 HP 曲線
 
 ```text
-chapterHpScale = 1.40 ^ (chapterIndex - 1)
-encounterHpScale = 1 + 0.08 × encounterIndexWithinChapter
-enemyHp = round(baseHp × chapterHpScale × encounterHpScale)
+chapterHpScale = [1.10、1.54、2.156、3.014、4.224、5.918]
+roundHpScale = 1.00、1.05、1.10
+waveHpScale = 1.00、1.04、1.08、1.12、1.16
+enemyHp = round(baseHp × chapterHpScale × roundHpScale × waveHpScale)
 eliteHp = round(enemyHp × 3.0)
 bossHp = round(36 × chapterHpScale)
 ```
 
-| 章節 | HP 倍率 | 近戰 HP（base 8） | 遠程 HP（base 12） | Boss HP（base 36） |
+| 章節 | HP 倍率 | 第 1 波近／遠 | 第 15 波近／遠 | Boss HP |
 | ---: | ---: | ---: | ---: | ---: |
-| 1 | 1.00 | 8 | 12 | 36 |
-| 2 | 1.40 | 11 | 17 | 50 |
-| 3 | 1.96 | 16 | 24 | 71 |
-| 4 | 2.74 | 22 | 33 | 99 |
-| 5 | 3.84 | 31 | 46 | 138 |
-| 6 | 5.38 | 43 | 65 | 194 |
+| 1 | 1.10 | 9 / 13 | 11 / 17 | 36 |
+| 2 | 1.54 | 12 / 18 | 16 / 24 | 50 |
+| 3 | 2.156 | 17 / 26 | 22 / 33 | 71 |
+| 4 | 3.014 | 24 / 36 | 31 / 46 | 99 |
+| 5 | 4.224 | 34 / 51 | 43 / 65 | 138 |
+| 6 | 5.918 | 47 / 71 | 60 / 90 | 194 |
 
-怪物傷害採較慢曲線 `1.22^(chapterIndex-1)`。每章第三場戰鬥最高額外套用 `×1.16` HP；若主要 Build 的普通敵 TTK 超過 2 秒，先調低 HP 曲線或增加 Gate 輸出保底。
+怪物傷害採較慢曲線 `1.22^(chapterIndex-1)`；若主要 Build 的普通敵 TTK 超過 2 秒，先調低 HP 曲線或增加 Gate 輸出保底。
 
 ## 每章戰鬥內容與驗收
 
