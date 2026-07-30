@@ -42,7 +42,6 @@ const POLYHAVEN_STREET_LAMP_URL = `${import.meta.env.BASE_URL}assets/polyhaven/s
 const POLYHAVEN_GOTHIC_STATUE_URL = `${import.meta.env.BASE_URL}assets/polyhaven/gothic_statue/gothic_statue.gltf`;
 const POLYHAVEN_BUFF_LANTERN_URL = `${import.meta.env.BASE_URL}assets/polyhaven/lantern_01/Lantern_01.gltf`;
 const POLY_PIZZA_ARCHER_URL = `${import.meta.env.BASE_URL}assets/poly-pizza/archer/archer.glb`;
-const QUATERNIUS_ENEMY_URL = `${import.meta.env.BASE_URL}assets/quaternius/platformer/enemy.gltf`;
 const QUATERNIUS_GRASS_ROAD_URL = `${import.meta.env.BASE_URL}assets/quaternius/platformer/grass_road_tile.gltf`;
 const POLYHAVEN_CANNON_URL = `${import.meta.env.BASE_URL}assets/polyhaven/cannon_01/cannon_01.gltf`;
 const POLYHAVEN_AMMO_BOX_URL = `${import.meta.env.BASE_URL}assets/polyhaven/ammo_box/ammo_box.gltf`;
@@ -95,7 +94,6 @@ export class ThreeRuntime {
   private ch06BossModelTemplate: Group | undefined;
   private buffModelTemplate: Group | undefined;
   private playerModelTemplate: Group | undefined;
-  private enemyModelTemplate: Group | undefined;
   private ch02MeleeModelTemplate: Group | undefined;
   private ch02RangedModelTemplate: Group | undefined;
   private ch03MeleeModelTemplate: Group | undefined;
@@ -135,7 +133,7 @@ export class ThreeRuntime {
     this.loadPolyhavenBossModel();
     this.loadPolyhavenCh02BossModel();
     this.loadPolyhavenBuffModel();
-    this.loadQuaterniusActorModels();
+    this.loadPlayerModel();
     this.loadQuaterniusRoadModel();
     this.loadPolyhavenViaductProps();
     this.loadPolyhavenCh02EnemyModels();
@@ -444,14 +442,10 @@ export class ThreeRuntime {
       .catch((error: unknown) => console.warn(`${label} 載入失敗。`, error));
   }
 
-  private loadQuaterniusActorModels(): void {
+  private loadPlayerModel(): void {
     this.loadGltf(POLY_PIZZA_ARCHER_URL, 'Poly Pizza Archer', (scene) => {
       this.playerModelTemplate = scene;
       this.attachPlayerModel();
-    });
-    this.loadGltf(QUATERNIUS_ENEMY_URL, 'Quaternius Enemy', (scene) => {
-      this.enemyModelTemplate = scene;
-      for (const enemy of this.enemyMeshes.values()) this.attachEnemyModel(enemy, enemy.userData.kind as 'melee' | 'ranged', enemy.userData.chapterId as ChapterId);
     });
   }
 
@@ -501,7 +495,7 @@ export class ThreeRuntime {
             ? (kind === 'melee' ? this.ch05MeleeModelTemplate : this.ch05RangedModelTemplate)
             : chapterId === 'ch06_horizon'
               ? (kind === 'melee' ? this.ch06MeleeModelTemplate : this.ch06RangedModelTemplate)
-      : this.enemyModelTemplate;
+      : undefined;
     if (template === undefined || anchor.getObjectByName('enemy-model') !== undefined) return;
     const model = template.clone(true);
     model.name = 'enemy-model';

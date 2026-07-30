@@ -30,7 +30,7 @@
 | 資產 | 來源網址 | 作者 | 採用檔案 | 使用位置 | 授權 |
 | --- | --- | --- | --- | --- | --- |
 | Platformer Game Kit — Character | https://quaternius.com/packs/ultimateplatformer.html | Quaternius（laulhet@gmail.com） | `public/assets/quaternius/platformer/character.gltf` | 所有關卡共用的玩家角色 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)；可自由使用、修改與商用，不要求署名。 |
-| Platformer Game Kit — Enemy | https://quaternius.com/packs/ultimateplatformer.html | Quaternius（laulhet@gmail.com） | `public/assets/quaternius/platformer/enemy.gltf` | CH01 的近戰與遠程小怪；後續章節可依主題另換型 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)；可自由使用、修改與商用，不要求署名。 |
+| Platformer Game Kit — Enemy（備用，已移除載入） | https://quaternius.com/packs/ultimateplatformer.html | Quaternius（laulhet@gmail.com） | `public/assets/quaternius/platformer/enemy.gltf` | 不再載入 CH01；保留檔案供後續替換評估，遊戲改用章節基礎幾何避免舊綠色怪物模型殘留 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)；可自由使用、修改與商用，不要求署名。 |
 | Platformer Game Kit — Cube Grass Center Tall | https://quaternius.com/packs/ultimateplatformer.html | Quaternius（laulhet@gmail.com） | `public/assets/quaternius/platformer/grass_road_tile.gltf` | CH01 可重複使用的草地道路平台模型；CH02 調成藍鋼高架、CH03 調成玄武岩板道 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)；可自由使用、修改與商用，不要求署名。 |
 
 ## Poly Pizza 資產來源與授權
