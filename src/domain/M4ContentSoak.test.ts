@@ -6,7 +6,8 @@ function clearChapter(simulation: M1RunSimulation): void {
   for (let tick = 0; tick < 12_000 && simulation.snapshot().phase !== 'reward' && simulation.snapshot().phase !== 'dead'; tick += 1) {
     const snapshot = simulation.snapshot();
     if (snapshot.phase === 'echo') {
-      expect(snapshot.rewardOptions).toHaveLength(1);
+      expect(snapshot.rewardOptions).toHaveLength(3);
+      expect(new Set(snapshot.rewardOptions).size).toBe(3);
       expect(simulation.chooseReward(snapshot.rewardOptions[0]!)).toBe(true);
       continue;
     }

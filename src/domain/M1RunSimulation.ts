@@ -171,7 +171,6 @@ export class M1RunSimulation {
   private makeGate(groupId: string, z: number, pair: readonly [BuffId, BuffId]): MutableGate { return { groupId, z, leftBuffId: pair[0], rightBuffId: pair[1], leftLabel: BUFF_CATALOG[pair[0]].gateLabel, rightLabel: BUFF_CATALOG[pair[1]].gateLabel, isChosen: false }; }
   private nextRandomIndex(length: number): number { this.randomState = (1664525 * this.randomState + 1013904223) >>> 0; return this.randomState % length; }
   private drawRewards(): RewardId[] { const pool = [...REWARDS]; const choices: RewardId[] = []; while (choices.length < 3) choices.push(pool.splice(this.nextRandomIndex(pool.length), 1)[0]!); return choices; }
-  private drawEchoReward(): RewardId { return REWARDS[this.nextRandomIndex(REWARDS.length)]!; }
   private applyBuff(buffId: BuffId, scale: number): void {
     if (buffId === 'split_arrow') { this.player.arrowCharge += scale; while (this.player.arrowCharge >= 1) { this.player.projectileCount += 1; this.player.arrowCharge -= 1; } }
     if (buffId === 'power_shot') this.player.damage *= 1 + 0.25 * scale;
@@ -200,7 +199,7 @@ export class M1RunSimulation {
     this.wavesCompleted += 1;
     if (this.wavesCompleted % WAVES_PER_ECHO === 0) {
       this.echoRound = this.wavesCompleted / WAVES_PER_ECHO;
-      this.rewardOptions = [this.drawEchoReward()];
+      this.rewardOptions = this.drawRewards();
       this.selectedReward = undefined;
       this.phase = 'echo';
     }

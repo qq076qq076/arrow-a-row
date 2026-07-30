@@ -6,7 +6,7 @@ function advanceToDistance(simulation: M1RunSimulation, distanceMeters: number):
   while (simulation.snapshot().distanceMeters < distanceMeters) {
     const snapshot = simulation.snapshot();
     if (snapshot.phase === 'echo') {
-      expect(snapshot.rewardOptions).toHaveLength(1);
+      expect(snapshot.rewardOptions).toHaveLength(3);
       expect(simulation.chooseReward(snapshot.rewardOptions[0]!)).toBe(true);
       continue;
     }
@@ -19,7 +19,7 @@ function advanceToBossReward(simulation: M1RunSimulation, maxTicks = 12_000): Re
   for (let tick = 0; tick < maxTicks; tick += 1) {
     const snapshot = simulation.snapshot();
     if (snapshot.phase === 'echo') {
-      expect(snapshot.rewardOptions).toHaveLength(1);
+      expect(snapshot.rewardOptions).toHaveLength(3);
       expect(simulation.chooseReward(snapshot.rewardOptions[0]!)).toBe(true);
       continue;
     }
@@ -69,7 +69,8 @@ describe('M1RunSimulation', () => {
       expect(echo.phase).toBe('echo');
       expect(echo.echoRound).toBe(round);
       expect(echo.wavesCompleted).toBe(round * 5);
-      expect(echo.rewardOptions).toHaveLength(1);
+      expect(echo.rewardOptions).toHaveLength(3);
+      expect(new Set(echo.rewardOptions).size).toBe(3);
       expect(echo.boss).toBeUndefined();
       expect(echo.enemies.some((enemy) => enemy.id.startsWith(`wave-${round * 5}-`))).toBe(true);
       expect(simulation.chooseReward(echo.rewardOptions[0]!)).toBe(true);
@@ -118,7 +119,7 @@ describe('M1RunSimulation', () => {
         const snapshot = simulation.snapshot();
         if (snapshot.phase === 'echo') {
           echoRounds.push(snapshot.echoRound);
-          expect(snapshot.rewardOptions).toHaveLength(1);
+          expect(snapshot.rewardOptions).toHaveLength(3);
           expect(simulation.chooseReward(snapshot.rewardOptions[0]!)).toBe(true);
           continue;
         }
@@ -141,7 +142,7 @@ describe('M1RunSimulation', () => {
     const restored = new M1RunSimulation();
     expect(restored.restore(checkpoint)).toBe(true);
     expect(restored.snapshot().phase).toBe('echo');
-    expect(restored.snapshot().rewardOptions).toHaveLength(1);
+    expect(restored.snapshot().rewardOptions).toHaveLength(3);
     expect(restored.chooseReward(restored.snapshot().rewardOptions[0]!)).toBe(true);
     expect(restored.snapshot().phase).toBe('playing');
     expect(restored.snapshot().wavesCompleted).toBe(5);
