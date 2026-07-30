@@ -29,10 +29,15 @@ export function runBetaBotCampaigns(buildId: BetaBuildId, campaigns: number): Be
     simulation.start();
     let completed = true;
     for (let chapter = 0; chapter < 3; chapter += 1) {
-      for (let tick = 0; tick < 12_000 && simulation.snapshot().phase === 'playing'; tick += 1) {
+      for (let tick = 0; tick < 12_000 && simulation.snapshot().phase !== 'reward' && simulation.snapshot().phase !== 'dead'; tick += 1) {
         const snapshot = simulation.snapshot();
+        if (snapshot.phase === 'echo') {
+          const echoReward = snapshot.rewardOptions.includes(target.rewardId) ? target.rewardId : snapshot.rewardOptions[0]!;
+          simulation.chooseReward(echoReward);
+          continue;
+        }
         const nextGate = snapshot.gates.find((gate) => !gate.isChosen && gate.z >= snapshot.distanceMeters);
-        if (snapshot.boss !== undefined || snapshot.distanceMeters >= 72) simulation.setTargetX(0);
+        if (snapshot.boss !== undefined || snapshot.wavesCompleted >= 15) simulation.setTargetX(0);
         else if (nextGate?.leftBuffId === target.buffId) simulation.setTargetX(-5);
         else if (nextGate?.rightBuffId === target.buffId) simulation.setTargetX(5);
         else simulation.setTargetX(5);

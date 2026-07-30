@@ -3,7 +3,31 @@ import { BUFF_IDS } from '../content/BuffCatalog';
 import { BASE_ARROW_DAMAGE, BASE_LIGHTNING_DAMAGE_PER_SECOND, BOSS_START_DISTANCE, BOSS_STOP_DISTANCE, BOSS_WARNING_SECONDS, BOSS_WARNING_START_DISTANCE, getArrowDamageMultiplier, M1RunSimulation } from './M1RunSimulation';
 
 function advanceToDistance(simulation: M1RunSimulation, distanceMeters: number): void {
-  while (simulation.snapshot().distanceMeters < distanceMeters) simulation.tick(1 / 30);
+  while (simulation.snapshot().distanceMeters < distanceMeters) {
+    const snapshot = simulation.snapshot();
+    if (snapshot.phase === 'echo') {
+      expect(snapshot.rewardOptions).toHaveLength(1);
+      expect(simulation.chooseReward(snapshot.rewardOptions[0]!)).toBe(true);
+      continue;
+    }
+    if (snapshot.phase !== 'playing') return;
+    simulation.tick(1 / 30);
+  }
+}
+
+function advanceToBossReward(simulation: M1RunSimulation, maxTicks = 12_000): ReturnType<M1RunSimulation['snapshot']> {
+  for (let tick = 0; tick < maxTicks; tick += 1) {
+    const snapshot = simulation.snapshot();
+    if (snapshot.phase === 'echo') {
+      expect(snapshot.rewardOptions).toHaveLength(1);
+      expect(simulation.chooseReward(snapshot.rewardOptions[0]!)).toBe(true);
+      continue;
+    }
+    if (snapshot.phase !== 'playing') break;
+    if (snapshot.distanceMeters >= 42) simulation.setTargetX(0);
+    simulation.tick(1 / 30);
+  }
+  return simulation.snapshot();
 }
 
 describe('M1RunSimulation', () => {
@@ -32,22 +56,31 @@ describe('M1RunSimulation', () => {
     expect(simulation.snapshot().distanceMeters).toBeGreaterThan(beforePause.distanceMeters);
   });
 
-  it('warns for five seconds after the last minion wave, then brings the Boss to three units', () => {
+  it('runs three five-wave rounds with one echo each, then warns five seconds before Boss', () => {
     const simulation = new M1RunSimulation();
     simulation.start({ healthLevel: 100 });
     simulation.setTargetX(5);
     simulation.tick(1 / 30);
     expect(simulation.snapshot().arrows).toHaveLength(1);
 
-    advanceToDistance(simulation, BOSS_WARNING_START_DISTANCE - 0.1);
-    expect(simulation.snapshot().boss).toBeUndefined();
-    expect(simulation.snapshot().bossWarningSeconds).toBe(0);
-    advanceToDistance(simulation, BOSS_WARNING_START_DISTANCE);
-    while (simulation.snapshot().bossWarningSeconds === 0) simulation.tick(1 / 30);
+    for (let round = 1; round <= 3; round += 1) {
+      while (simulation.snapshot().phase === 'playing' && simulation.snapshot().wavesCompleted < round * 5) simulation.tick(1 / 30);
+      const echo = simulation.snapshot();
+      expect(echo.phase).toBe('echo');
+      expect(echo.echoRound).toBe(round);
+      expect(echo.wavesCompleted).toBe(round * 5);
+      expect(echo.rewardOptions).toHaveLength(1);
+      expect(echo.boss).toBeUndefined();
+      expect(echo.enemies.some((enemy) => enemy.id.startsWith(`wave-${round * 5}-`))).toBe(true);
+      expect(simulation.chooseReward(echo.rewardOptions[0]!)).toBe(true);
+    }
+
     const warning = simulation.snapshot();
+    expect(warning.phase).toBe('playing');
+    expect(warning.wavesCompleted).toBe(15);
+    expect(warning.distanceMeters).toBeGreaterThanOrEqual(BOSS_WARNING_START_DISTANCE);
     expect(warning.boss).toBeUndefined();
     expect(warning.bossWarningSeconds).toBe(BOSS_WARNING_SECONDS);
-    expect(warning.enemies.some((enemy) => enemy.id === 'wave-7a')).toBe(true);
 
     simulation.tick(BOSS_WARNING_SECONDS - 0.1);
     expect(simulation.snapshot().boss).toBeUndefined();
@@ -57,8 +90,9 @@ describe('M1RunSimulation', () => {
     expect(simulation.snapshot().distanceMeters).toBeLessThanOrEqual(BOSS_START_DISTANCE);
     expect(arrivingBoss?.z).toBeGreaterThan(BOSS_STOP_DISTANCE);
 
+    simulation.restore({ ...simulation.snapshot(), boss: { ...arrivingBoss!, hp: 999_999, maxHp: 999_999 } });
     simulation.setTargetX(0);
-    const initialBossHp = arrivingBoss?.hp ?? 0;
+    const initialBossHp = simulation.snapshot().boss?.hp ?? 0;
     for (let tick = 0; tick < 360; tick += 1) simulation.tick(1 / 30);
     expect(simulation.snapshot().boss?.z).toBe(BOSS_STOP_DISTANCE);
     expect(simulation.snapshot().boss?.hp).toBeLessThan(initialBossHp);
@@ -72,6 +106,60 @@ describe('M1RunSimulation', () => {
     const preview = simulation.snapshot();
     expect(preview.distanceMeters).toBe(BOSS_START_DISTANCE);
     expect(preview.boss).toMatchObject({ z: BOSS_STOP_DISTANCE, hp: 9_999, maxHp: 9_999, isDefeated: false });
+  });
+
+  it('uses the fifteen-wave, three-echo schedule in every chapter', () => {
+    const chapters = ['ch01_meadow', 'ch02_viaduct', 'ch03_forge', 'ch04_canopy', 'ch05_archive', 'ch06_horizon'] as const;
+    for (const chapterId of chapters) {
+      const simulation = new M1RunSimulation();
+      simulation.start({ healthLevel: 100 }, chapterId);
+      const echoRounds: number[] = [];
+      for (let tick = 0; tick < 6_000 && simulation.snapshot().phase !== 'reward' && simulation.snapshot().phase !== 'dead'; tick += 1) {
+        const snapshot = simulation.snapshot();
+        if (snapshot.phase === 'echo') {
+          echoRounds.push(snapshot.echoRound);
+          expect(snapshot.rewardOptions).toHaveLength(1);
+          expect(simulation.chooseReward(snapshot.rewardOptions[0]!)).toBe(true);
+          continue;
+        }
+        simulation.setTargetX(snapshot.wavesCompleted >= 15 ? 0 : 5);
+        simulation.tick(1 / 30);
+      }
+      expect(echoRounds).toEqual([1, 2, 3]);
+      expect(simulation.snapshot().phase).toBe('reward');
+      expect(simulation.snapshot().wavesCompleted).toBe(15);
+    }
+  });
+
+  it('restores an in-progress chapter echo before allowing the next wave', () => {
+    const source = new M1RunSimulation();
+    source.start();
+    while (source.snapshot().phase === 'playing') source.tick(1 / 30);
+    const checkpoint = source.snapshot();
+    expect(checkpoint.phase).toBe('echo');
+
+    const restored = new M1RunSimulation();
+    expect(restored.restore(checkpoint)).toBe(true);
+    expect(restored.snapshot().phase).toBe('echo');
+    expect(restored.snapshot().rewardOptions).toHaveLength(1);
+    expect(restored.chooseReward(restored.snapshot().rewardOptions[0]!)).toBe(true);
+    expect(restored.snapshot().phase).toBe('playing');
+    expect(restored.snapshot().wavesCompleted).toBe(5);
+  });
+
+  it('applies the PM first-wave HP anchors to every chapter', () => {
+    const chapters = [
+      ['ch01_meadow', 9], ['ch02_viaduct', 12], ['ch03_forge', 17],
+      ['ch04_canopy', 24], ['ch05_archive', 34], ['ch06_horizon', 47],
+    ] as const;
+    for (const [chapterId, meleeHp] of chapters) {
+      const simulation = new M1RunSimulation();
+      simulation.start({}, chapterId);
+      while (simulation.snapshot().wavesCompleted < 1) simulation.tick(1 / 30);
+      const firstWave = simulation.snapshot().enemies.filter((enemy) => enemy.id.startsWith('wave-1-'));
+      expect(firstWave.filter((enemy) => enemy.kind === 'melee')[0]?.hp).toBe(meleeHp);
+      expect(Math.max(...firstWave.map((enemy) => enemy.hp))).toBe(meleeHp);
+    }
   });
 
   it('randomly offers the swarm echo and doubles minions in the next chapter', () => {
@@ -261,7 +349,7 @@ describe('M1RunSimulation', () => {
     const simulation = new M1RunSimulation();
     simulation.start();
     simulation.setTargetX(5);
-    for (let index = 0; index < 2500 && simulation.snapshot().phase === 'playing'; index += 1) { if (simulation.snapshot().distanceMeters >= 42) simulation.setTargetX(0); simulation.tick(1 / 30); }
+    advanceToBossReward(simulation);
 
     expect(simulation.snapshot().phase).toBe('reward');
     expect(simulation.snapshot().earnedGold).toBe(30);
@@ -278,7 +366,7 @@ describe('M1RunSimulation', () => {
     const source = new M1RunSimulation();
     source.start();
     source.setTargetX(5);
-    for (let index = 0; index < 2500 && source.snapshot().phase === 'playing'; index += 1) { if (source.snapshot().distanceMeters >= 42) source.setTargetX(0); source.tick(1 / 30); }
+    advanceToBossReward(source);
     const restored = new M1RunSimulation();
     expect(restored.restore(source.snapshot())).toBe(true);
     expect(restored.snapshot().phase).toBe('reward');
@@ -292,8 +380,7 @@ describe('M1RunSimulation', () => {
 
     for (let chapterIndex = 1; chapterIndex <= 6; chapterIndex += 1) {
       simulation.setTargetX(5);
-      for (let tick = 0; tick < 12000 && simulation.snapshot().phase === 'playing'; tick += 1) { if (simulation.snapshot().distanceMeters >= 42) simulation.setTargetX(0); simulation.tick(1 / 30); }
-      const reward = simulation.snapshot();
+      const reward = advanceToBossReward(simulation);
       expect(reward.phase).toBe('reward');
       expect(reward.chapterId).toBe(`ch0${chapterIndex}_${['meadow', 'viaduct', 'forge', 'canopy', 'archive', 'horizon'][chapterIndex - 1]}`);
       bossHpByChapter.push(reward.boss?.maxHp ?? 0);

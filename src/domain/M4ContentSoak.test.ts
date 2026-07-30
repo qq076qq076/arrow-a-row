@@ -3,8 +3,14 @@ import { M1RunSimulation } from './M1RunSimulation';
 
 function clearChapter(simulation: M1RunSimulation): void {
   simulation.setTargetX(5);
-  for (let tick = 0; tick < 12_000 && simulation.snapshot().phase === 'playing'; tick += 1) {
-    if (simulation.snapshot().distanceMeters >= 42) simulation.setTargetX(0);
+  for (let tick = 0; tick < 12_000 && simulation.snapshot().phase !== 'reward' && simulation.snapshot().phase !== 'dead'; tick += 1) {
+    const snapshot = simulation.snapshot();
+    if (snapshot.phase === 'echo') {
+      expect(snapshot.rewardOptions).toHaveLength(1);
+      expect(simulation.chooseReward(snapshot.rewardOptions[0]!)).toBe(true);
+      continue;
+    }
+    if (snapshot.distanceMeters >= 42) simulation.setTargetX(0);
     simulation.tick(1 / 30);
   }
   const reward = simulation.snapshot();
