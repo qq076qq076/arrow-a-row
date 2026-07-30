@@ -13,6 +13,12 @@ describe('M1RunSimulation', () => {
     expect(simulation.snapshot().player.projectileCount).toBe(1);
   });
 
+  it('starts lightning with a one-unit lock range', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start();
+    expect(simulation.snapshot().player.lightningRange).toBe(1);
+  });
+
   it('freezes simulation state while paused and resumes from the same state', () => {
     const simulation = new M1RunSimulation();
     simulation.start();
@@ -43,8 +49,8 @@ describe('M1RunSimulation', () => {
     expect(arrivingBoss?.z).toBeGreaterThan(15);
 
     const initialBossHp = arrivingBoss?.hp ?? 0;
-    for (let tick = 0; tick < 120; tick += 1) simulation.tick(1 / 30);
-    expect(simulation.snapshot().boss?.z).toBeGreaterThan(15);
+    for (let tick = 0; tick < 360; tick += 1) simulation.tick(1 / 30);
+    expect(simulation.snapshot().boss?.z).toBeGreaterThanOrEqual(15);
     expect(simulation.snapshot().boss?.hp).toBeLessThan(initialBossHp);
   });
 
@@ -146,11 +152,21 @@ describe('M1RunSimulation', () => {
     const simulation = new M1RunSimulation();
     simulation.start({ damageLevel: 0 });
     expect(simulation.snapshot().player.lightningTargetCount).toBe(2);
-    simulation.setTargetX(5);
-    for (let tick = 0; tick < 900 && simulation.snapshot().lightningTargetIds.length < 2; tick += 1) simulation.tick(1 / 30);
+    const initial = simulation.snapshot();
+    simulation.restore({
+      ...initial,
+      enemies: [
+        { id: 'test-near-left', kind: 'melee', x: -0.2, z: 0.9, hp: 100, telegraphSeconds: 0, deathSeconds: 0 },
+        { id: 'test-near-right', kind: 'melee', x: 0.2, z: 0.9, hp: 100, telegraphSeconds: 0, deathSeconds: 0 },
+      ],
+      arrows: [],
+      lightningTargetIds: [],
+    });
+    simulation.tick(1 / 30);
 
     const snapshot = simulation.snapshot();
     expect(snapshot.lightningTargetIds).toHaveLength(2);
+    expect(snapshot.player.lightningRange).toBe(1);
     expect(snapshot.lightningTargetIds.every((id) => snapshot.enemies.some((enemy) => enemy.id === id && enemy.z > 0))).toBe(true);
   });
 

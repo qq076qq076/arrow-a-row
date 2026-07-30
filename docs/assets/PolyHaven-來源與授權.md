@@ -1,6 +1,6 @@
 # Poly Haven 資產來源與授權
 
-本專案只採用 Poly Haven 公開標示為免費、CC0 的資產；本檔保留來源、授權與實際使用方式，供後續發佈與維護查核。
+本檔保留本專案採用的免費 3D 資產來源、授權與實際使用方式，供後續發佈與維護查核；Poly Haven 資產均為公開標示的 CC0，玩家弓箭手另列於 Poly Pizza 授權區。
 
 | 資產 | 來源網址 | 作者 | 採用檔案 | 使用位置 | 授權 |
 | --- | --- | --- | --- | --- | --- |
@@ -32,5 +32,11 @@
 | Platformer Game Kit — Character | https://quaternius.com/packs/ultimateplatformer.html | Quaternius（laulhet@gmail.com） | `public/assets/quaternius/platformer/character.gltf` | 所有關卡共用的玩家角色 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)；可自由使用、修改與商用，不要求署名。 |
 | Platformer Game Kit — Enemy | https://quaternius.com/packs/ultimateplatformer.html | Quaternius（laulhet@gmail.com） | `public/assets/quaternius/platformer/enemy.gltf` | CH01 的近戰與遠程小怪；後續章節可依主題另換型 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)；可自由使用、修改與商用，不要求署名。 |
 | Platformer Game Kit — Cube Grass Center Tall | https://quaternius.com/packs/ultimateplatformer.html | Quaternius（laulhet@gmail.com） | `public/assets/quaternius/platformer/grass_road_tile.gltf` | CH01 可重複使用的草地道路平台模型；CH02 調成藍鋼高架、CH03 調成玄武岩板道 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)；可自由使用、修改與商用，不要求署名。 |
+
+## Poly Pizza 資產來源與授權
+
+| 資產 | 來源網址 | 作者 | 採用檔案 | 使用位置 | 授權 |
+| --- | --- | --- | --- | --- | --- |
+| Archer | https://poly.pizza/m/0jlabhnBscv | Poly by Google | `public/assets/poly-pizza/archer/archer.glb` | 所有關卡共用的玩家弓箭手角色（含弓與箭袋造型） | [Creative Commons Attribution 3.0](https://creativecommons.org/licenses/by/3.0/)；發佈時保留作者與來源連結。 |
 
 採用 1K glTF 版本（約 2.1 MB，含幾何與貼圖），在場景中共享同一份幾何／材質並建立四個位置與尺寸變體；它們會隨關卡距離移動，低畫質模式只保留前兩個景物，不另下載高解析貼圖。

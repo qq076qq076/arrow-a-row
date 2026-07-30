@@ -41,7 +41,7 @@ const POLYHAVEN_ROCK_URL = `${import.meta.env.BASE_URL}assets/polyhaven/rock_07/
 const POLYHAVEN_STREET_LAMP_URL = `${import.meta.env.BASE_URL}assets/polyhaven/street_lamp_01/street_lamp_01.gltf`;
 const POLYHAVEN_GOTHIC_STATUE_URL = `${import.meta.env.BASE_URL}assets/polyhaven/gothic_statue/gothic_statue.gltf`;
 const POLYHAVEN_BUFF_LANTERN_URL = `${import.meta.env.BASE_URL}assets/polyhaven/lantern_01/Lantern_01.gltf`;
-const QUATERNIUS_PLAYER_URL = `${import.meta.env.BASE_URL}assets/quaternius/platformer/character.gltf`;
+const POLY_PIZZA_ARCHER_URL = `${import.meta.env.BASE_URL}assets/poly-pizza/archer/archer.glb`;
 const QUATERNIUS_ENEMY_URL = `${import.meta.env.BASE_URL}assets/quaternius/platformer/enemy.gltf`;
 const QUATERNIUS_GRASS_ROAD_URL = `${import.meta.env.BASE_URL}assets/quaternius/platformer/grass_road_tile.gltf`;
 const POLYHAVEN_CANNON_URL = `${import.meta.env.BASE_URL}assets/polyhaven/cannon_01/cannon_01.gltf`;
@@ -443,7 +443,7 @@ export class ThreeRuntime {
   }
 
   private loadQuaterniusActorModels(): void {
-    this.loadGltf(QUATERNIUS_PLAYER_URL, 'Quaternius Character', (scene) => {
+    this.loadGltf(POLY_PIZZA_ARCHER_URL, 'Poly Pizza Archer', (scene) => {
       this.playerModelTemplate = scene;
       this.attachPlayerModel();
     });
@@ -458,17 +458,22 @@ export class ThreeRuntime {
     const model = this.playerModelTemplate.clone(true);
     model.name = 'player-model';
     model.scale.setScalar(0.2);
-    model.position.set(0, -0.61, 0);
+    model.position.set(0, -0.62, 0);
     model.traverse((child) => {
       if (!(child instanceof Mesh)) return;
-      const material = (child.material as MeshBasicMaterial).clone();
-      // Keep the avatar opaque and deterministic when several clothing shells
-      // share a nearly identical surface in the source GLTF.
-      material.depthWrite = false;
-      material.polygonOffset = true;
-      material.polygonOffsetFactor = -1;
-      material.polygonOffsetUnits = -1;
-      child.material = material;
+      const stabilizeMaterial = (source: MeshBasicMaterial): MeshBasicMaterial => {
+        const material = source.clone();
+        // Keep the avatar opaque and deterministic when several clothing shells
+        // share a nearly identical surface in the source GLTF.
+        material.depthWrite = false;
+        material.polygonOffset = true;
+        material.polygonOffsetFactor = -1;
+        material.polygonOffsetUnits = -1;
+        return material;
+      };
+      child.material = Array.isArray(child.material)
+        ? child.material.map((material) => stabilizeMaterial(material as MeshBasicMaterial))
+        : stabilizeMaterial(child.material as MeshBasicMaterial);
       child.renderOrder = 10;
     });
     this.playerModelAnchor.add(model);
