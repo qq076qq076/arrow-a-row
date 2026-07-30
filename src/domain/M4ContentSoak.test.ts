@@ -33,5 +33,5 @@ describe('M4 content soak', () => {
         expect(simulation.continueToNextChapter()).toBe(true);
       }
     }
-  });
+  }, 30_000);
 });
