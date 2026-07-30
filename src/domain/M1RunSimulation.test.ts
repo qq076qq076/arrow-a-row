@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BUFF_IDS } from '../content/BuffCatalog';
-import { BASE_ARROW_DAMAGE, BASE_CANNON_DAMAGE, BASE_LIGHTNING_DAMAGE_PER_SECOND, BOSS_START_DISTANCE, BOSS_STOP_DISTANCE, BOSS_WARNING_SECONDS, BOSS_WARNING_START_DISTANCE, CANNON_BLAST_RADIUS, CANNON_DAMAGE_BONUS, CANNON_RADIUS_BONUS, ENEMY_SPAWN_Z, LIFE_STEAL_BONUS, getArrowDamageMultiplier, M1RunSimulation } from './M1RunSimulation';
+import { BASE_ARROW_DAMAGE, BASE_CANNON_DAMAGE, BASE_LIGHTNING_DAMAGE_PER_SECOND, BOSS_START_DISTANCE, BOSS_STOP_DISTANCE, BOSS_WARNING_SECONDS, BOSS_WARNING_START_DISTANCE, CANNON_BLAST_RADIUS, CANNON_DAMAGE_BONUS, CANNON_RADIUS_BONUS, ENEMY_PROJECTILE_SPEED, ENEMY_SPAWN_Z, LIFE_STEAL_BONUS, getArrowDamageMultiplier, M1RunSimulation } from './M1RunSimulation';
 
 function advanceToDistance(simulation: M1RunSimulation, distanceMeters: number): void {
   while (simulation.snapshot().distanceMeters < distanceMeters) {
@@ -258,6 +258,55 @@ describe('M1RunSimulation', () => {
     expect(snapshot.collectedShards).toBe(1);
     expect(snapshot.enemies[0]).toMatchObject({ id: 'collision-enemy', hp: 0 });
     expect(snapshot.enemies[0]?.deathSeconds).toBeGreaterThan(0);
+  });
+
+  it('fires visible ranged enemy projectiles that can be dodged before they damage the player', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start();
+    const initial = simulation.snapshot();
+    simulation.restore({
+      ...initial,
+      player: { ...initial.player, lightningRange: 0 },
+      enemies: [{ id: 'ranged-attacker', kind: 'ranged', x: 2, z: 12, hp: 100, telegraphSeconds: 0, deathSeconds: 0 }],
+      arrows: [],
+      enemyProjectiles: [],
+    });
+
+    let observedStoppedTelegraph = false;
+    for (let tick = 0; tick < 180 && !observedStoppedTelegraph; tick += 1) {
+      const before = simulation.snapshot();
+      const chargingEnemy = before.enemies[0];
+      if (chargingEnemy !== undefined && chargingEnemy.telegraphSeconds > 0) {
+        simulation.tick(0.1);
+        expect(simulation.snapshot().enemies[0]?.z).toBeCloseTo(chargingEnemy.z);
+        observedStoppedTelegraph = true;
+      } else {
+        simulation.tick(1 / 30);
+      }
+    }
+    expect(observedStoppedTelegraph).toBe(true);
+    for (let tick = 0; tick < 180 && simulation.snapshot().enemyProjectiles.length === 0; tick += 1) simulation.tick(1 / 30);
+    const telegraphAndShot = simulation.snapshot();
+    expect(telegraphAndShot.enemies[0]).toBeDefined();
+    expect(telegraphAndShot.enemyProjectiles).toHaveLength(1);
+    expect(telegraphAndShot.enemyProjectiles[0]?.vz).toBe(-ENEMY_PROJECTILE_SPEED);
+    expect(telegraphAndShot.player.hp).toBe(100);
+
+    simulation.setTargetX(5);
+    for (let tick = 0; tick < 240 && simulation.snapshot().enemyProjectiles.length > 0; tick += 1) simulation.tick(1 / 30);
+    expect(simulation.snapshot().player.hp).toBe(100);
+    expect(simulation.snapshot().enemyProjectiles).toHaveLength(0);
+
+    const dodged = simulation.snapshot();
+    simulation.restore({
+      ...dodged,
+      player: { ...dodged.player, x: 0, hp: 100 },
+      enemies: [],
+      enemyProjectiles: [{ id: 999, x: 0, z: 0.6, vx: 0, vz: -ENEMY_PROJECTILE_SPEED, damage: 12 }],
+    });
+    simulation.tick(1 / 30);
+    expect(simulation.snapshot().player.hp).toBe(88);
+    expect(simulation.snapshot().enemyProjectiles).toHaveLength(0);
   });
 
   it('heals by the actual damage multiplied by life steal', () => {

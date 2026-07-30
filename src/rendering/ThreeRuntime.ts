@@ -78,6 +78,7 @@ export class ThreeRuntime {
   private readonly enemyMeshPools = new Map<string, Mesh[]>();
   private readonly arrowMeshes = new Map<number, Mesh>();
   private readonly arrowMeshPool: Mesh[] = [];
+  private readonly enemyProjectileMeshes = new Map<number, Mesh>();
   private readonly hitMeshes = new Map<number, Mesh>();
   private readonly pickupMeshes = new Map<number, Mesh>();
   private readonly transientMeshPools = new Map<Map<number, Mesh>, Mesh[]>();
@@ -184,6 +185,7 @@ export class ThreeRuntime {
       this.syncScenery(snapshot);
       this.syncGates(snapshot);
       this.syncEnemies(snapshot);
+      this.syncEnemyProjectiles(snapshot);
       this.syncArrows(snapshot);
       this.syncHits(snapshot);
       this.syncPickups(snapshot);
@@ -253,6 +255,7 @@ export class ThreeRuntime {
     for (const pool of this.enemyMeshPools.values()) for (const mesh of pool) this.disposeMesh(mesh);
     for (const mesh of this.arrowMeshes.values()) this.disposeMesh(mesh);
     for (const mesh of this.arrowMeshPool) this.disposeMesh(mesh);
+    for (const mesh of this.enemyProjectileMeshes.values()) this.disposeMesh(mesh);
     for (const mesh of this.hitMeshes.values()) this.disposeMesh(mesh);
     for (const mesh of this.pickupMeshes.values()) this.disposeMesh(mesh);
     for (const pool of this.transientMeshPools.values()) for (const mesh of pool) this.disposeMesh(mesh);
@@ -1169,6 +1172,13 @@ export class ThreeRuntime {
       }
       mesh.position.set(arrow.x, 0.8, arrow.z);
     }
+  }
+
+  private syncEnemyProjectiles(snapshot: M1RunSnapshot): void {
+    this.syncTransientMeshes(snapshot.enemyProjectiles, this.enemyProjectileMeshes, () => new Mesh(new SphereGeometry(0.16, 8, 8), new MeshBasicMaterial({ color: '#ff8b48' })), (mesh, projectile) => {
+      mesh.position.set(projectile.x, 0.72, projectile.z);
+      mesh.scale.setScalar(1 + Math.sin(projectile.id) * 0.08);
+    });
   }
 
   private configureArrowMesh(mesh: Mesh, weapon: 'bow' | 'cannon'): void {
