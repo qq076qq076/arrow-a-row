@@ -37,8 +37,10 @@ export const BOSS_WARNING_SECONDS = 5;
 export const BOSS_STOP_DISTANCE = 3;
 export const BOSS_WARNING_START_DISTANCE = FIRST_WAVE_DISTANCE + (TOTAL_MINION_WAVES - 1) * WAVE_DISTANCE_INTERVAL;
 export const BOSS_START_DISTANCE = BOSS_WARNING_START_DISTANCE + BOSS_WARNING_SECONDS * WORLD_SPEED;
-export const BASE_ARROW_DAMAGE = 0.8;
-export const BASE_LIGHTNING_DAMAGE_PER_SECOND = 5;
+export const BASE_ARROW_DAMAGE = 0.8 / 3;
+export const BASE_LIGHTNING_DAMAGE_PER_SECOND = 5 / 3;
+export const POWER_SHOT_DAMAGE_BONUS = 0.25 / 3;
+export const LIGHTNING_DAMAGE_BONUS_PER_GATE = 2 / 3;
 export function getArrowDamageMultiplier(distance: number): number { return distance <= 8 ? 1.5 : distance <= 18 ? 0.9 : 0.55; }
 const REWARDS: readonly RewardId[] = ['storm_bow', 'lightning_core', 'heartwood', 'deadeye', 'gale_heart', 'ironbark', 'enemy_swarm'];
 const ROUND_HP_SCALES: readonly number[] = [1, 1.05, 1.1];
@@ -173,12 +175,12 @@ export class M1RunSimulation {
   private drawRewards(): RewardId[] { const pool = [...REWARDS]; const choices: RewardId[] = []; while (choices.length < 3) choices.push(pool.splice(this.nextRandomIndex(pool.length), 1)[0]!); return choices; }
   private applyBuff(buffId: BuffId, scale: number): void {
     if (buffId === 'split_arrow') { this.player.arrowCharge += scale; while (this.player.arrowCharge >= 1) { this.player.projectileCount += 1; this.player.arrowCharge -= 1; } }
-    if (buffId === 'power_shot') this.player.damage *= 1 + 0.25 * scale;
+    if (buffId === 'power_shot') this.player.damage *= 1 + POWER_SHOT_DAMAGE_BONUS * scale;
     if (buffId === 'swift_shot') this.player.arrowSpeed *= 1 + 0.25 * scale;
     if (buffId === 'rapid_fire') this.player.fireRateMultiplier *= 1 - 0.12 * scale;
     if (buffId === 'piercing_arrow') { this.player.pierceCharge += scale; while (this.player.pierceCharge >= 1) { this.player.pierceCount += 1; this.player.pierceCharge -= 1; } }
     if (buffId === 'lightning_targets') { this.player.lightningTargetCharge += scale; while (this.player.lightningTargetCharge >= 1) { this.player.lightningTargetCount += 1; this.player.lightningTargetCharge -= 1; } }
-    if (buffId === 'lightning_damage') this.player.lightningDamagePerSecond += 2 * scale;
+    if (buffId === 'lightning_damage') this.player.lightningDamagePerSecond += LIGHTNING_DAMAGE_BONUS_PER_GATE * scale;
     if (buffId === 'lightning_range') this.player.lightningRange += 6 * scale;
     if (buffId === 'vitality') { const amount = 20 * scale; this.player.maxHp += amount; this.player.hp = Math.min(this.player.maxHp, this.player.hp + amount); }
     if (buffId === 'windstep') this.player.movementSpeed *= 1 + 0.2 * scale;

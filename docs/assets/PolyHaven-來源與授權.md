@@ -7,7 +7,8 @@
 | Rock 07 | https://polyhaven.com/a/rock_07 | Jenelle van Heerden | `public/assets/polyhaven/rock_07/rock_07.gltf`、1K JPG 貼圖與 BIN | CH01 晨線草原道路兩側的岩石景物 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 | Street Lamp 01 | https://polyhaven.com/a/street_lamp_01 | Josh Dean | `public/assets/polyhaven/street_lamp_01/street_lamp_01.gltf`、1K JPG 貼圖與 BIN | CH02 鏡潮高架道路兩側的照明與高架地標 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 | Gothic Statue | https://polyhaven.com/a/gothic_statue | Benni Weimer | `public/assets/polyhaven/gothic_statue/gothic_statue.gltf`、1K JPG 貼圖與 BIN | CH01 苔冠守衛 Boss | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
-| Lantern 01 | https://polyhaven.com/a/Lantern_01 | Rajil Jose Macatangay | `public/assets/polyhaven/lantern_01/Lantern_01.gltf`、1K JPG 貼圖與 BIN | 全類型 Buff：關卡門與戰利品採同一盞燈籠模型，以色彩區分能力 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
+| Lantern 01 | https://polyhaven.com/a/Lantern_01 | Rajil Jose Macatangay | `public/assets/polyhaven/lantern_01/Lantern_01.gltf`、1K JPG 貼圖與 BIN | Gate Buff 的門上能力標記，以色彩區分能力 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
+| Treasure Chest | https://polyhaven.com/a/treasure_chest | Rico Cilliers | `public/assets/polyhaven/treasure_chest/treasure_chest_1k.gltf`、1K JPG 貼圖與 BIN | 小怪掉落在地面的 Buff 拾取物；用於取代原本的地面燈籠 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 | Ammo Box | https://polyhaven.com/a/ammo_box | DanKit | `public/assets/polyhaven/ammo_box/ammo_box.gltf`、1K JPG 貼圖與 BIN | CH02 磁軌獵犬的低矮近戰底盤 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 | Cannon 01 | https://polyhaven.com/a/cannon_01 | Yann Kervran、James Ray Cock | `public/assets/polyhaven/cannon_01/cannon_01.gltf`、1K JPG 貼圖與 BIN | CH02 鏡翼炮台與 CH03 炭火投擲者的遠程砲身；以章節色彩區分 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 | Drill Press 01 | https://polyhaven.com/a/drill_press_01 | Viktor | `public/assets/polyhaven/drill_press_01/drill_press_01.gltf`、1K JPG 貼圖與 BIN | CH02 鏡潮校準者的機械主體 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
@@ -39,4 +40,4 @@
 | --- | --- | --- | --- | --- | --- |
 | Archer | https://poly.pizza/m/0jlabhnBscv | Poly by Google | `public/assets/poly-pizza/archer/archer.glb` | 所有關卡共用的玩家弓箭手角色（含弓與箭袋造型） | [Creative Commons Attribution 3.0](https://creativecommons.org/licenses/by/3.0/)；發佈時保留作者與來源連結。 |
 
-採用 1K glTF 版本（約 2.1 MB，含幾何與貼圖），在場景中共享同一份幾何／材質並建立四個位置與尺寸變體；它們會隨關卡距離移動，低畫質模式只保留前兩個景物，不另下載高解析貼圖。
+採用 1K glTF 版本，場景物件會共享幾何／材質並依用途建立位置與尺寸變體；地面 Buff 使用 Treasure Chest，Gate Buff 使用 Lantern 01，不另下載高解析貼圖。

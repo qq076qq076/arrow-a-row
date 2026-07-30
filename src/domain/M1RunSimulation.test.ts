@@ -175,7 +175,7 @@ describe('M1RunSimulation', () => {
         enemies: [],
         boss: { id: 'bos_moss_crown_a', hp: 1, maxHp: 1, z: BOSS_STOP_DISTANCE, phase: 1, telegraphSeconds: 0, telegraphText: 'Boss 進場！', isDefeated: false },
       });
-      for (let tick = 0; tick < 12 && simulation.snapshot().phase === 'playing'; tick += 1) simulation.tick(1 / 30);
+      for (let tick = 0; tick < 90 && simulation.snapshot().phase === 'playing'; tick += 1) simulation.tick(1 / 30);
       const reward = simulation.snapshot();
       if (reward.rewardOptions.includes('enemy_swarm')) swarmReward = reward;
     }
@@ -208,7 +208,7 @@ describe('M1RunSimulation', () => {
     const player = simulation.snapshot().player;
     expect(player.maxHp).toBe(120);
     expect(player.hp).toBe(120);
-    expect(player.damage).toBeCloseTo(1.28);
+    expect(player.damage).toBeCloseTo(BASE_ARROW_DAMAGE * 1.6);
     expect(player.projectileCount).toBe(1);
   });
 
@@ -220,6 +220,25 @@ describe('M1RunSimulation', () => {
     expect(getArrowDamageMultiplier(6)).toBe(1.5);
     expect(getArrowDamageMultiplier(14)).toBe(0.9);
     expect(getArrowDamageMultiplier(24)).toBe(0.55);
+  });
+
+  it('applies one-third damage bonuses for regular arrow and lightning Buffs', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start();
+    const started = simulation.snapshot();
+    simulation.restore({
+      ...started,
+      gates: [
+        { ...started.gates[0]!, leftBuffId: 'power_shot', rightBuffId: 'split_arrow', leftLabel: '箭傷 +8.3%', rightLabel: '+1 箭矢' },
+        { ...started.gates[1]!, z: 18, leftBuffId: 'lightning_damage', rightBuffId: 'split_arrow', leftLabel: '電擊傷害 +0.67', rightLabel: '+1 箭矢' },
+        ...started.gates.slice(2),
+      ],
+    });
+    simulation.setTargetX(-5);
+    advanceToDistance(simulation, 11);
+    expect(simulation.snapshot().player.damage).toBeCloseTo(BASE_ARROW_DAMAGE * (1 + 0.25 / 3));
+    advanceToDistance(simulation, 19);
+    expect(simulation.snapshot().player.lightningDamagePerSecond).toBeCloseTo(BASE_LIGHTNING_DAMAGE_PER_SECOND + 2 / 3);
   });
 
   it('applies the three additional permanent upgrades to a new run', () => {
@@ -348,7 +367,7 @@ describe('M1RunSimulation', () => {
 
   it('reaches Boss reward and applies it exactly once', () => {
     const simulation = new M1RunSimulation();
-    simulation.start();
+    simulation.start({ healthLevel: 100 });
     simulation.setTargetX(5);
     advanceToBossReward(simulation);
 
@@ -365,7 +384,7 @@ describe('M1RunSimulation', () => {
 
   it('restores an in-progress reward choice without replacing its candidates', () => {
     const source = new M1RunSimulation();
-    source.start();
+    source.start({ healthLevel: 100 });
     source.setTargetX(5);
     advanceToBossReward(source);
     const restored = new M1RunSimulation();

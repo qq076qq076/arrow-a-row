@@ -9,10 +9,10 @@ describe('M5 beta bot balance', () => {
 
     expect(metrics.reduce((total, metric) => total + metric.campaigns, 0)).toBe(1_000);
     expect(metrics.every((metric) => metric.completedCampaigns > 0)).toBe(true);
-    // The short-range lightning baseline intentionally makes the early run
-    // less forgiving; keep a narrow spread while allowing the longer boss
-    // windows that result from waiting for a one-unit lock opportunity.
-    expect(Math.max(...completionRates) - Math.min(...completionRates)).toBeLessThanOrEqual(0.16);
+    // One-third base output makes damage-heavy and multi-arrow builds diverge
+    // more; retain a floor while allowing the expected wider spread.
+    expect(metrics.every((metric) => metric.completionRate >= 0.5)).toBe(true);
+    expect(Math.max(...completionRates) - Math.min(...completionRates)).toBeLessThanOrEqual(0.36);
     expect(metrics.every((metric) => metric.averageBossSeconds >= 20 && metric.averageBossSeconds <= 65 && metric.averageChoicesPerCampaign >= 3)).toBe(true);
   }, 45_000);
 });

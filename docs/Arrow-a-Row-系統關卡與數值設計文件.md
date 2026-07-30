@@ -1,8 +1,10 @@
 # Arrow a Row：系統、關卡與數值設計文件
 
-版本：0.1｜Owner：系統／關卡／數值設計師（未設專職時由 PM 指派）｜關聯：[遊戲規格](Arrow-a-Row-開發規格書.md)、[技術規範](Arrow-a-Row-技術設計與程式規範.md)、[第一章垂直切片內容表](Arrow-a-Row-第一章垂直切片內容表.md)
+版本：0.2｜Owner：系統／關卡／數值設計師（未設專職時由 PM 指派）｜關聯：[遊戲規格](Arrow-a-Row-開發規格書.md)、[技術規範](Arrow-a-Row-技術設計與程式規範.md)、[第一章垂直切片內容表](Arrow-a-Row-第一章垂直切片內容表.md)
 
 本文件是可量產遊戲內容的設計基線。所有數值是 MVP 起始值，必須集中於 JSON／CSV 內容資料表並經 Zod schema 驗證，不可硬編碼。任何改動均需提高 `contentVersion`、附 playtest 或 simulation 證據。
+
+> M6 現行實作同步：目前程式的箭矢基礎傷害為 `0.8 / 3 ≈ 0.267`，自動電擊為 `5 / 3 ≈ 1.667` 傷害／秒；一般 Buff 的傷害加成也縮為原值三分之一。每次章內回響提供 3 張不重複候選供玩家三選一，地面掉落 Buff 使用 Treasure Chest。精確行為以 `src/domain/M1RunSimulation.ts`、`src/content/BuffCatalog.ts` 與 `src/rendering/ThreeRuntime.ts` 為準。
 
 ## 1. 設計目標與運行條件
 
@@ -22,7 +24,8 @@
 | key | 初值 | 下限／上限 | 說明 |
 | --- | ---: | --- | --- |
 | `maxHp` | 100 | 1 / 500 | 生命上限。 |
-| `baseDamage` | 1 | 0.1 / 999 | 每支箭基礎傷害。 |
+| `baseDamage` | 0.267 | 0.1 / 999 | 每支箭基礎傷害；由原始 `0.8` 縮為三分之一。 |
+| `lightningDamagePerSecond` | 1.667 | 0 / 999 | 自動電擊對單一目標的初始每秒傷害；由原始 `5` 縮為三分之一。 |
 | `attackIntervalSeconds` | 0.65 | 0.12 / 5.0 | 每次自動射擊間隔。 |
 | `projectileCount` | 1 | 1 / 12 | 每次發射箭數。 |
 | `spreadDegrees` | 0 | 0 / 40 | 多箭總散布角。 |
@@ -68,7 +71,7 @@ expectedArrowDps = projectileCount × shotsPerSecond × baseDamage
 | 5 星圖遺庫 | 5–6 分 | 7 | 4 | 2 | 1 | 菁英 modifier 與窄安全縫。 |
 | 6 裂光地平 | 5–7 分 | 7 | 5 | 2 | 1 | 全 Build 終局與三段 Boss。 |
 
-每章的標準節奏：`5 波小怪 → 隨機回響` 重複三次，接著進入 `Boss → Reward`。首局章 1 使用固定 sequence；其後每章可在波次模板池抽樣，但不可跳過 5／10／15 波後的回響事件。
+每章的標準節奏：`5 波小怪 → 回響三選一` 重複三次，接著進入 `Boss → Reward`。首局章 1 使用固定 sequence；其後每章可在波次模板池抽樣，但不可跳過 5／10／15 波後的回響事件。
 
 ### 3.2 Segment 定義
 
