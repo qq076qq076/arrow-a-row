@@ -255,6 +255,7 @@ describe('M1RunSimulation', () => {
 
     const snapshot = simulation.snapshot();
     expect(snapshot.player.hp).toBe(63);
+    expect(snapshot.collectedShards).toBe(1);
     expect(snapshot.enemies[0]).toMatchObject({ id: 'collision-enemy', hp: 0 });
     expect(snapshot.enemies[0]?.deathSeconds).toBeGreaterThan(0);
   });
