@@ -41,6 +41,7 @@ const POLYHAVEN_ROCK_URL = `${import.meta.env.BASE_URL}assets/polyhaven/rock_07/
 const POLYHAVEN_STREET_LAMP_URL = `${import.meta.env.BASE_URL}assets/polyhaven/street_lamp_01/street_lamp_01.gltf`;
 const POLYHAVEN_GOTHIC_STATUE_URL = `${import.meta.env.BASE_URL}assets/polyhaven/gothic_statue/gothic_statue.gltf`;
 const POLYHAVEN_BUFF_LANTERN_URL = `${import.meta.env.BASE_URL}assets/polyhaven/lantern_01/Lantern_01.gltf`;
+const POLYHAVEN_PICKUP_CHEST_URL = `${import.meta.env.BASE_URL}assets/polyhaven/treasure_chest/treasure_chest_1k.gltf`;
 const POLY_PIZZA_ARCHER_URL = `${import.meta.env.BASE_URL}assets/poly-pizza/archer/archer.glb`;
 const QUATERNIUS_GRASS_ROAD_URL = `${import.meta.env.BASE_URL}assets/quaternius/platformer/grass_road_tile.gltf`;
 const POLYHAVEN_CANNON_URL = `${import.meta.env.BASE_URL}assets/polyhaven/cannon_01/cannon_01.gltf`;
@@ -93,6 +94,7 @@ export class ThreeRuntime {
   private ch05BossModelTemplate: Group | undefined;
   private ch06BossModelTemplate: Group | undefined;
   private buffModelTemplate: Group | undefined;
+  private pickupModelTemplate: Group | undefined;
   private playerModelTemplate: Group | undefined;
   private ch02MeleeModelTemplate: Group | undefined;
   private ch02RangedModelTemplate: Group | undefined;
@@ -133,6 +135,7 @@ export class ThreeRuntime {
     this.loadPolyhavenBossModel();
     this.loadPolyhavenCh02BossModel();
     this.loadPolyhavenBuffModel();
+    this.loadPolyhavenPickupModel();
     this.loadPlayerModel();
     this.loadQuaterniusRoadModel();
     this.loadPolyhavenViaductProps();
@@ -807,10 +810,16 @@ export class ThreeRuntime {
   private loadPolyhavenBuffModel(): void {
     this.loadGltf(POLYHAVEN_BUFF_LANTERN_URL, 'Poly Haven Lantern 01', (scene) => {
       this.buffModelTemplate = scene;
-      for (const pickup of this.pickupMeshes.values()) this.attachBuffModel(pickup, '#71e6d1', 1.7);
       for (const group of this.gateGroups.values()) {
         for (const anchor of group.children.filter((child): child is Mesh => child.name === 'buff-anchor')) this.attachBuffModel(anchor, anchor.userData.color as string, 5);
       }
+    });
+  }
+
+  private loadPolyhavenPickupModel(): void {
+    this.loadGltf(POLYHAVEN_PICKUP_CHEST_URL, 'Poly Haven Treasure Chest', (scene) => {
+      this.pickupModelTemplate = scene;
+      for (const pickup of this.pickupMeshes.values()) this.attachPickupModel(pickup, '#71e6d1', 1.8);
     });
   }
 
@@ -832,6 +841,29 @@ export class ThreeRuntime {
     anchorMaterial.depthWrite = false;
     anchor.add(model);
     anchor.userData.buffModelAttached = true;
+  }
+
+  private attachPickupModel(anchor: Mesh, color: string, scale: number): void {
+    if (this.pickupModelTemplate === undefined || anchor.userData.pickupModelAttached === true) return;
+    const model = this.pickupModelTemplate.clone(true);
+    model.name = 'pickup-model';
+    model.scale.setScalar(scale);
+    model.position.set(0, -0.32, 0.02);
+    model.traverse((child) => {
+      if (child instanceof Mesh) {
+        const material = (child.material as MeshBasicMaterial).clone();
+        if (material.color !== undefined) material.color.lerp(new Color(color), 0.08);
+        child.material = material;
+      }
+    });
+    const glow = new PointLight(color, 0.75, 3.5, 2);
+    glow.position.set(0, 0.25, 0);
+    model.add(glow);
+    const anchorMaterial = anchor.material as MeshBasicMaterial;
+    anchorMaterial.colorWrite = false;
+    anchorMaterial.depthWrite = false;
+    anchor.add(model);
+    anchor.userData.pickupModelAttached = true;
   }
 
   private syncChapterBossModel(chapterId: M1RunSnapshot['chapterId']): void {
@@ -1174,7 +1206,7 @@ export class ThreeRuntime {
     const label = this.createPickupLabel('Buff +⅓', 'split_arrow');
     label.name = 'pickup-label';
     mesh.add(label);
-    this.attachBuffModel(mesh, '#71e6d1', 1.7);
+    this.attachPickupModel(mesh, '#71e6d1', 1.8);
     return mesh;
   }
 
@@ -1185,9 +1217,9 @@ export class ThreeRuntime {
     context.fillStyle = '#102c2a'; context.fillRect(0, 0, canvas.width, canvas.height);
     context.strokeStyle = '#e8fff1'; context.lineWidth = 12; context.strokeRect(6, 6, canvas.width - 12, canvas.height - 12);
     this.drawPickupIcon(context, buffId, canvas.width / 2, 108);
-    context.fillStyle = '#f8f7ef'; context.font = '800 108px system-ui, sans-serif'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(text, canvas.width / 2, 294);
+    context.fillStyle = '#f8f7ef'; context.font = '800 128px system-ui, sans-serif'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(text, canvas.width / 2, 294);
     const label = new Sprite(new SpriteMaterial({ map: new CanvasTexture(canvas), transparent: false }));
-    label.userData.text = text; label.userData.buffId = buffId; label.position.set(0, 1.1, 0); label.scale.set(3, 1.22, 1);
+    label.userData.text = text; label.userData.buffId = buffId; label.position.set(0, 1.1, 0); label.scale.set(3.25, 1.32, 1);
     return label;
   }
 
