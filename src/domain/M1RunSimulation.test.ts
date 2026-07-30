@@ -56,7 +56,7 @@ describe('M1RunSimulation', () => {
     expect(simulation.snapshot().distanceMeters).toBeGreaterThan(beforePause.distanceMeters);
   });
 
-  it('runs three five-wave rounds with one echo each, then warns five seconds before Boss', () => {
+  it('runs three five-wave rounds with one final echo, then warns five seconds before Boss', () => {
     const simulation = new M1RunSimulation();
     simulation.start({ healthLevel: 100 });
     simulation.setTargetX(5);
@@ -65,16 +65,19 @@ describe('M1RunSimulation', () => {
 
     for (let round = 1; round <= 3; round += 1) {
       while (simulation.snapshot().phase === 'playing' && simulation.snapshot().wavesCompleted < round * 5) simulation.tick(1 / 30);
-      const echo = simulation.snapshot();
-      expect(echo.phase).toBe('echo');
-      expect(echo.echoRound).toBe(round);
-      expect(echo.wavesCompleted).toBe(round * 5);
-      expect(echo.rewardOptions).toHaveLength(3);
-      expect(new Set(echo.rewardOptions).size).toBe(3);
-      expect(echo.boss).toBeUndefined();
-      expect(echo.enemies.some((enemy) => enemy.id.startsWith(`wave-${round * 5}-`))).toBe(true);
-      expect(simulation.chooseReward(echo.rewardOptions[0]!)).toBe(true);
+      const roundEnd = simulation.snapshot();
+      expect(roundEnd.wavesCompleted).toBe(round * 5);
+      expect(roundEnd.enemies.some((enemy) => enemy.id.startsWith(`wave-${round * 5}-`))).toBe(true);
+      if (round < 3) expect(roundEnd.phase).toBe('playing');
     }
+
+    const echo = simulation.snapshot();
+    expect(echo.phase).toBe('echo');
+    expect(echo.echoRound).toBe(1);
+    expect(echo.rewardOptions).toHaveLength(3);
+    expect(new Set(echo.rewardOptions).size).toBe(3);
+    expect(echo.boss).toBeUndefined();
+    expect(simulation.chooseReward(echo.rewardOptions[0]!)).toBe(true);
 
     const warning = simulation.snapshot();
     expect(warning.phase).toBe('playing');
@@ -109,35 +112,37 @@ describe('M1RunSimulation', () => {
     expect(preview.boss).toMatchObject({ z: BOSS_STOP_DISTANCE, hp: 9_999, maxHp: 9_999, isDefeated: false });
   });
 
-  it('uses the fifteen-wave, three-echo schedule in every chapter', () => {
+  it('uses fifteen waves and one final echo in every chapter', () => {
     const chapters = ['ch01_meadow', 'ch02_viaduct', 'ch03_forge', 'ch04_canopy', 'ch05_archive', 'ch06_horizon'] as const;
     for (const chapterId of chapters) {
       const simulation = new M1RunSimulation();
       simulation.start({ healthLevel: 100 }, chapterId);
       const echoRounds: number[] = [];
-      for (let tick = 0; tick < 6_000 && simulation.snapshot().phase !== 'reward' && simulation.snapshot().phase !== 'dead'; tick += 1) {
+      for (let tick = 0; tick < 6_000 && simulation.snapshot().phase !== 'echo' && simulation.snapshot().phase !== 'dead'; tick += 1) {
         const snapshot = simulation.snapshot();
-        if (snapshot.phase === 'echo') {
-          echoRounds.push(snapshot.echoRound);
-          expect(snapshot.rewardOptions).toHaveLength(3);
-          expect(simulation.chooseReward(snapshot.rewardOptions[0]!)).toBe(true);
-          continue;
-        }
         simulation.setTargetX(snapshot.wavesCompleted >= 15 ? 0 : 5);
         simulation.tick(1 / 30);
       }
-      expect(echoRounds).toEqual([1, 2, 3]);
-      expect(simulation.snapshot().phase).toBe('reward');
+      const echo = simulation.snapshot();
+      if (echo.phase === 'echo') {
+        echoRounds.push(echo.echoRound);
+        expect(echo.rewardOptions).toHaveLength(3);
+        expect(simulation.chooseReward(echo.rewardOptions[0]!)).toBe(true);
+      }
+      expect(echoRounds).toEqual([1]);
+      expect(simulation.snapshot().phase).toBe('playing');
       expect(simulation.snapshot().wavesCompleted).toBe(15);
+      expect(simulation.snapshot().bossWarningSeconds).toBe(BOSS_WARNING_SECONDS);
     }
   });
 
-  it('restores an in-progress chapter echo before allowing the next wave', () => {
+  it('restores the final chapter echo before allowing the Boss warning', () => {
     const source = new M1RunSimulation();
-    source.start();
+    source.start({ healthLevel: 100 });
     while (source.snapshot().phase === 'playing') source.tick(1 / 30);
     const checkpoint = source.snapshot();
     expect(checkpoint.phase).toBe('echo');
+    expect(checkpoint.wavesCompleted).toBe(15);
 
     const restored = new M1RunSimulation();
     expect(restored.restore(checkpoint)).toBe(true);
@@ -145,7 +150,8 @@ describe('M1RunSimulation', () => {
     expect(restored.snapshot().rewardOptions).toHaveLength(3);
     expect(restored.chooseReward(restored.snapshot().rewardOptions[0]!)).toBe(true);
     expect(restored.snapshot().phase).toBe('playing');
-    expect(restored.snapshot().wavesCompleted).toBe(5);
+    expect(restored.snapshot().wavesCompleted).toBe(15);
+    expect(restored.snapshot().bossWarningSeconds).toBe(BOSS_WARNING_SECONDS);
   });
 
   it('applies the PM first-wave HP anchors to every chapter', () => {

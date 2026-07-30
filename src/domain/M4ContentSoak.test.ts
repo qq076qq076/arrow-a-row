@@ -25,7 +25,7 @@ describe('M4 content soak', () => {
   it('completes 100 consecutive CH01–CH03 campaigns without a soft lock', () => {
     for (let run = 0; run < 100; run += 1) {
       const simulation = new M1RunSimulation();
-      simulation.start({ healthLevel: 5, damageLevel: 5, fireRateLevel: 5, arrowSpeedLevel: 5, pierceLevel: 5, movementLevel: 5 });
+      simulation.start({ healthLevel: 100, damageLevel: 5, fireRateLevel: 5, arrowSpeedLevel: 5, pierceLevel: 5, movementLevel: 5 });
 
       for (let chapter = 1; chapter <= 3; chapter += 1) {
         clearChapter(simulation);

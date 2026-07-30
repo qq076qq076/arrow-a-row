@@ -4,7 +4,7 @@
 
 本文件是可量產遊戲內容的設計基線。所有數值是 MVP 起始值，必須集中於 JSON／CSV 內容資料表並經 Zod schema 驗證，不可硬編碼。任何改動均需提高 `contentVersion`、附 playtest 或 simulation 證據。
 
-> M6 現行實作同步：目前程式的箭矢基礎傷害為 `0.8 / 3 ≈ 0.267`，自動電擊為 `5 / 3 ≈ 1.667` 傷害／秒；一般 Buff 的傷害加成也縮為原值三分之一。每次章內回響提供 3 張不重複候選供玩家三選一，地面掉落 Buff 使用 Treasure Chest。精確行為以 `src/domain/M1RunSimulation.ts`、`src/content/BuffCatalog.ts` 與 `src/rendering/ThreeRuntime.ts` 為準。
+> M6 現行實作同步：目前程式的箭矢基礎傷害為 `0.8 / 3 ≈ 0.267`，自動電擊為 `5 / 3 ≈ 1.667` 傷害／秒；一般 Buff 的傷害加成也縮為原值三分之一。前 5／10 波只靠地面掉落 Buff，15 波完成後才提供 3 張不重複回響候選供玩家三選一，地面掉落 Buff 使用 Treasure Chest。精確行為以 `src/domain/M1RunSimulation.ts`、`src/content/BuffCatalog.ts` 與 `src/rendering/ThreeRuntime.ts` 為準。
 
 ## 1. 設計目標與運行條件
 
@@ -71,7 +71,7 @@ expectedArrowDps = projectileCount × shotsPerSecond × baseDamage
 | 5 星圖遺庫 | 5–6 分 | 7 | 4 | 2 | 1 | 菁英 modifier 與窄安全縫。 |
 | 6 裂光地平 | 5–7 分 | 7 | 5 | 2 | 1 | 全 Build 終局與三段 Boss。 |
 
-每章的標準節奏：`5 波小怪 → 回響三選一` 重複三次，接著進入 `Boss → Reward`。首局章 1 使用固定 sequence；其後每章可在波次模板池抽樣，但不可跳過 5／10／15 波後的回響事件。
+每章的標準節奏：`5 波小怪 → 地面掉落 Buff` 重複三次，接著 `最終回響三選一 → Boss → Reward`。首局章 1 使用固定 sequence；其後每章可在波次模板池抽樣，但不可跳過第 15 波後的最終回響。
 
 ### 3.2 Segment 定義
 

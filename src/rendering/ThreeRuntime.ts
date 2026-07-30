@@ -75,9 +75,12 @@ export class ThreeRuntime {
   private readonly roadMaterials = [new MeshBasicMaterial({ color: '#315f4a' }), new MeshBasicMaterial({ color: '#3d7755' })];
   private readonly roadMeshes: Mesh[] = [];
   private readonly enemyMeshes = new Map<string, Mesh>();
+  private readonly enemyMeshPools = new Map<string, Mesh[]>();
   private readonly arrowMeshes = new Map<number, Mesh>();
+  private readonly arrowMeshPool: Mesh[] = [];
   private readonly hitMeshes = new Map<number, Mesh>();
   private readonly pickupMeshes = new Map<number, Mesh>();
+  private readonly transientMeshPools = new Map<Map<number, Mesh>, Mesh[]>();
   private readonly lightningMeshes = new Map<string, Mesh>();
   private readonly lightningArcs = new Map<string, Line>();
   private readonly gateGroups = new Map<string, Group>();
@@ -112,6 +115,8 @@ export class ThreeRuntime {
   private isDisposed = false;
   private qualityMode: 'low' | 'standard' = 'standard';
   private bossChapterId: M1RunSnapshot['chapterId'] = 'ch01_meadow';
+  private themedChapterId: M1RunSnapshot['chapterId'] | undefined;
+  private lastSimulationKey: string | undefined;
 
   public constructor(private readonly container: HTMLElement) {
     this.renderer = new WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
@@ -151,6 +156,7 @@ export class ThreeRuntime {
 
   public setQuality(mode: 'low' | 'standard'): void {
     this.qualityMode = mode;
+    this.lastSimulationKey = undefined;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, mode === 'low' ? 1 : 1.5));
     this.resize();
   }
@@ -170,18 +176,24 @@ export class ThreeRuntime {
     this.syncChapterTheme(snapshot.chapterId);
     this.playerMesh.position.set(snapshot.player.x, 0.6, 0);
     this.playerModelAnchor.position.set(snapshot.player.x, 0.6, 0);
-    this.updateCamera(snapshot.player.x);
-    this.syncScenery(snapshot);
-    this.syncGates(snapshot);
-    this.syncEnemies(snapshot);
-    this.syncArrows(snapshot);
-    this.syncHits(snapshot);
-    this.syncPickups(snapshot);
+    const simulationKey = `${snapshot.chapterId}|${snapshot.phase}|${snapshot.elapsedSeconds}|${snapshot.distanceMeters}|${snapshot.player.x}|${snapshot.wavesCompleted}|${snapshot.bossWarningSeconds}|${snapshot.boss?.z ?? ''}|${snapshot.boss?.hp ?? ''}`;
+    const simulationChanged = simulationKey !== this.lastSimulationKey;
+    this.lastSimulationKey = simulationKey;
+    if (simulationChanged) {
+      this.syncScenery(snapshot);
+      this.syncGates(snapshot);
+      this.syncEnemies(snapshot);
+      this.syncArrows(snapshot);
+      this.syncHits(snapshot);
+      this.syncPickups(snapshot);
+    }
     this.syncLightning(snapshot);
     this.syncBoss(snapshot);
   }
 
   private syncChapterTheme(chapterId: M1RunSnapshot['chapterId']): void {
+    if (this.themedChapterId === chapterId) return;
+    this.themedChapterId = chapterId;
     if (this.bossChapterId !== chapterId) {
       this.bossMesh.geometry.dispose();
       this.bossMesh.geometry = chapterId === 'ch02_viaduct' ? new OctahedronGeometry(1.45, 1) : chapterId === 'ch03_forge' ? new IcosahedronGeometry(1.35, 1) : new BoxGeometry(2.4, 2.2, 1.4);
@@ -237,9 +249,12 @@ export class ThreeRuntime {
     this.roadGeometry.dispose();
     this.roadMaterials.forEach((material) => material.dispose());
     for (const mesh of this.enemyMeshes.values()) this.disposeMesh(mesh);
+    for (const pool of this.enemyMeshPools.values()) for (const mesh of pool) this.disposeMesh(mesh);
     for (const mesh of this.arrowMeshes.values()) this.disposeMesh(mesh);
+    for (const mesh of this.arrowMeshPool) this.disposeMesh(mesh);
     for (const mesh of this.hitMeshes.values()) this.disposeMesh(mesh);
     for (const mesh of this.pickupMeshes.values()) this.disposeMesh(mesh);
+    for (const pool of this.transientMeshPools.values()) for (const mesh of pool) this.disposeMesh(mesh);
     for (const mesh of this.lightningMeshes.values()) this.disposeMesh(mesh);
     for (const line of this.lightningArcs.values()) this.disposeLine(line);
     for (const group of this.gateGroups.values()) group.traverse((child) => {
@@ -440,7 +455,10 @@ export class ThreeRuntime {
         loader.parse(source, resourcePath, (gltf) => resolve(gltf.scene), reject);
       }))
       .then((scene) => {
-        if (!this.isDisposed) onLoad(scene);
+        if (!this.isDisposed) {
+          onLoad(scene);
+          this.lastSimulationKey = undefined;
+        }
       })
       .catch((error: unknown) => console.warn(`${label} 載入失敗。`, error));
   }
@@ -507,7 +525,9 @@ export class ThreeRuntime {
     model.rotation.y = chapterId === 'ch02_viaduct' ? (kind === 'ranged' ? Math.PI : Math.PI / 2) : chapterId === 'ch03_forge' ? (kind === 'ranged' ? Math.PI / 2 : 0) : chapterId === 'ch04_canopy' ? (kind === 'ranged' ? Math.PI : 0) : chapterId === 'ch05_archive' ? (kind === 'ranged' ? Math.PI / 2 : Math.PI) : chapterId === 'ch06_horizon' ? Math.PI / 2 : kind === 'ranged' ? Math.PI : 0;
     model.traverse((child) => {
       if (child instanceof Mesh) {
-        const material = (child.material as MeshBasicMaterial).clone();
+        // Cloned GLTF nodes share this immutable-by-kind material; cloning a
+        // material for every enemy needlessly increases GPU state changes.
+        const material = child.material as MeshBasicMaterial;
         const tint = chapterId === 'ch02_viaduct' ? (kind === 'ranged' ? '#8cd7ff' : '#4d8ee8') : chapterId === 'ch03_forge' ? (kind === 'ranged' ? '#ff8b48' : '#b84d32') : chapterId === 'ch04_canopy' ? (kind === 'ranged' ? '#7ae8d0' : '#4a9e72') : chapterId === 'ch05_archive' ? (kind === 'ranged' ? '#f1cf71' : '#9f94d5') : chapterId === 'ch06_horizon' ? (kind === 'ranged' ? '#fff0a5' : '#b58bff') : kind === 'ranged' ? '#a986ef' : '#f06b5e';
         if (chapterId === 'ch02_viaduct' || chapterId === 'ch03_forge' || chapterId === 'ch04_canopy' || chapterId === 'ch05_archive' || chapterId === 'ch06_horizon') {
           material.map = null;
@@ -518,26 +538,8 @@ export class ThreeRuntime {
       }
     });
     anchor.add(model);
-    if (chapterId === 'ch02_viaduct') {
-      const glow = new PointLight(kind === 'ranged' ? '#b8e5ff' : '#4d8ee8', 0.85, 3.8, 2);
-      glow.position.set(0, 0.35, 0);
-      model.add(glow);
-    }
-    if (chapterId === 'ch03_forge') {
-      const glow = new PointLight(kind === 'ranged' ? '#ff9a45' : '#ff552d', 1.05, 4.2, 2);
-      glow.position.set(0, 0.35, 0);
-      model.add(glow);
-    }
-    if (chapterId === 'ch04_canopy') {
-      const glow = new PointLight(kind === 'ranged' ? '#8ff5db' : '#4ab883', 0.9, 4, 2);
-      glow.position.set(0, 0.55, 0);
-      model.add(glow);
-    }
-    if (chapterId === 'ch05_archive') {
-      const glow = new PointLight(kind === 'ranged' ? '#f5d66d' : '#a89ae8', 1, 4.2, 2);
-      glow.position.set(0, 0.5, 0);
-      model.add(glow);
-    }
+    // Enemy materials already carry the chapter tint and use MeshBasicMaterial;
+    // per-enemy PointLights only add draw overhead without changing the result.
     const material = anchor.material as MeshBasicMaterial;
     material.colorWrite = false;
     material.depthWrite = false;
@@ -971,7 +973,7 @@ export class ThreeRuntime {
     const isAttackTelegraph = boss.telegraphSeconds > 0 && boss.telegraphText !== '靜滯正在加深！';
     const pulse = isAttackTelegraph ? 1 + Math.sin(performance.now() / 70) * 0.12 : 1;
     this.bossMesh.scale.setScalar(baseScale * pulse);
-    this.bossMesh.rotation.y += isAttackTelegraph ? 0.12 : 0.02;
+    this.bossMesh.rotation.y = 0;
     if (isAttackTelegraph) {
       this.bossTelegraphRing.visible = true;
       this.bossTelegraphRing.position.set(0, 0.06, boss.z);
@@ -1054,16 +1056,24 @@ export class ThreeRuntime {
     for (const [id, mesh] of this.enemyMeshes) {
       if (!activeIds.has(id)) {
         this.scene.remove(mesh);
-        this.disposeMesh(mesh);
+        mesh.visible = false;
         this.enemyMeshes.delete(id);
+        const poolKey = `${mesh.userData.chapterId as string}:${mesh.userData.kind as string}`;
+        const pool = this.enemyMeshPools.get(poolKey) ?? [];
+        pool.push(mesh);
+        this.enemyMeshPools.set(poolKey, pool);
       }
     }
     for (const enemy of snapshot.enemies) {
       let mesh = this.enemyMeshes.get(enemy.id);
       if (mesh !== undefined && mesh.userData.chapterId !== snapshot.chapterId) {
         this.scene.remove(mesh);
-        this.disposeMesh(mesh);
+        mesh.visible = false;
         this.enemyMeshes.delete(enemy.id);
+        const poolKey = `${mesh.userData.chapterId as string}:${mesh.userData.kind as string}`;
+        const pool = this.enemyMeshPools.get(poolKey) ?? [];
+        pool.push(mesh);
+        this.enemyMeshPools.set(poolKey, pool);
         mesh = undefined;
       }
       if (mesh === undefined) {
@@ -1075,29 +1085,31 @@ export class ThreeRuntime {
       const scale = enemy.deathSeconds > 0 ? 0.35 + deathProgress * 0.65 : enemy.telegraphSeconds > 0 ? 1.25 : 1;
       mesh.position.set(enemy.x, 0.55 - (1 - deathProgress) * 0.35, enemy.z);
       mesh.scale.setScalar(scale);
-      mesh.rotation.y += enemy.kind === 'ranged' ? 0.045 : 0.015;
       const healthFill = mesh.getObjectByName('health-fill') as Mesh | undefined;
-      const healthBackground = mesh.getObjectByName('health-background') as Mesh | undefined;
-      // Enemy bodies may spin, but their HP bars stay stable and readable.
-      if (healthBackground !== undefined) healthBackground.rotation.y = -mesh.rotation.y;
-      if (healthFill !== undefined) healthFill.rotation.y = -mesh.rotation.y;
       if (healthFill !== undefined) healthFill.scale.x = Math.max(0, enemy.hp / (enemy.kind === 'melee' ? 8 : 12));
     }
   }
 
   private createEnemyMesh(kind: 'melee' | 'ranged', chapterId: ChapterId): Mesh {
+    const poolKey = `${chapterId}:${kind}`;
+    const pool = this.enemyMeshPools.get(poolKey);
+    const pooledMesh = pool?.pop();
+    if (pooledMesh !== undefined) {
+      pooledMesh.visible = true;
+      return pooledMesh;
+    }
     const geometry = kind === 'melee' ? new ConeGeometry(0.72, 1.45, 4) : new SphereGeometry(0.72, 10, 8);
     const mesh = new Mesh(geometry, ENEMY_MATERIALS[kind]);
     mesh.userData.kind = kind;
     mesh.userData.chapterId = chapterId;
     const label = this.createEnemyLabel(chapterId === 'ch02_viaduct' ? (kind === 'melee' ? '磁軌獵犬' : '鏡翼炮台') : chapterId === 'ch03_forge' ? (kind === 'melee' ? '熔殼步兵' : '炭火投擲者') : chapterId === 'ch04_canopy' ? (kind === 'melee' ? '孢囊衝撞獸' : '飛芽施法體') : chapterId === 'ch05_archive' ? (kind === 'melee' ? '抄錄傀儡' : '浮頁施法體') : kind === 'melee' ? '衝鋒獸' : '芽砲手');
     label.position.set(0, 1.1, 0);
-    const healthBackground = new Mesh(new BoxGeometry(1, 0.07, 0.04), new MeshBasicMaterial({ color: '#321d25' }));
+    const healthBackground = new Mesh(new BoxGeometry(1.15, 0.12, 0.06), new MeshBasicMaterial({ color: '#321d25' }));
     healthBackground.name = 'health-background';
-    healthBackground.position.set(0, 1.28, 0);
-    const healthFill = new Mesh(new BoxGeometry(0.92, 0.04, 0.05), new MeshBasicMaterial({ color: '#84e38a' }));
+    healthBackground.position.set(0, 1.31, 0);
+    const healthFill = new Mesh(new BoxGeometry(1.07, 0.08, 0.07), new MeshBasicMaterial({ color: '#84e38a' }));
     healthFill.name = 'health-fill';
-    healthFill.position.set(0, 1.28, -0.03);
+    healthFill.position.set(0, 1.31, -0.04);
     mesh.add(label, healthBackground, healthFill);
     this.attachEnemyModel(mesh, kind, chapterId);
     return mesh;
@@ -1126,14 +1138,16 @@ export class ThreeRuntime {
     for (const [id, mesh] of this.arrowMeshes) {
       if (!activeIds.has(id)) {
         this.scene.remove(mesh);
-        this.disposeMesh(mesh);
+        mesh.visible = false;
         this.arrowMeshes.delete(id);
+        this.arrowMeshPool.push(mesh);
       }
     }
     for (const arrow of snapshot.arrows) {
       let mesh = this.arrowMeshes.get(arrow.id);
       if (mesh === undefined) {
-        mesh = new Mesh(new SphereGeometry(0.12, 8, 8), new MeshBasicMaterial({ color: '#fff4ba' }));
+        mesh = this.arrowMeshPool.pop() ?? new Mesh(new SphereGeometry(0.12, 8, 8), new MeshBasicMaterial({ color: '#fff4ba' }));
+        mesh.visible = true;
         this.arrowMeshes.set(arrow.id, mesh);
         this.scene.add(mesh);
       }
@@ -1188,7 +1202,7 @@ export class ThreeRuntime {
   private syncPickups(snapshot: M1RunSnapshot): void {
     this.syncTransientMeshes(snapshot.pickups, this.pickupMeshes, () => this.createPickupMesh(), (mesh, pickup) => {
       mesh.position.set(pickup.x, 0.45, pickup.z);
-      mesh.rotation.y += 0.08;
+      mesh.rotation.y = 0;
       const label = mesh.getObjectByName('pickup-label') as Sprite | undefined;
       if (label !== undefined && (label.userData.text !== pickup.label || label.userData.buffId !== pickup.buffId)) {
         label.material.map?.dispose();
@@ -1231,9 +1245,11 @@ export class ThreeRuntime {
   }
 
   private syncTransientMeshes<T extends { readonly id: number }>(items: readonly T[], meshes: Map<number, Mesh>, create: () => Mesh, update: (mesh: Mesh, item: T) => void): void {
+    const pool = this.transientMeshPools.get(meshes) ?? [];
+    this.transientMeshPools.set(meshes, pool);
     const activeIds = new Set(items.map((item) => item.id));
-    for (const [id, mesh] of meshes) { if (!activeIds.has(id)) { this.scene.remove(mesh); this.disposeMesh(mesh); meshes.delete(id); } }
-    for (const item of items) { let mesh = meshes.get(item.id); if (mesh === undefined) { mesh = create(); meshes.set(item.id, mesh); this.scene.add(mesh); } update(mesh, item); }
+    for (const [id, mesh] of meshes) { if (!activeIds.has(id)) { this.scene.remove(mesh); mesh.visible = false; meshes.delete(id); pool.push(mesh); } }
+    for (const item of items) { let mesh = meshes.get(item.id); if (mesh === undefined) { mesh = pool.pop() ?? create(); mesh.visible = true; meshes.set(item.id, mesh); this.scene.add(mesh); } update(mesh, item); }
   }
 
   private disposeMesh(mesh: Mesh): void {

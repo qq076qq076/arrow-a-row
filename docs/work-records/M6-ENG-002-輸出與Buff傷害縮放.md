@@ -32,7 +32,7 @@
 ## 文件同步
 
 - 現行 Buff 清單、倍率與掉落／Gate 模型記錄於 `docs/Arrow-a-Row-Buff系統設計.md`。
-- 三輪五波與章內回響三選一記錄於 `docs/work-records/M6-PM-001-三輪五波與回響流程.md` 與 `docs/work-records/M6-ENG-001-三輪五波與章內回響實作.md`。
+- 三輪五波、最後一次回響三選一與 Boss 前警示記錄於 `docs/work-records/M6-PM-001-三輪五波與回響流程.md` 與 `docs/work-records/M6-ENG-001-三輪五波與章內回響實作.md`。
 - M5 的初始輸出表保留作歷史基線，並在 `M5-ENG-004` 明確標示 M6 修訂值。
 
 ## 驗證

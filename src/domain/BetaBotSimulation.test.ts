@@ -9,10 +9,10 @@ describe('M5 beta bot balance', () => {
 
     expect(metrics.reduce((total, metric) => total + metric.campaigns, 0)).toBe(1_000);
     expect(metrics.every((metric) => metric.completedCampaigns > 0)).toBe(true);
-    // One-third base output makes damage-heavy and multi-arrow builds diverge
-    // more; retain a floor while allowing the expected wider spread.
-    expect(metrics.every((metric) => metric.completionRate >= 0.5)).toBe(true);
-    expect(Math.max(...completionRates) - Math.min(...completionRates)).toBeLessThanOrEqual(0.36);
-    expect(metrics.every((metric) => metric.averageBossSeconds >= 20 && metric.averageBossSeconds <= 65 && metric.averageChoicesPerCampaign >= 3)).toBe(true);
+    // With only one chapter echo, builds receive fewer reward power spikes;
+    // retain a positive completion floor while allowing the longer Boss TTK.
+    expect(metrics.every((metric) => metric.completionRate >= 0.15)).toBe(true);
+    expect(Math.max(...completionRates) - Math.min(...completionRates)).toBeLessThanOrEqual(0.3);
+    expect(metrics.every((metric) => metric.averageBossSeconds >= 20 && metric.averageBossSeconds <= 110 && metric.averageChoicesPerCampaign >= 3)).toBe(true);
   }, 45_000);
 });

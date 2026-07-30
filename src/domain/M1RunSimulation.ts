@@ -29,8 +29,8 @@ interface MutableBoss { hp: number; maxHp: number; z: number; phase: 1 | 2; tele
 const WORLD_SPEED = 4;
 const PLAYER_MAX_X = 5;
 const PLAYER_MOVE_SPEED = 10;
-export const WAVES_PER_ECHO = 5;
-export const TOTAL_MINION_WAVES = WAVES_PER_ECHO * 3;
+export const WAVES_PER_ROUND = 5;
+export const TOTAL_MINION_WAVES = WAVES_PER_ROUND * 3;
 export const FIRST_WAVE_DISTANCE = 12;
 export const WAVE_DISTANCE_INTERVAL = 8;
 export const BOSS_WARNING_SECONDS = 5;
@@ -56,7 +56,7 @@ const WAVE_TEMPLATES: ReadonlyArray<readonly WaveEnemySpec[]> = [
 ];
 const WAVE_DEFINITIONS: readonly WaveDefinition[] = Array.from({ length: TOTAL_MINION_WAVES }, (_, index) => ({
   distance: FIRST_WAVE_DISTANCE + index * WAVE_DISTANCE_INTERVAL,
-  enemies: WAVE_TEMPLATES[index % WAVES_PER_ECHO]!,
+  enemies: WAVE_TEMPLATES[index % WAVES_PER_ROUND]!,
 }));
 
 export class M1RunSimulation {
@@ -87,7 +87,7 @@ export class M1RunSimulation {
     this.distanceMeters = BOSS_START_DISTANCE;
     this.bossWarningSeconds = 0;
     this.wavesCompleted = TOTAL_MINION_WAVES;
-    this.echoRound = 3;
+    this.echoRound = 1;
     this.spawnBoss();
     if (this.boss === undefined) return;
     this.boss.z = BOSS_STOP_DISTANCE;
@@ -100,8 +100,10 @@ export class M1RunSimulation {
   /** Restores only data produced by snapshot(); cooldowns restart safely on resume. */
   public restore(snapshot: M1RunSnapshot): boolean {
     if (snapshot.phase !== 'playing' && snapshot.phase !== 'echo' && snapshot.phase !== 'reward') return false;
-    this.phase = snapshot.phase; this.chapterId = snapshot.chapterId ?? 'ch01_meadow'; this.elapsedSeconds = snapshot.elapsedSeconds; this.distanceMeters = snapshot.distanceMeters; this.targetX = snapshot.player.x;
-    this.player = { ...snapshot.player, damage: snapshot.player.damage ?? BASE_ARROW_DAMAGE, pierceCount: snapshot.player.pierceCount ?? 0, pierceCharge: snapshot.player.pierceCharge ?? 0, lightningTargetCount: snapshot.player.lightningTargetCount ?? 2, lightningDamagePerSecond: snapshot.player.lightningDamagePerSecond ?? BASE_LIGHTNING_DAMAGE_PER_SECOND, lightningRange: snapshot.player.lightningRange ?? 1, lightningTargetCharge: snapshot.player.lightningTargetCharge ?? 0, enemyCountMultiplier: snapshot.player.enemyCountMultiplier ?? 1 }; this.attackCooldownSeconds = 0.1; this.lightningCooldownSeconds = 0; this.nextArrowId = Math.max(1, ...snapshot.arrows.map((arrow) => arrow.id + 1)); this.earnedGold = snapshot.earnedGold; this.collectedShards = snapshot.collectedShards ?? 0; this.bossWarningSeconds = snapshot.bossWarningSeconds ?? 0; this.wavesCompleted = Math.max(0, Math.min(TOTAL_MINION_WAVES, snapshot.wavesCompleted ?? 0)); this.echoRound = Math.max(0, Math.min(3, snapshot.echoRound ?? Math.floor(this.wavesCompleted / WAVES_PER_ECHO))); this.selectedReward = snapshot.selectedReward === ('blade_nexus' as never) ? 'lightning_core' : snapshot.selectedReward; this.rewardOptions = snapshot.rewardOptions.map((reward) => reward === ('blade_nexus' as never) ? 'lightning_core' : reward);
+    const restoredWaves = Math.max(0, Math.min(TOTAL_MINION_WAVES, snapshot.wavesCompleted ?? 0));
+    const isLegacyMidChapterEcho = snapshot.phase === 'echo' && restoredWaves < TOTAL_MINION_WAVES;
+    this.phase = isLegacyMidChapterEcho ? 'playing' : snapshot.phase; this.chapterId = snapshot.chapterId ?? 'ch01_meadow'; this.elapsedSeconds = snapshot.elapsedSeconds; this.distanceMeters = snapshot.distanceMeters; this.targetX = snapshot.player.x;
+    this.player = { ...snapshot.player, damage: snapshot.player.damage ?? BASE_ARROW_DAMAGE, pierceCount: snapshot.player.pierceCount ?? 0, pierceCharge: snapshot.player.pierceCharge ?? 0, lightningTargetCount: snapshot.player.lightningTargetCount ?? 2, lightningDamagePerSecond: snapshot.player.lightningDamagePerSecond ?? BASE_LIGHTNING_DAMAGE_PER_SECOND, lightningRange: snapshot.player.lightningRange ?? 1, lightningTargetCharge: snapshot.player.lightningTargetCharge ?? 0, enemyCountMultiplier: snapshot.player.enemyCountMultiplier ?? 1 }; this.attackCooldownSeconds = 0.1; this.lightningCooldownSeconds = 0; this.nextArrowId = Math.max(1, ...snapshot.arrows.map((arrow) => arrow.id + 1)); this.earnedGold = snapshot.earnedGold; this.collectedShards = snapshot.collectedShards ?? 0; this.bossWarningSeconds = snapshot.bossWarningSeconds ?? 0; this.wavesCompleted = restoredWaves; this.echoRound = restoredWaves >= TOTAL_MINION_WAVES && snapshot.echoRound > 0 ? 1 : 0; this.selectedReward = snapshot.selectedReward === ('blade_nexus' as never) ? 'lightning_core' : snapshot.selectedReward; this.rewardOptions = isLegacyMidChapterEcho ? [] : snapshot.rewardOptions.map((reward) => reward === ('blade_nexus' as never) ? 'lightning_core' : reward);
     this.selectedGateIds.clear(); snapshot.selectedGateIds.forEach((id) => this.selectedGateIds.add(id)); this.positionedEnemyIds.clear(); this.swarmDuplicatedIds.clear(); const swarmSourceIds = new Set(snapshot.enemies.filter((enemy) => enemy.id.includes('-swarm-')).map((enemy) => enemy.id.split('-swarm-')[0]!)); snapshot.enemies.forEach((enemy) => { this.positionedEnemyIds.add(enemy.id); if (swarmSourceIds.has(enemy.id)) this.swarmDuplicatedIds.add(enemy.id); }); this.enemies.splice(0, this.enemies.length, ...snapshot.enemies.map((enemy) => ({ ...enemy, deathSeconds: enemy.deathSeconds ?? 0, attackCooldownSeconds: 0.5 }))); this.arrows.splice(0, this.arrows.length, ...snapshot.arrows.map((arrow) => ({ ...arrow, vx: arrow.vx ?? 0, piercesRemaining: arrow.piercesRemaining ?? 0, hitEnemyIds: [...(arrow.hitEnemyIds ?? [])], hitBoss: arrow.hitBoss ?? false })));
     this.gates.splice(0, this.gates.length, ...snapshot.gates.map((gate) => ({ ...gate, leftBuffId: gate.leftBuffId === ('flying_sword' as never) ? 'lightning_targets' : gate.leftBuffId, rightBuffId: gate.rightBuffId === ('flying_sword' as never) ? 'lightning_targets' : gate.rightBuffId, leftLabel: gate.leftBuffId === ('flying_sword' as never) ? '電擊目標 +1' : gate.leftLabel, rightLabel: gate.rightBuffId === ('flying_sword' as never) ? '電擊目標 +1' : gate.rightLabel }))); this.hits.splice(0, this.hits.length, ...(snapshot.hits ?? []).map((hit) => ({ ...hit }))); this.pickups.splice(0, this.pickups.length, ...(snapshot.pickups ?? []).map((pickup) => ({ ...pickup, buffId: pickup.buffId === ('flying_sword' as never) ? 'lightning_targets' : pickup.buffId, label: pickup.buffId === ('flying_sword' as never) ? '鎖定碎片 +⅓' : pickup.label }))); this.lightningTargetIds = [...(snapshot.lightningTargetIds ?? [])];
     this.boss = snapshot.boss === undefined ? undefined : { hp: snapshot.boss.hp, maxHp: snapshot.boss.maxHp, z: snapshot.boss.z ?? 15, phase: snapshot.boss.phase, telegraphSeconds: snapshot.boss.telegraphSeconds, telegraphText: snapshot.boss.telegraphText, attackCooldownSeconds: 1, isDefeated: snapshot.boss.isDefeated };
@@ -190,8 +192,8 @@ export class M1RunSimulation {
     const wave = WAVE_DEFINITIONS[this.wavesCompleted];
     if (wave === undefined || this.distanceMeters < wave.distance) return;
     const chapterScale = getChapterDefinition(this.chapterId).enemyHpScale;
-    const roundIndex = Math.floor(this.wavesCompleted / WAVES_PER_ECHO);
-    const waveIndex = this.wavesCompleted % WAVES_PER_ECHO;
+    const roundIndex = Math.floor(this.wavesCompleted / WAVES_PER_ROUND);
+    const waveIndex = this.wavesCompleted % WAVES_PER_ROUND;
     const roundScale = ROUND_HP_SCALES[roundIndex] ?? 1;
     const waveScale = WAVE_HP_SCALES[waveIndex] ?? 1;
     for (const [enemyIndex, spec] of wave.enemies.entries()) {
@@ -199,8 +201,8 @@ export class M1RunSimulation {
       this.enemies.push({ id: `wave-${this.wavesCompleted + 1}-${enemyIndex + 1}`, kind: spec.kind, x: spec.x, z: 38, hp: Math.round(baseHp * chapterScale * roundScale * waveScale), attackCooldownSeconds: spec.kind === 'ranged' ? 1 : 0, telegraphSeconds: 0, deathSeconds: 0 });
     }
     this.wavesCompleted += 1;
-    if (this.wavesCompleted % WAVES_PER_ECHO === 0) {
-      this.echoRound = this.wavesCompleted / WAVES_PER_ECHO;
+    if (this.wavesCompleted === TOTAL_MINION_WAVES) {
+      this.echoRound = 1;
       this.rewardOptions = this.drawRewards();
       this.selectedReward = undefined;
       this.phase = 'echo';
