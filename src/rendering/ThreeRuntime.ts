@@ -122,7 +122,9 @@ export class ThreeRuntime {
     // avatar can create coplanar depth noise that looks like clothing flicker.
     this.playerMesh.visible = false;
     this.updateCamera(0);
-    this.scene.add(this.playerMesh, this.playerModelAnchor);
+    // The collision box is simulation-only; keep it out of the render tree so
+    // a legacy avatar mesh can never reappear above the current archer model.
+    this.scene.add(this.playerModelAnchor);
     this.scene.add(this.bossMesh);
     this.scene.add(this.bossTelegraphRing);
     this.sunLight.position.set(-4, 9, -2);
@@ -454,7 +456,13 @@ export class ThreeRuntime {
   }
 
   private attachPlayerModel(): void {
-    if (this.playerModelTemplate === undefined || this.playerMesh.getObjectByName('player-model') !== undefined) return;
+    if (this.playerModelTemplate === undefined) return;
+    // A hot reload or a repeated asset callback can leave a previous player
+    // visual on the anchor. Always replace the anchor contents before
+    // attaching the single current archer instance so no legacy head/body can
+    // remain visible.
+    for (const child of [...this.playerModelAnchor.children]) child.removeFromParent();
+    this.playerMesh.clear();
     const model = this.playerModelTemplate.clone(true);
     model.name = 'player-model';
     model.scale.setScalar(0.2);
