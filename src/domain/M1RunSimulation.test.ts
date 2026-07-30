@@ -289,6 +289,7 @@ describe('M1RunSimulation', () => {
     const telegraphAndShot = simulation.snapshot();
     expect(telegraphAndShot.enemies[0]).toBeDefined();
     expect(telegraphAndShot.enemyProjectiles).toHaveLength(1);
+    expect(ENEMY_PROJECTILE_SPEED).toBeGreaterThan(6.7);
     expect(telegraphAndShot.enemyProjectiles[0]?.vz).toBe(-ENEMY_PROJECTILE_SPEED);
     expect(telegraphAndShot.player.hp).toBe(100);
 
