@@ -116,3 +116,4 @@
 | 4 | 工程師 | 場景效能、固定模型朝向與怪物血條可讀性 | Completed | [M6-ENG-003](M6-ENG-003-場景效能與可讀性優化.md) | `feat：關卡回響與場景效能優化` |
 | 5 | 工程師 | Boss 後怪物清場與道路最遠端生成 | Completed | [M6-ENG-004](M6-ENG-004-怪物清場與遠端生成.md) | `feat：怪物清場與遠端生成` |
 | 6 | 工程師 | 碰撞擊殺與吸血 Buff | Completed | [M6-ENG-005](M6-ENG-005-碰撞擊殺與吸血Buff.md) | `feat：加入碰撞擊殺與吸血Buff` |
+| 7 | 工程師 | 統一怪物與 Buff 接近速度 | Completed | [M6-ENG-006](M6-ENG-006-統一怪物與Buff接近速度.md) | `fix：統一怪物與Buff接近速度` |

@@ -326,6 +326,21 @@ describe('M1RunSimulation', () => {
     expect(simulation.snapshot().pickups).toHaveLength(0);
   });
 
+  it('moves monsters and Buff pickups at the same approach speed', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start();
+    const initial = simulation.snapshot();
+    simulation.restore({
+      ...initial,
+      enemies: [{ id: 'speed-enemy', kind: 'melee', x: 0, z: 20, hp: 100, telegraphSeconds: 0, deathSeconds: 0 }],
+      pickups: [{ id: 1001, x: 0, z: 20, buffId: 'life_steal', label: '吸血 +3.3%' }],
+    });
+    simulation.tick(1 / 30);
+
+    const snapshot = simulation.snapshot();
+    expect(snapshot.enemies[0]?.z).toBeCloseTo(snapshot.pickups[0]?.z ?? 0);
+  });
+
   it('applies the three additional permanent upgrades to a new run', () => {
     const simulation = new M1RunSimulation();
     simulation.start({ arrowSpeedLevel: 2, pierceLevel: 1, movementLevel: 3 });
