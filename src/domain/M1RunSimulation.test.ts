@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BUFF_IDS } from '../content/BuffCatalog';
-import { BASE_ARROW_DAMAGE, BASE_LIGHTNING_DAMAGE_PER_SECOND, BOSS_START_DISTANCE, BOSS_STOP_DISTANCE, BOSS_WARNING_SECONDS, BOSS_WARNING_START_DISTANCE, ENEMY_SPAWN_Z, LIFE_STEAL_BONUS, getArrowDamageMultiplier, M1RunSimulation } from './M1RunSimulation';
+import { BASE_ARROW_DAMAGE, BASE_CANNON_DAMAGE, BASE_LIGHTNING_DAMAGE_PER_SECOND, BOSS_START_DISTANCE, BOSS_STOP_DISTANCE, BOSS_WARNING_SECONDS, BOSS_WARNING_START_DISTANCE, CANNON_BLAST_RADIUS, ENEMY_SPAWN_Z, LIFE_STEAL_BONUS, getArrowDamageMultiplier, M1RunSimulation } from './M1RunSimulation';
 
 function advanceToDistance(simulation: M1RunSimulation, distanceMeters: number): void {
   while (simulation.snapshot().distanceMeters < distanceMeters) {
@@ -31,10 +31,13 @@ function advanceToBossReward(simulation: M1RunSimulation, maxTicks = 18_000): Re
 }
 
 describe('M1RunSimulation', () => {
-  it('starts every run with exactly one arrow', () => {
+  it('starts every run without arrows and guarantees the first Gate weapon choice', () => {
     const simulation = new M1RunSimulation();
     simulation.start();
-    expect(simulation.snapshot().player.projectileCount).toBe(1);
+    const snapshot = simulation.snapshot();
+    expect(snapshot.player.projectileCount).toBe(0);
+    expect(snapshot.player.lightningTargetCount).toBe(2);
+    expect(new Set([snapshot.gates[0]?.leftBuffId, snapshot.gates[0]?.rightBuffId])).toEqual(new Set(['split_arrow', 'lightning_targets']));
   });
 
   it('starts lightning with a one-unit lock range', () => {
@@ -61,7 +64,7 @@ describe('M1RunSimulation', () => {
     simulation.start({ healthLevel: 100 });
     simulation.setTargetX(5);
     simulation.tick(1 / 30);
-    expect(simulation.snapshot().arrows).toHaveLength(1);
+    expect(simulation.snapshot().arrows).toHaveLength(0);
 
     for (let round = 1; round <= 3; round += 1) {
       while (simulation.snapshot().phase === 'playing' && simulation.snapshot().wavesCompleted < round * 5) simulation.tick(1 / 30);
@@ -179,7 +182,8 @@ describe('M1RunSimulation', () => {
       simulation.restore({
         ...setup,
         enemies: [],
-        boss: { id: 'bos_moss_crown_a', hp: 1, maxHp: 1, z: BOSS_STOP_DISTANCE, phase: 1, telegraphSeconds: 0, telegraphText: 'Boss 進場！', isDefeated: false },
+        player: { ...setup.player, lightningTargetCount: 1, projectileCount: 0 },
+        boss: { id: 'bos_moss_crown_a', hp: 1, maxHp: 1, z: 1, phase: 1, telegraphSeconds: 0, telegraphText: 'Boss 進場！', isDefeated: false },
       });
       for (let tick = 0; tick < 90 && simulation.snapshot().phase === 'playing'; tick += 1) simulation.tick(1 / 30);
       const reward = simulation.snapshot();
@@ -215,7 +219,7 @@ describe('M1RunSimulation', () => {
     expect(player.maxHp).toBe(120);
     expect(player.hp).toBe(120);
     expect(player.damage).toBeCloseTo(BASE_ARROW_DAMAGE * 1.6);
-    expect(player.projectileCount).toBe(1);
+    expect(player.projectileCount).toBe(0);
   });
 
   it('uses a weaker base arrow but rewards close-range hits, while lightning is the stronger short-range baseline', () => {
@@ -254,7 +258,7 @@ describe('M1RunSimulation', () => {
     const initial = simulation.snapshot();
     simulation.restore({
       ...initial,
-      player: { ...initial.player, hp: 50, lifeSteal: 0.2, lightningRange: 6 },
+      player: { ...initial.player, hp: 50, lifeSteal: 0.2, lightningTargetCount: 1, lightningRange: 6 },
       enemies: [{ id: 'life-steal-target', kind: 'melee', x: 0, z: 5, hp: 100, telegraphSeconds: 0, deathSeconds: 0 }],
       arrows: [],
       lightningTargetIds: [],
@@ -291,6 +295,7 @@ describe('M1RunSimulation', () => {
     const started = simulation.snapshot();
     simulation.restore({
       ...started,
+      player: { ...started.player, projectileCount: 1 },
       gates: [
         { ...started.gates[0]!, leftBuffId: 'life_steal', rightBuffId: 'split_arrow', leftLabel: '吸血 +10%', rightLabel: '+1 箭矢' },
         ...started.gates.slice(1),
@@ -383,7 +388,7 @@ describe('M1RunSimulation', () => {
     expect(gates.slice(0, 2).flatMap((gate) => [gate.leftLabel, gate.rightLabel]).join(' ')).not.toMatch(/HP|生命|回復|治療/);
   });
 
-  it('draws distinct random Gate options from the twelve-Buff catalog', () => {
+  it('draws distinct random Gate options from the expanded Buff catalog', () => {
     const seen = new Set<string>();
     const simulation = new M1RunSimulation();
     for (let index = 0; index < 12; index += 1) {
@@ -399,6 +404,13 @@ describe('M1RunSimulation', () => {
   it('drops a readable one-third Buff pickup when a minor enemy is defeated', () => {
     const simulation = new M1RunSimulation();
     simulation.start({ damageLevel: 20 });
+    const started = simulation.snapshot();
+    simulation.restore({
+      ...started,
+      player: { ...started.player, projectileCount: 1, damage: 100 },
+      enemies: [{ id: 'pickup-target', kind: 'melee', x: 0, z: 3, hp: 1, telegraphSeconds: 0, deathSeconds: 0 }],
+      arrows: [],
+    });
     for (let tick = 0; tick < 600 && simulation.snapshot().pickups.length === 0; tick += 1) simulation.tick(1 / 30);
     const pickup = simulation.snapshot().pickups[0];
     expect(pickup?.buffId).toBeDefined();
@@ -434,7 +446,7 @@ describe('M1RunSimulation', () => {
     const initial = simulation.snapshot();
     simulation.restore({
       ...initial,
-      player: { ...initial.player, lightningRange: 2 },
+      player: { ...initial.player, lightningTargetCount: 2, lightningRange: 2 },
       enemies: [
         { id: 'test-near-left', kind: 'melee', x: -0.2, z: 2, hp: 100, telegraphSeconds: 0, deathSeconds: 0 },
         { id: 'test-near-right', kind: 'melee', x: 0.2, z: 2, hp: 100, telegraphSeconds: 0, deathSeconds: 0 },
@@ -453,14 +465,17 @@ describe('M1RunSimulation', () => {
   it('fires multiple arrows in a forward fan rather than parallel lines', () => {
     const simulation = new M1RunSimulation();
     simulation.start();
-    let gate = simulation.snapshot().gates[0]!;
-    for (let attempt = 0; gate.leftBuffId !== 'split_arrow' && gate.rightBuffId !== 'split_arrow'; attempt += 1) {
-      simulation.start();
-      gate = simulation.snapshot().gates[0]!;
-      if (attempt > 12) throw new Error('測試序列未提供箭矢 Buff。');
-    }
-    simulation.setTargetX(gate.leftBuffId === 'split_arrow' ? -5 : 5);
-    advanceToDistance(simulation, 11);
+    const started = simulation.snapshot();
+    simulation.restore({
+      ...started,
+      gates: [
+        { ...started.gates[0]!, leftBuffId: 'split_arrow', rightBuffId: 'lightning_targets', leftLabel: '+1 箭矢', rightLabel: '電擊目標 +1' },
+        { ...started.gates[1]!, z: 18, leftBuffId: 'split_arrow', rightBuffId: 'lightning_targets', leftLabel: '+1 箭矢', rightLabel: '電擊目標 +1' },
+        ...started.gates.slice(2),
+      ],
+    });
+    simulation.setTargetX(-5);
+    advanceToDistance(simulation, 19);
     expect(simulation.snapshot().player.projectileCount).toBe(2);
     for (let tick = 0; tick < 30 && !simulation.snapshot().arrows.some((arrow) => arrow.vx !== 0); tick += 1) simulation.tick(1 / 30);
     const velocities = simulation.snapshot().arrows.map((arrow) => arrow.vx);
@@ -473,19 +488,54 @@ describe('M1RunSimulation', () => {
     simulation.start();
     expect(simulation.snapshot().arrows).toHaveLength(0);
     simulation.tick(1 / 30);
-    expect(simulation.snapshot().arrows[0]?.piercesRemaining).toBe(0);
+    expect(simulation.snapshot().arrows).toHaveLength(0);
 
-    let gate = simulation.snapshot().gates[0]!;
-    for (let attempt = 0; gate.leftBuffId !== 'piercing_arrow' && gate.rightBuffId !== 'piercing_arrow'; attempt += 1) {
-      simulation.start();
-      gate = simulation.snapshot().gates[0]!;
-      if (attempt > 18) throw new Error('測試序列未提供穿透 Buff。');
-    }
-    simulation.setTargetX(gate.leftBuffId === 'piercing_arrow' ? -5 : 5);
+    const started = simulation.snapshot();
+    simulation.restore({
+      ...started,
+      player: { ...started.player, projectileCount: 1 },
+      gates: [
+        { ...started.gates[0]!, leftBuffId: 'piercing_arrow', rightBuffId: 'lightning_targets', leftLabel: '穿透 +1', rightLabel: '電擊目標 +1' },
+        ...started.gates.slice(1),
+      ],
+    });
+    simulation.setTargetX(-5);
     advanceToDistance(simulation, 11);
     expect(simulation.snapshot().player.pierceCount).toBe(1);
     for (let tick = 0; tick < 30 && !simulation.snapshot().arrows.some((arrow) => arrow.piercesRemaining === 1); tick += 1) simulation.tick(1 / 30);
     expect(simulation.snapshot().arrows.some((arrow) => arrow.piercesRemaining === 1)).toBe(true);
+  });
+
+  it('unlocks the slow cannon and applies blast damage to multiple targets', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start();
+    const started = simulation.snapshot();
+    simulation.restore({
+      ...started,
+      gates: [
+        { ...started.gates[0]!, leftBuffId: 'cannon_weapon', rightBuffId: 'lightning_targets', leftLabel: '解鎖火砲', rightLabel: '電擊目標 +1' },
+        ...started.gates.slice(1),
+      ],
+    });
+    simulation.setTargetX(-5);
+    advanceToDistance(simulation, 11);
+    expect(simulation.snapshot().player.cannonUnlocked).toBe(true);
+    expect(simulation.snapshot().player.cannonDamage).toBe(BASE_CANNON_DAMAGE);
+
+    const armed = simulation.snapshot();
+    simulation.restore({
+      ...armed,
+      player: { ...armed.player, cannonUnlocked: true },
+      enemies: [
+        { id: 'cannon-left', kind: 'melee', x: -0.6, z: 3, hp: 3, telegraphSeconds: 0, deathSeconds: 0 },
+        { id: 'cannon-right', kind: 'melee', x: 0.6, z: 3, hp: 3, telegraphSeconds: 0, deathSeconds: 0 },
+      ],
+      arrows: [{ id: 900, weapon: 'cannon', x: 0, z: 2.5, vx: 0, damage: BASE_CANNON_DAMAGE, blastRadius: CANNON_BLAST_RADIUS, piercesRemaining: 0, hitEnemyIds: [], hitBoss: false }],
+    });
+    simulation.tick(1 / 30);
+    const result = simulation.snapshot();
+    expect(result.arrows).toHaveLength(0);
+    expect(result.enemies.every((enemy) => enemy.hp < 3)).toBe(true);
   });
 
   it('reaches Boss reward and applies it exactly once', () => {

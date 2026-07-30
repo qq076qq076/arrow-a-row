@@ -4,7 +4,7 @@
 
 本文件是可量產遊戲內容的設計基線。所有數值是 MVP 起始值，必須集中於 JSON／CSV 內容資料表並經 Zod schema 驗證，不可硬編碼。任何改動均需提高 `contentVersion`、附 playtest 或 simulation 證據。
 
-> M6 現行實作同步：目前程式的箭矢基礎傷害為 `0.8 / 3 ≈ 0.267`，自動電擊為 `5 / 3 ≈ 1.667` 傷害／秒；一般 Buff 的傷害加成也縮為原值三分之一。前 5／10 波只靠地面掉落 Buff，15 波完成後才提供 3 張不重複回響候選供玩家三選一，地面掉落 Buff 使用 Treasure Chest。小怪於道路最遠端 `z = 64` 生成；Boss 擊敗後須等小怪死亡或跑出玩家身後 `z < -2` 才進入結算。新增 `life_steal` Buff，初始吸血為 0%，依實際傷害比例回復生命。精確行為以 `src/domain/M1RunSimulation.ts`、`src/content/BuffCatalog.ts` 與 `src/rendering/ThreeRuntime.ts` 為準。
+> M6 現行實作同步：目前程式的箭矢基礎傷害為 `0.8 / 3 ≈ 0.267`，開局箭數為 `0`；自動電擊為 `5 / 3 ≈ 1.667` 傷害／秒、初始 2 個鎖定目標。第一個 Gate 固定提供「+1 箭矢／電擊目標 +1」二選一；另有慢速範圍火砲，可由 `cannon_weapon` 解鎖並以獨立 Buff 強化傷害與射速。一般 Buff 的傷害加成也縮為原值三分之一。前 5／10 波只靠地面掉落 Buff，15 波完成後才提供 3 張不重複回響候選供玩家三選一，地面掉落 Buff 使用 Treasure Chest。小怪於道路最遠端 `z = 64` 生成；Boss 擊敗後須等小怪死亡或跑出玩家身後 `z < -2` 才進入結算。新增 `life_steal` Buff，初始吸血為 0%，依實際傷害比例回復生命。精確行為以 `src/domain/M1RunSimulation.ts`、`src/content/BuffCatalog.ts` 與 `src/rendering/ThreeRuntime.ts` 為準。
 
 ## 1. 設計目標與運行條件
 
@@ -27,7 +27,11 @@
 | `baseDamage` | 0.267 | 0.1 / 999 | 每支箭基礎傷害；由原始 `0.8` 縮為三分之一。 |
 | `lightningDamagePerSecond` | 1.667 | 0 / 999 | 自動電擊對單一目標的初始每秒傷害；由原始 `5` 縮為三分之一。 |
 | `attackIntervalSeconds` | 0.65 | 0.12 / 5.0 | 每次自動射擊間隔。 |
-| `projectileCount` | 1 | 1 / 12 | 每次發射箭數。 |
+| `projectileCount` | 0 | 0 / 12 | 每次發射箭數；第一個 Gate 取得 `split_arrow` 後才開始射箭。 |
+| `lightningTargetCount` | 2 | 0 / 12 | 自動電擊的初始鎖定目標數；第一個 Gate 可再增加 1。 |
+| `cannonUnlocked` | false | — | 取得 `cannon_weapon` 後啟用火砲。 |
+| `cannonDamage` | 2.4 | 0 / 999 | 火砲每發範圍傷害。 |
+| `cannonIntervalSeconds` | 1.6 | 0.35 / 5.0 | 火砲初始發射間隔，慢於弓箭。 |
 | `spreadDegrees` | 0 | 0 / 40 | 多箭總散布角。 |
 | `rangeMeters` | 22 | 5 / 60 | 箭射程。 |
 | `projectileSpeedMps` | 24 | 8 / 60 | 箭速。 |

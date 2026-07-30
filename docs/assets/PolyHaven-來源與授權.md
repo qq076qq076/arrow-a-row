@@ -10,7 +10,7 @@
 | Lantern 01 | https://polyhaven.com/a/Lantern_01 | Rajil Jose Macatangay | `public/assets/polyhaven/lantern_01/Lantern_01.gltf`、1K JPG 貼圖與 BIN | Gate Buff 的門上能力標記，以色彩區分能力 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 | Treasure Chest | https://polyhaven.com/a/treasure_chest | Rico Cilliers | `public/assets/polyhaven/treasure_chest/treasure_chest_1k.gltf`、1K JPG 貼圖與 BIN | 小怪掉落在地面的 Buff 拾取物；用於取代原本的地面燈籠 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 | Ammo Box | https://polyhaven.com/a/ammo_box | DanKit | `public/assets/polyhaven/ammo_box/ammo_box.gltf`、1K JPG 貼圖與 BIN | CH02 磁軌獵犬的低矮近戰底盤 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
-| Cannon 01 | https://polyhaven.com/a/cannon_01 | Yann Kervran、James Ray Cock | `public/assets/polyhaven/cannon_01/cannon_01.gltf`、1K JPG 貼圖與 BIN | CH02 鏡翼炮台與 CH03 炭火投擲者的遠程砲身；以章節色彩區分 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
+| Cannon 01 | https://polyhaven.com/a/cannon_01 | Yann Kervran、James Ray Cock | `public/assets/polyhaven/cannon_01/cannon_01.gltf`、1K JPG 貼圖與 BIN | CH02 鏡翼炮台與 CH03 炭火投擲者的遠程砲身；同檔案的 `cannon_01_ball_01` 節點重用為玩家火砲砲彈模型；以章節色彩區分 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 | Drill Press 01 | https://polyhaven.com/a/drill_press_01 | Viktor | `public/assets/polyhaven/drill_press_01/drill_press_01.gltf`、1K JPG 貼圖與 BIN | CH02 鏡潮校準者的機械主體 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 | Barrel 01 | https://polyhaven.com/a/Barrel_01 | Jorge Camacho | `public/assets/polyhaven/barrel_01/barrel_01.gltf`、1K JPG 貼圖與 BIN | CH03 熔殼步兵與熔爐旁的炭火桶 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
 | Barrel Stove | https://polyhaven.com/a/barrel_stove | MP | `public/assets/polyhaven/barrel_stove/barrel_stove.gltf`、1K JPG 貼圖與 BIN | CH03 熔脈監工 Boss 的鍛爐主體 | [CC0 1.0](https://polyhaven.com/license)；可自由使用、修改與商用，不要求署名。 |
@@ -38,6 +38,6 @@
 
 | 資產 | 來源網址 | 作者 | 採用檔案 | 使用位置 | 授權 |
 | --- | --- | --- | --- | --- | --- |
-| Archer | https://poly.pizza/m/0jlabhnBscv | Poly by Google | `public/assets/poly-pizza/archer/archer.glb` | 所有關卡共用的玩家弓箭手角色（含弓與箭袋造型） | [Creative Commons Attribution 3.0](https://creativecommons.org/licenses/by/3.0/)；發佈時保留作者與來源連結。 |
+| Archer | https://poly.pizza/m/0jlabhnBscv | Poly by Google | `public/assets/poly-pizza/archer/archer.glb` | 所有關卡共用的玩家弓箭手角色（含弓與箭袋造型）；箭矢投射物改用輕量弓箭形視覺，與角色弓箭模型保持一致 | [Creative Commons Attribution 3.0](https://creativecommons.org/licenses/by/3.0/)；發佈時保留作者與來源連結。 |
 
 採用 1K glTF 版本，場景物件會共享幾何／材質並依用途建立位置與尺寸變體；地面 Buff 使用 Treasure Chest，Gate Buff 使用 Lantern 01，不另下載高解析貼圖。

@@ -121,9 +121,12 @@
 | 屬性 | 建議初值 | 目的 |
 | --- | ---: | --- |
 | `maxHp` / `hp` | 100 / 100 | 死亡與生存。參考商店也列基礎 HP 100。 |
-| `baseDamage` | 1 | 箭傷。參考商店列基礎箭傷 1。 |
-| `attackInterval` | 0.65 秒 | 實際攻速為 `1 / interval`。 |
-| `projectileCount` | 1 | 每次發射的箭數。 |
+| `baseDamage` | 0.267 | 箭傷；目前實作使用 `0.8 / 3`。 |
+| `attackInterval` | 0.45 秒 | 弓箭自動射擊間隔；實際攻速為 `1 / interval`。 |
+| `projectileCount` | 0 | 每次發射的箭數；第一個 Gate 固定提供 `+1 箭矢`。 |
+| `lightningTargetCount` | 2 | 自動電擊初始鎖定目標數；第一個 Gate 可選 `+1`。 |
+| `cannonUnlocked` | false | 取得火砲 Buff 後啟用範圍砲擊。 |
+| `cannonInterval` | 1.6 秒 | 火砲獨立發射間隔，初始慢於弓箭。 |
 | `spreadDeg` | 12° | 多箭對稱散布。 |
 | `range` / `projectileSpeed` | 22m / 24m/s | 箭的有效距離與飛行感。 |
 | `critChance` / `critMult` | 0% / 2.0 | 暴擊率限制 0–80%。 |

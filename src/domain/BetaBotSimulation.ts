@@ -37,9 +37,10 @@ export function runBetaBotCampaigns(buildId: BetaBuildId, campaigns: number): Be
           continue;
         }
         const nextGate = snapshot.gates.find((gate) => !gate.isChosen && gate.z >= snapshot.distanceMeters);
-        if (snapshot.boss !== undefined || snapshot.wavesCompleted >= 15) simulation.setTargetX(0);
+        if (snapshot.boss !== undefined) simulation.setTargetX(0);
         else if (nextGate?.leftBuffId === target.buffId) simulation.setTargetX(-5);
-        else if (nextGate?.rightBuffId === target.buffId) simulation.setTargetX(5);
+        else if (nextGate?.groupId === 'g01' && nextGate.leftBuffId === 'split_arrow') simulation.setTargetX(-5);
+        else if (nextGate?.rightBuffId === target.buffId || (nextGate?.groupId === 'g01' && nextGate.rightBuffId === 'lightning_targets')) simulation.setTargetX(5);
         else simulation.setTargetX(5);
         simulation.tick(1 / 30);
       }

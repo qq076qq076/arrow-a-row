@@ -5,6 +5,7 @@ import {
   Color,
   CanvasTexture,
   ConeGeometry,
+  CylinderGeometry,
   DirectionalLight,
   Group,
   IcosahedronGeometry,
@@ -34,7 +35,7 @@ const ENEMY_MATERIALS = {
 };
 
 const BUFF_ICON_GLYPHS: Record<BuffId, string> = {
-  split_arrow: '↗', power_shot: '✦', swift_shot: '➤', rapid_fire: '≋', piercing_arrow: '⊹', lightning_targets: '⚡', lightning_damage: '✹', lightning_range: '⌁', life_steal: '♥', vitality: '✚', windstep: '➟', barkskin: '◆',
+  split_arrow: '↗', power_shot: '✦', swift_shot: '➤', rapid_fire: '≋', piercing_arrow: '⊹', lightning_targets: '⚡', lightning_damage: '✹', lightning_range: '⌁', cannon_weapon: '◉', cannon_damage: '✹', cannon_fire_rate: '➶', life_steal: '♥', vitality: '✚', windstep: '➟', barkskin: '◆',
 };
 
 const POLYHAVEN_ROCK_URL = `${import.meta.env.BASE_URL}assets/polyhaven/rock_07/rock_07.gltf`;
@@ -109,6 +110,7 @@ export class ThreeRuntime {
   private ch05RangedModelTemplate: Group | undefined;
   private ch06MeleeModelTemplate: Group | undefined;
   private ch06RangedModelTemplate: Group | undefined;
+  private cannonBallModelTemplate: Group | undefined;
   private roadModelTemplate: Group | undefined;
   private readonly ambientLight = new AmbientLight('#cde4d0', 1.7);
   private readonly sunLight = new DirectionalLight('#fff0c4', 2.8);
@@ -612,6 +614,17 @@ export class ThreeRuntime {
     });
     this.loadGltf(POLYHAVEN_CANNON_URL, 'Poly Haven Cannon 01', (scene) => {
       this.ch02RangedModelTemplate = scene;
+      const cannonBall = scene.getObjectByName('cannon_01_ball_01');
+      if (cannonBall !== undefined) {
+        this.cannonBallModelTemplate = new Group();
+        const ball = cannonBall.clone(true);
+        ball.position.set(0, 0, 0);
+        ball.rotation.set(0, 0, 0);
+        this.cannonBallModelTemplate.add(ball);
+        for (const arrow of this.arrowMeshes.values()) {
+          if (arrow.userData.weapon === 'cannon') this.configureArrowMesh(arrow, 'cannon');
+        }
+      }
       for (const enemy of this.enemyMeshes.values()) {
         if (enemy.userData.chapterId === 'ch02_viaduct' && enemy.userData.kind === 'ranged') {
           enemy.getObjectByName('enemy-model')?.removeFromParent();
@@ -1147,11 +1160,41 @@ export class ThreeRuntime {
       let mesh = this.arrowMeshes.get(arrow.id);
       if (mesh === undefined) {
         mesh = this.arrowMeshPool.pop() ?? new Mesh(new SphereGeometry(0.12, 8, 8), new MeshBasicMaterial({ color: '#fff4ba' }));
+        this.configureArrowMesh(mesh, arrow.weapon);
         mesh.visible = true;
         this.arrowMeshes.set(arrow.id, mesh);
         this.scene.add(mesh);
+      } else if (mesh.userData.weapon !== arrow.weapon) {
+        this.configureArrowMesh(mesh, arrow.weapon);
       }
       mesh.position.set(arrow.x, 0.8, arrow.z);
+    }
+  }
+
+  private configureArrowMesh(mesh: Mesh, weapon: 'bow' | 'cannon'): void {
+    mesh.geometry.dispose();
+    if (Array.isArray(mesh.material)) mesh.material.forEach((material) => material.dispose());
+    else mesh.material.dispose();
+    mesh.clear();
+    mesh.rotation.set(0, 0, 0);
+    mesh.scale.setScalar(1);
+    mesh.userData.weapon = weapon;
+    if (weapon === 'bow') {
+      mesh.geometry = new CylinderGeometry(0.035, 0.035, 0.72, 6);
+      mesh.material = new MeshBasicMaterial({ color: '#f4c95d' });
+      mesh.rotation.x = Math.PI / 2;
+      const arrowHead = new Mesh(new ConeGeometry(0.11, 0.26, 6), new MeshBasicMaterial({ color: '#fff4ba' }));
+      arrowHead.position.z = 0.48;
+      mesh.add(arrowHead);
+      return;
+    }
+    mesh.geometry = new SphereGeometry(0.16, 8, 8);
+    mesh.material = new MeshBasicMaterial({ color: '#ff795d' });
+    if (this.cannonBallModelTemplate !== undefined) {
+      const cannonBall = this.cannonBallModelTemplate.clone(true);
+      cannonBall.scale.setScalar(0.9);
+      mesh.add(cannonBall);
+      mesh.visible = true;
     }
   }
 
@@ -1238,7 +1281,7 @@ export class ThreeRuntime {
   }
 
   private drawPickupIcon(context: CanvasRenderingContext2D, buffId: BuffId, x: number, y: number): void {
-    const icons: Record<BuffId, readonly [string, string]> = { split_arrow: ['➤', '#f4c95d'], power_shot: ['✦', '#ff9a6b'], swift_shot: ['≫', '#71e6d1'], rapid_fire: ['⚡', '#fff4ba'], piercing_arrow: ['⇥', '#a986ef'], lightning_targets: ['⚡', '#9ee8ff'], lightning_damage: ['✹', '#b3a6ff'], lightning_range: ['⌁', '#71e6d1'], life_steal: ['♥', '#ff6b9d'], vitality: ['+', '#ff8d9b'], windstep: ['➜', '#83d7ff'], barkskin: ['⬡', '#8fe39a'] };
+    const icons: Record<BuffId, readonly [string, string]> = { split_arrow: ['➤', '#f4c95d'], power_shot: ['✦', '#ff9a6b'], swift_shot: ['≫', '#71e6d1'], rapid_fire: ['⚡', '#fff4ba'], piercing_arrow: ['⇥', '#a986ef'], lightning_targets: ['⚡', '#9ee8ff'], lightning_damage: ['✹', '#b3a6ff'], lightning_range: ['⌁', '#71e6d1'], cannon_weapon: ['◉', '#ff9a6b'], cannon_damage: ['✹', '#ff795d'], cannon_fire_rate: ['➶', '#ffd16b'], life_steal: ['♥', '#ff6b9d'], vitality: ['+', '#ff8d9b'], windstep: ['➜', '#83d7ff'], barkskin: ['⬡', '#8fe39a'] };
     const [glyph, color] = icons[buffId];
     context.fillStyle = color; context.beginPath(); context.arc(x, y, 72, 0, Math.PI * 2); context.fill();
     context.fillStyle = '#102c2a'; context.font = '800 104px system-ui, sans-serif'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(glyph, x, y + 4);

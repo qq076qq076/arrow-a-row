@@ -117,3 +117,4 @@
 | 5 | 工程師 | Boss 後怪物清場與道路最遠端生成 | Completed | [M6-ENG-004](M6-ENG-004-怪物清場與遠端生成.md) | `feat：怪物清場與遠端生成` |
 | 6 | 工程師 | 碰撞擊殺與吸血 Buff | Completed | [M6-ENG-005](M6-ENG-005-碰撞擊殺與吸血Buff.md) | `feat：加入碰撞擊殺與吸血Buff` |
 | 7 | 工程師 | 統一怪物與 Buff 接近速度 | Completed | [M6-ENG-006](M6-ENG-006-統一怪物與Buff接近速度.md) | `fix：統一怪物與Buff接近速度` |
+| 8 | 工程師 | 初始主武器 Gate、火砲範圍攻擊與弓箭／砲彈模型 | Completed | [M6-ENG-007](M6-ENG-007-初始主武器與火砲.md) | `feat：新增火砲與初始主武器選擇` |
