@@ -65,6 +65,11 @@ const POLYHAVEN_SHRUB_URL = `${import.meta.env.BASE_URL}assets/polyhaven/shrub_0
 const POLYHAVEN_AIRDUCT_URL = `${import.meta.env.BASE_URL}assets/polyhaven/modular_airduct_circular_01/modular_airduct_circular_01_1k.gltf`;
 const POLYHAVEN_STEEL_SHELVES_URL = `${import.meta.env.BASE_URL}assets/polyhaven/steel_frame_shelves_01/steel_frame_shelves_01_1k.gltf`;
 const POLYHAVEN_CRYSTALLINE_ICEPLANT_URL = `${import.meta.env.BASE_URL}assets/polyhaven/crystalline_iceplant/crystalline_iceplant_1k.gltf`;
+const SCENERY_LOOP_LENGTH = 72;
+const SCENERY_VISIBLE_START_Z = -8;
+const SCENERY_VISIBLE_END_Z = 64;
+
+type BackdropStyle = 'meadow' | 'viaduct' | 'forge' | 'canopy' | 'archive' | 'horizon';
 
 export class ThreeRuntime {
   private readonly scene = new Scene();
@@ -142,6 +147,8 @@ export class ThreeRuntime {
     this.sunLight.position.set(-4, 9, -2);
     this.scene.add(this.ambientLight, this.sunLight, this.sceneryGroup, this.viaductSceneryGroup, this.forgeSceneryGroup, this.canopySceneryGroup, this.archiveSceneryGroup, this.horizonSceneryGroup);
     this.createRoad();
+    this.createDenseChapterBackdrops();
+    this.createChapterRoadDetails();
     this.loadPolyhavenScenery();
     this.loadPolyhavenViaductScenery();
     this.loadPolyhavenBossModel();
@@ -173,9 +180,9 @@ export class ThreeRuntime {
     const width = Math.max(this.container.clientWidth, 1);
     const height = Math.max(this.container.clientHeight, 1);
     this.camera.aspect = width / height;
-    // A short landscape viewport needs a wider vertical view; a tall phone can
-    // keep the runner larger while still reserving the lower gameplay area.
-    this.camera.fov = this.camera.aspect > 1 ? 62 : 52;
+    // Narrow phones need a wider vertical FOV so all three lanes and their
+    // roadside framing stay inside the small horizontal viewing angle.
+    this.camera.fov = this.camera.aspect > 1 ? 62 : this.camera.aspect < 0.6 ? 68 : 58;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height, false);
   }
@@ -300,9 +307,162 @@ export class ThreeRuntime {
     for (let index = 0; index < 24; index += 1) {
       const segment = new Mesh(this.roadGeometry, this.roadMaterials[index % this.roadMaterials.length]!);
       segment.position.set(0, -0.1, index * 7 + 3.5);
+      segment.userData.roadIndex = index;
       this.roadMeshes.push(segment);
       this.scene.add(segment);
     }
+  }
+
+  private createDenseChapterBackdrops(): void {
+    const bays: ReadonlyArray<readonly [number, number, number, number]> = [
+      [-2.8, 8, 0.35, 0.12], [3.1, 20, 0.55, -0.16], [-3.6, 32, 0.7, 0.2],
+      [4.2, 44, 0.85, -0.12], [-4.8, 56, 1, 0.16], [5.4, 68, 1.12, -0.2],
+    ];
+    this.addBackdropBays(this.sceneryGroup, 'ch01-backdrop', 'meadow', bays, '#355f43', '#d6b45a');
+    this.addBackdropBays(this.viaductSceneryGroup, 'ch02-backdrop', 'viaduct', bays, '#1d3f70', '#70b8e8');
+    this.addBackdropBays(this.forgeSceneryGroup, 'ch03-backdrop', 'forge', bays, '#51283a', '#e36b37');
+    this.addBackdropBays(this.canopySceneryGroup, 'ch04-backdrop', 'canopy', bays, '#214d3d', '#62bea0');
+    this.addBackdropBays(this.archiveSceneryGroup, 'ch05-backdrop', 'archive', bays, '#182751', '#d2b85e');
+    this.addBackdropBays(this.horizonSceneryGroup, 'ch06-backdrop', 'horizon', bays, '#4b3564', '#e8d88b');
+  }
+
+  private createChapterRoadDetails(): void {
+    this.addRoadDetailBays(this.sceneryGroup, 'ch01-road-detail', 'meadow', '#8ab079', '#e0c56d');
+    this.addRoadDetailBays(this.viaductSceneryGroup, 'ch02-road-detail', 'viaduct', '#4b79ac', '#8ed4f2');
+    this.addRoadDetailBays(this.forgeSceneryGroup, 'ch03-road-detail', 'forge', '#6f3540', '#cf6038');
+    this.addRoadDetailBays(this.canopySceneryGroup, 'ch04-road-detail', 'canopy', '#3d7657', '#66a98c');
+    this.addRoadDetailBays(this.archiveSceneryGroup, 'ch05-road-detail', 'archive', '#334979', '#b49a51');
+    this.addRoadDetailBays(this.horizonSceneryGroup, 'ch06-road-detail', 'horizon', '#725894', '#c8b976');
+  }
+
+  private addRoadDetailBays(targetGroup: Group, name: string, style: BackdropStyle, primaryColor: string, accentColor: string): void {
+    const zNodes = [8, 20, 32, 44, 56, 68] as const;
+    for (const [nodeIndex, z] of zNodes.entries()) {
+      const detail = new Group();
+      detail.name = `${name}:${nodeIndex}`;
+      const panel = new MeshBasicMaterial({ color: primaryColor, transparent: true, opacity: 0.2, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+      const primary = new MeshBasicMaterial({ color: primaryColor, transparent: true, opacity: 0.78, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+      const accent = new MeshBasicMaterial({ color: accentColor, transparent: true, opacity: 0.72, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+      const add = (mesh: Mesh, x: number, localZ: number, rotationY = 0, scaleX = 1, scaleZ = 1): void => {
+        mesh.position.set(x, 0.18, localZ);
+        mesh.rotation.y = rotationY;
+        mesh.scale.set(scaleX, 1, scaleZ);
+        detail.add(mesh);
+      };
+      add(new Mesh(new BoxGeometry(8.6, 0.025, 6.8), panel), 0, 0);
+      add(new Mesh(new BoxGeometry(0.26, 0.04, 10.4), primary), -4.55, 0);
+      add(new Mesh(new BoxGeometry(0.26, 0.04, 10.4), primary), 4.55, 0);
+
+      const direction = nodeIndex % 2 === 0 ? 1 : -1;
+      if (style === 'meadow') {
+        add(new Mesh(new BoxGeometry(1.25, 0.035, 1.8), primary), direction * 3.35, -1.65, direction * 0.18);
+        add(new Mesh(new BoxGeometry(0.8, 0.035, 1.25), accent), -direction * 3.65, 2.1, -direction * 0.25);
+        add(new Mesh(new BoxGeometry(0.15, 0.035, 5.2), accent), direction * 1.85, 0.35, direction * 0.42);
+        add(new Mesh(new BoxGeometry(2.8, 0.035, 0.22), accent), -direction * 0.8, 2.35, -direction * 0.12);
+      } else if (style === 'viaduct') {
+        add(new Mesh(new BoxGeometry(8.3, 0.035, 0.46), accent), 0, -2.25);
+        add(new Mesh(new BoxGeometry(5.4, 0.035, 0.32), primary), 0, 2.25);
+        add(new Mesh(new BoxGeometry(0.18, 0.035, 5.4), accent), direction * 2.15, 0.25, direction * 0.28);
+      } else if (style === 'forge') {
+        add(new Mesh(new BoxGeometry(0.15, 0.035, 4.2), accent), direction * 1.7, 0.1, direction * 0.48);
+        add(new Mesh(new BoxGeometry(0.12, 0.035, 3.2), accent), -direction * 2.45, 1.35, -direction * 0.38);
+      } else if (style === 'canopy') {
+        add(new Mesh(new BoxGeometry(0.22, 0.035, 4.8), primary), direction * 2.7, 0, direction * 0.42);
+        add(new Mesh(new BoxGeometry(0.16, 0.035, 3.4), accent), -direction * 3.1, 1.45, -direction * 0.34);
+      } else if (style === 'archive') {
+        add(new Mesh(new BoxGeometry(7.6, 0.035, 0.38), accent), 0, 0);
+        const star = new Mesh(new OctahedronGeometry(0.28, 0), accent);
+        star.position.set(direction * 2.2, 0.12, 2.1);
+        star.scale.set(1, 0.18, 1);
+        detail.add(star);
+      } else {
+        add(new Mesh(new BoxGeometry(0.14, 0.035, 4.8), accent), direction * 1.15, -0.4, direction * 0.58);
+        add(new Mesh(new BoxGeometry(0.12, 0.035, 3.6), accent), -direction * 2.7, 1.8, -direction * 0.44);
+      }
+      detail.userData.worldZ = z;
+      detail.userData.sceneryIndex = targetGroup.children.length;
+      detail.userData.lowQualityVisible = nodeIndex % 2 === 0;
+      targetGroup.add(detail);
+    }
+  }
+
+  private addBackdropBays(
+    targetGroup: Group,
+    name: string,
+    style: BackdropStyle,
+    placements: ReadonlyArray<readonly [number, number, number, number]>,
+    primaryColor: string,
+    accentColor: string,
+  ): void {
+    for (const [placementIndex, [x, z, scale, rotationY]] of placements.entries()) {
+      const bay = this.createBackdropBay(style, primaryColor, accentColor, placementIndex);
+      bay.name = `${name}:${placementIndex}`;
+      bay.position.set(x, 0, z);
+      bay.rotation.y = rotationY;
+      bay.scale.setScalar(scale);
+      bay.userData.worldZ = z;
+      bay.userData.sceneryIndex = targetGroup.children.length;
+      bay.userData.sceneryParallax = 0.58;
+      bay.userData.lowQualityVisible = placementIndex % 2 === 0;
+      targetGroup.add(bay);
+    }
+  }
+
+  private createBackdropBay(style: BackdropStyle, primaryColor: string, accentColor: string, variant: number): Group {
+    const bay = new Group();
+    const direction = variant % 2 === 0 ? 1 : -1;
+    const primary = new MeshBasicMaterial({ color: primaryColor });
+    const accent = new MeshBasicMaterial({ color: accentColor, transparent: true, opacity: 0.82 });
+    const add = (mesh: Mesh, x: number, y: number, z: number, scaleX = 1, scaleY = 1, scaleZ = 1): Mesh => {
+      mesh.position.set(x, y, z);
+      mesh.scale.set(scaleX, scaleY, scaleZ);
+      bay.add(mesh);
+      return mesh;
+    };
+
+    if (style === 'meadow') {
+      add(new Mesh(new SphereGeometry(1.8, 8, 5), primary), 0, 0.02, 0, 2.25, 0.5, 1.35);
+      for (const [x, height] of [[-1.3, 1.6], [0.15, 2.1], [1.25, 1.35]] as const) {
+        add(new Mesh(new ConeGeometry(0.22, 1, 5), primary), x, height / 2, -0.25, 1, height, 1);
+      }
+      add(new Mesh(new BoxGeometry(0.18, 1.7, 0.18), accent), direction * 0.7, 1.05, 0.25);
+      const flag = add(new Mesh(new ConeGeometry(0.48, 0.85, 3), accent), direction * 1.05, 1.65, 0.25);
+      flag.rotation.z = -direction * Math.PI / 2;
+    } else if (style === 'viaduct') {
+      add(new Mesh(new BoxGeometry(4.2, 0.24, 5.2), primary), 0, 0.12, 0);
+      add(new Mesh(new BoxGeometry(0.9, 5.4, 0.9), primary), direction * 0.65, 2.7, 0);
+      add(new Mesh(new BoxGeometry(3.8, 0.32, 0.6), primary), 0, 4.5, 0);
+      add(new Mesh(new TorusGeometry(0.62, 0.11, 6, 18), accent), -direction * 0.45, 2.7, -0.5);
+      add(new Mesh(new BoxGeometry(0.18, 2.8, 0.18), accent), -direction * 1.25, 1.55, 0.2);
+    } else if (style === 'forge') {
+      add(new Mesh(new BoxGeometry(3.6, 0.18, 4.8), accent), 0, 0.1, 0);
+      add(new Mesh(new BoxGeometry(3.1, 3.4, 1.25), primary), 0, 1.7, 0.2);
+      add(new Mesh(new BoxGeometry(0.78, 5.4, 0.78), primary), direction * 1.2, 2.7, -0.1);
+      add(new Mesh(new TorusGeometry(0.72, 0.14, 6, 18), accent), -direction * 0.45, 1.75, -0.52);
+      add(new Mesh(new BoxGeometry(2.1, 0.16, 0.22), accent), -direction * 0.25, 0.72, -0.5);
+    } else if (style === 'canopy') {
+      add(new Mesh(new SphereGeometry(1.7, 8, 5), primary), 0, 0.02, 0, 2.2, 0.42, 1.4);
+      add(new Mesh(new BoxGeometry(0.92, 5.2, 0.92), primary), direction * 0.35, 2.6, 0);
+      const branch = add(new Mesh(new BoxGeometry(3.2, 0.42, 0.55), primary), -direction * 0.45, 3.7, 0);
+      branch.rotation.z = direction * 0.42;
+      add(new Mesh(new SphereGeometry(1.35, 7, 5), primary), -direction * 0.55, 4.9, 0, 1.45, 0.82, 1.1);
+      add(new Mesh(new SphereGeometry(0.22, 6, 4), accent), direction * 0.9, 3.1, -0.65);
+      add(new Mesh(new SphereGeometry(0.16, 6, 4), accent), -direction * 1.25, 4.25, -0.55);
+    } else if (style === 'archive') {
+      add(new Mesh(new BoxGeometry(4.2, 0.2, 5.2), primary), 0, 0.1, 0);
+      add(new Mesh(new BoxGeometry(0.42, 5.1, 0.8), primary), -1.45, 2.55, 0);
+      add(new Mesh(new BoxGeometry(0.42, 5.1, 0.8), primary), 1.45, 2.55, 0);
+      add(new Mesh(new BoxGeometry(3.35, 0.38, 0.8), primary), 0, 4.75, 0);
+      for (const y of [1.15, 2.15, 3.15]) add(new Mesh(new BoxGeometry(2.45, 0.14, 0.55), accent), 0, y, -0.5);
+      add(new Mesh(new SphereGeometry(0.3, 8, 6), accent), direction * 0.8, 4.1, -0.65);
+    } else {
+      add(new Mesh(new BoxGeometry(4.1, 0.3, 3.8), primary), 0, 0.15, 0);
+      add(new Mesh(new OctahedronGeometry(1.15, 0), primary), direction * 0.25, 2.3, 0, 0.9, 2.2, 0.9);
+      add(new Mesh(new OctahedronGeometry(0.55, 0), primary), -direction * 1.55, 1.45, -0.4, 0.7, 1.4, 0.7);
+      add(new Mesh(new OctahedronGeometry(0.38, 0), accent), direction * 1.55, 3.5, 0.2, 0.6, 1.8, 0.6);
+      add(new Mesh(new TorusGeometry(1.55, 0.1, 6, 24), accent), 0, 2.4, -0.55);
+    }
+    return bay;
   }
 
   private loadQuaterniusRoadModel(): void {
@@ -323,14 +483,14 @@ export class ThreeRuntime {
     if (this.roadModelTemplate === undefined || road.getObjectByName('ch01-road-model') !== undefined) return;
     const model = this.roadModelTemplate.clone(true);
     model.name = 'ch01-road-model';
-    model.scale.set(11, 0.16, 7);
+    model.scale.set(5.5, 0.16, 3.5);
     model.position.y = -0.16;
     model.traverse((child) => {
       if (child instanceof Mesh) {
         const material = (child.material as MeshBasicMaterial).clone();
         material.map = null;
         material.vertexColors = false;
-        if (material.color !== undefined) material.color.set('#315f4a');
+        if (material.color !== undefined) material.color.set((road.userData.roadIndex as number) % 2 === 0 ? '#294f3d' : '#4c7a57');
         child.material = material;
       }
     });
@@ -344,14 +504,14 @@ export class ThreeRuntime {
     if (this.roadModelTemplate === undefined || road.getObjectByName('ch02-road-model') !== undefined) return;
     const model = this.roadModelTemplate.clone(true);
     model.name = 'ch02-road-model';
-    model.scale.set(11, 0.16, 7);
+    model.scale.set(5.5, 0.16, 3.5);
     model.position.y = -0.16;
     model.traverse((child) => {
       if (child instanceof Mesh) {
         const material = (child.material as MeshBasicMaterial).clone();
         material.map = null;
         material.vertexColors = false;
-        if (material.color !== undefined) material.color.set('#274b7a');
+        if (material.color !== undefined) material.color.set((road.userData.roadIndex as number) % 2 === 0 ? '#203d68' : '#38699a');
         child.material = material;
       }
     });
@@ -363,14 +523,14 @@ export class ThreeRuntime {
     if (this.roadModelTemplate === undefined || road.getObjectByName('ch03-road-model') !== undefined) return;
     const model = this.roadModelTemplate.clone(true);
     model.name = 'ch03-road-model';
-    model.scale.set(11, 0.16, 7);
+    model.scale.set(5.5, 0.16, 3.5);
     model.position.y = -0.16;
     model.traverse((child) => {
       if (child instanceof Mesh) {
         const material = (child.material as MeshBasicMaterial).clone();
         material.map = null;
         material.vertexColors = false;
-        if (material.color !== undefined) material.color.set('#4b2425');
+        if (material.color !== undefined) material.color.set((road.userData.roadIndex as number) % 2 === 0 ? '#4b2425' : '#63302d');
         child.material = material;
       }
     });
@@ -382,14 +542,14 @@ export class ThreeRuntime {
     if (this.roadModelTemplate === undefined || road.getObjectByName('ch04-road-model') !== undefined) return;
     const model = this.roadModelTemplate.clone(true);
     model.name = 'ch04-road-model';
-    model.scale.set(11, 0.16, 7);
+    model.scale.set(5.5, 0.16, 3.5);
     model.position.y = -0.16;
     model.traverse((child) => {
       if (child instanceof Mesh) {
         const material = (child.material as MeshBasicMaterial).clone();
         material.map = null;
         material.vertexColors = false;
-        if (material.color !== undefined) material.color.set('#28604f');
+        if (material.color !== undefined) material.color.set((road.userData.roadIndex as number) % 2 === 0 ? '#28604f' : '#35735c');
         child.material = material;
       }
     });
@@ -401,14 +561,14 @@ export class ThreeRuntime {
     if (this.roadModelTemplate === undefined || road.getObjectByName('ch05-road-model') !== undefined) return;
     const model = this.roadModelTemplate.clone(true);
     model.name = 'ch05-road-model';
-    model.scale.set(11, 0.16, 7);
+    model.scale.set(5.5, 0.16, 3.5);
     model.position.y = -0.16;
     model.traverse((child) => {
       if (child instanceof Mesh) {
         const material = (child.material as MeshBasicMaterial).clone();
         material.map = null;
         material.vertexColors = false;
-        if (material.color !== undefined) material.color.set('#1f2b5c');
+        if (material.color !== undefined) material.color.set((road.userData.roadIndex as number) % 2 === 0 ? '#1f2b5c' : '#2b3a70');
         child.material = material;
       }
     });
@@ -420,14 +580,14 @@ export class ThreeRuntime {
     if (this.roadModelTemplate === undefined || road.getObjectByName('ch06-road-model') !== undefined) return;
     const model = this.roadModelTemplate.clone(true);
     model.name = 'ch06-road-model';
-    model.scale.set(11, 0.16, 7);
+    model.scale.set(5.5, 0.16, 3.5);
     model.position.y = -0.16;
     model.traverse((child) => {
       if (child instanceof Mesh) {
         const material = (child.material as MeshBasicMaterial).clone();
         material.map = null;
         material.vertexColors = false;
-        if (material.color !== undefined) material.color.set('#594178');
+        if (material.color !== undefined) material.color.set((road.userData.roadIndex as number) % 2 === 0 ? '#594178' : '#6a4f8b');
         child.material = material;
       }
     });
@@ -439,7 +599,7 @@ export class ThreeRuntime {
     new GLTFLoader().load(POLYHAVEN_ROCK_URL, (gltf) => {
       if (this.isDisposed) return;
       const placements: ReadonlyArray<readonly [number, number, number, number]> = [
-        [-7.4, 10, 10, 0.35], [7.3, 22, 9, -0.7], [-7.2, 38, 11, 1.15], [7.3, 56, 10, -1.55],
+        [-4.4, 10, 6.5, 0.35], [4.8, 22, 5.8, -0.7], [-5.2, 38, 6.2, 1.15], [5.4, 56, 5.5, -1.55],
       ];
       for (const [index, [x, z, scale, rotationY]] of placements.entries()) {
         const rock = gltf.scene.clone(true);
@@ -456,12 +616,12 @@ export class ThreeRuntime {
   private loadPolyhavenBackgroundKit(): void {
     this.loadGltf(POLYHAVEN_GRASS_MEDIUM_URL, 'Poly Haven Grass Medium 02', (scene) => {
       this.addSceneryModels(scene, this.sceneryGroup, 'ch01-grass', [
-        [-6.65, 14, 0.2, 0.35, 0], [6.7, 30, -0.75, 0.3, 0], [-6.7, 46, 0.55, 0.32, 0], [6.7, 62, -1.2, 0.35, 0],
+        [-3.4, 14, 0.2, 0.38, 0], [3.7, 30, -0.75, 0.34, 0], [-4.2, 46, 0.55, 0.36, 0], [4.6, 62, -1.2, 0.4, 0],
       ], '#7aa86c', 0.2);
     });
     this.loadGltf(POLYHAVEN_SHRUB_URL, 'Poly Haven Shrub 02 (meadow and canopy)', (scene) => {
       this.addSceneryModels(scene, this.sceneryGroup, 'ch01-shrub', [
-        [-7.6, 18, 0.2, 0.42, 0], [7.6, 34, -0.6, 0.38, 0], [-7.5, 50, 0.8, 0.45, 0],
+        [-4.1, 18, 0.2, 0.42, 0], [4.5, 34, -0.6, 0.38, 0], [-4.9, 50, 0.8, 0.45, 0],
       ], '#5f9567', 0.18);
       this.addSceneryModels(scene, this.canopySceneryGroup, 'ch04-shrub', [
         [6.5, 16, -0.25, 0.42, 0], [-6.5, 30, 0.45, 0.38, 0], [6.5, 54, -0.7, 0.45, 0], [-6.5, 68, 0.15, 0.4, 0],
@@ -1038,9 +1198,12 @@ export class ThreeRuntime {
         const worldZ = prop.userData.worldZ as number | undefined;
         const index = prop.userData.sceneryIndex as number | undefined;
         if (worldZ === undefined || index === undefined) continue;
-        const relativeZ = worldZ - snapshot.distanceMeters;
+        const parallax = (prop.userData.sceneryParallax as number | undefined) ?? 1;
+        const unwrappedZ = worldZ - snapshot.distanceMeters * parallax;
+        const relativeZ = ((unwrappedZ - SCENERY_VISIBLE_START_Z) % SCENERY_LOOP_LENGTH + SCENERY_LOOP_LENGTH) % SCENERY_LOOP_LENGTH + SCENERY_VISIBLE_START_Z;
+        const lowQualityVisible = prop.userData.lowQualityVisible === true || index % 3 === 0;
         prop.position.z = relativeZ;
-        prop.visible = relativeZ > -8 && relativeZ < 64 && (this.qualityMode === 'standard' || index < 2);
+        prop.visible = relativeZ > SCENERY_VISIBLE_START_Z && relativeZ < SCENERY_VISIBLE_END_Z && (this.qualityMode === 'standard' || lowQualityVisible);
       }
     }
   }
