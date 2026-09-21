@@ -11,6 +11,7 @@ test('進入 Run 後才掛載遊戲畫面', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: '開始 晨線草原' }).click();
   await expect(page.locator('.game-canvas')).toHaveCount(1);
+  await expect(page.getByLabel('晨線草原開始')).toContainText('CHAPTER 01');
 });
 
 test('可開始第一章 Run 並選取左側第一個 Gate', async ({ page }) => {

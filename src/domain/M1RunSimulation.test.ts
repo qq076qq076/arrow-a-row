@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BUFF_IDS } from '../content/BuffCatalog';
 import { BASE_ARROW_DAMAGE, BASE_CANNON_DAMAGE, BASE_LIGHTNING_DAMAGE_PER_SECOND, BOSS_START_DISTANCE, BOSS_STOP_DISTANCE, BOSS_WARNING_SECONDS, BOSS_WARNING_START_DISTANCE, CANNON_BLAST_RADIUS, CANNON_DAMAGE_BONUS, CANNON_RADIUS_BONUS, ENEMY_PROJECTILE_SPEED, ENEMY_SPAWN_Z, LIFE_STEAL_BONUS, getArrowDamageMultiplier, M1RunSimulation } from './M1RunSimulation';
+import { WORLD_SCROLL_SPEED } from './WorldMotion';
 
 function advanceToDistance(simulation: M1RunSimulation, distanceMeters: number): void {
   while (simulation.snapshot().distanceMeters < distanceMeters) {
@@ -31,6 +32,27 @@ function advanceToBossReward(simulation: M1RunSimulation, maxTicks = 18_000): Re
 }
 
 describe('M1RunSimulation', () => {
+  it('moves regular and charging enemies at the same speed as the world distance', () => {
+    const simulation = new M1RunSimulation();
+    simulation.start({ healthLevel: 100 });
+    const initial = simulation.snapshot();
+    expect(simulation.restore({
+      ...initial,
+      enemies: [{ id: 'charging-ranged', kind: 'ranged', x: 4, z: 20, hp: 12, telegraphSeconds: 0.5, deathSeconds: 0 }],
+      wavesCompleted: 1,
+    })).toBe(true);
+
+    const before = simulation.snapshot();
+    simulation.tick(0.25);
+    const after = simulation.snapshot();
+    const worldDelta = after.distanceMeters - before.distanceMeters;
+    const enemyDelta = before.enemies[0]!.z - after.enemies[0]!.z;
+
+    expect(worldDelta).toBeCloseTo(1);
+    expect(enemyDelta).toBeCloseTo(worldDelta);
+    expect(after.enemies[0]!.telegraphSeconds).toBeGreaterThan(0);
+  });
+
   it('starts every run without arrows and guarantees the first Gate weapon choice', () => {
     const simulation = new M1RunSimulation();
     simulation.start();
@@ -272,19 +294,19 @@ describe('M1RunSimulation', () => {
       enemyProjectiles: [],
     });
 
-    let observedStoppedTelegraph = false;
-    for (let tick = 0; tick < 180 && !observedStoppedTelegraph; tick += 1) {
+    let observedMovingTelegraph = false;
+    for (let tick = 0; tick < 180 && !observedMovingTelegraph; tick += 1) {
       const before = simulation.snapshot();
       const chargingEnemy = before.enemies[0];
       if (chargingEnemy !== undefined && chargingEnemy.telegraphSeconds > 0) {
         simulation.tick(0.1);
-        expect(simulation.snapshot().enemies[0]?.z).toBeCloseTo(chargingEnemy.z);
-        observedStoppedTelegraph = true;
+        expect(simulation.snapshot().enemies[0]?.z).toBeCloseTo(chargingEnemy.z - WORLD_SCROLL_SPEED * 0.1);
+        observedMovingTelegraph = true;
       } else {
         simulation.tick(1 / 30);
       }
     }
-    expect(observedStoppedTelegraph).toBe(true);
+    expect(observedMovingTelegraph).toBe(true);
     for (let tick = 0; tick < 180 && simulation.snapshot().enemyProjectiles.length === 0; tick += 1) simulation.tick(1 / 30);
     const telegraphAndShot = simulation.snapshot();
     expect(telegraphAndShot.enemies[0]).toBeDefined();

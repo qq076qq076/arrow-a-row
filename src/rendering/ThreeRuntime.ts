@@ -1,4 +1,5 @@
 import {
+  ACESFilmicToneMapping,
   AmbientLight,
   BoxGeometry,
   BufferGeometry,
@@ -6,6 +7,7 @@ import {
   CanvasTexture,
   ConeGeometry,
   DirectionalLight,
+  FogExp2,
   Group,
   IcosahedronGeometry,
   Line,
@@ -19,12 +21,14 @@ import {
   Sprite,
   SpriteMaterial,
   SphereGeometry,
+  SRGBColorSpace,
   TorusGeometry,
   Vector3,
   WebGLRenderer,
 } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import type { M1RunSnapshot } from '../domain/M1RunSimulation';
+import { getLoopedWorldZ } from '../domain/WorldMotion';
 import type { BuffId } from '../content/BuffCatalog';
 import type { ChapterId } from '../content/ChapterDefinitions';
 
@@ -68,8 +72,32 @@ const POLYHAVEN_CRYSTALLINE_ICEPLANT_URL = `${import.meta.env.BASE_URL}assets/po
 const SCENERY_LOOP_LENGTH = 72;
 const SCENERY_VISIBLE_START_Z = -8;
 const SCENERY_VISIBLE_END_Z = 64;
+const ROAD_SEGMENT_LENGTH = 7;
+const ROAD_LOOP_LENGTH = 24 * ROAD_SEGMENT_LENGTH;
+const ROAD_LOOP_START_Z = -ROAD_SEGMENT_LENGTH / 2;
 
 type BackdropStyle = 'meadow' | 'viaduct' | 'forge' | 'canopy' | 'archive' | 'horizon';
+
+interface AtmospherePalette {
+  readonly skyTop: string;
+  readonly skyHorizon: string;
+  readonly skyLow: string;
+  readonly fog: string;
+  readonly ground: string;
+  readonly ridge: string;
+  readonly ridgeFar: string;
+  readonly glow: string;
+  readonly mote: string;
+}
+
+const ATMOSPHERE_PALETTES: Record<BackdropStyle, AtmospherePalette> = {
+  meadow: { skyTop: '#173b46', skyHorizon: '#75a994', skyLow: '#e4c878', fog: '#789786', ground: '#355846', ridge: '#3f6949', ridgeFar: '#6c8d5c', glow: '#ffd47a', mote: '#f7df83' },
+  viaduct: { skyTop: '#0c1735', skyHorizon: '#416c9c', skyLow: '#9fcbe1', fog: '#567797', ground: '#111d38', ridge: '#203e67', ridgeFar: '#3f6387', glow: '#b8e7ff', mote: '#85d8ff' },
+  forge: { skyTop: '#1e0c21', skyHorizon: '#6d2d35', skyLow: '#e17344', fog: '#6e3d42', ground: '#25121c', ridge: '#4a222c', ridgeFar: '#743529', glow: '#ff8a4a', mote: '#ffb054' },
+  canopy: { skyTop: '#0d2928', skyHorizon: '#356f5c', skyLow: '#8fc6a0', fog: '#4f7564', ground: '#142e26', ridge: '#214a38', ridgeFar: '#407658', glow: '#a6f2c8', mote: '#75e6c1' },
+  archive: { skyTop: '#070d25', skyHorizon: '#263e6b', skyLow: '#81764f', fog: '#3b4764', ground: '#0d1430', ridge: '#172850', ridgeFar: '#36496c', glow: '#f0d27a', mote: '#f7db7d' },
+  horizon: { skyTop: '#18102d', skyHorizon: '#604b82', skyLow: '#c29f78', fog: '#62567c', ground: '#251b3d', ridge: '#432f5e', ridgeFar: '#755b89', glow: '#fff0a8', mote: '#d9baff' },
+};
 
 export class ThreeRuntime {
   private readonly scene = new Scene();
@@ -101,6 +129,7 @@ export class ThreeRuntime {
   private readonly canopySceneryGroup = new Group();
   private readonly archiveSceneryGroup = new Group();
   private readonly horizonSceneryGroup = new Group();
+  private readonly skyTextures = new Map<BackdropStyle, CanvasTexture>();
   private bossModelTemplate: Group | undefined;
   private ch02BossModelTemplate: Group | undefined;
   private ch03BossModelTemplate: Group | undefined;
@@ -133,7 +162,11 @@ export class ThreeRuntime {
   public constructor(private readonly container: HTMLElement) {
     this.renderer = new WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    this.renderer.outputColorSpace = SRGBColorSpace;
+    this.renderer.toneMapping = ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.06;
     this.renderer.setClearColor(new Color('#173b3a'));
+    this.scene.fog = new FogExp2('#789786', 0.012);
     this.container.append(this.renderer.domElement);
     // The box is a simulation hitbox only. Rendering it underneath the GLTF
     // avatar can create coplanar depth noise that looks like clothing flicker.
@@ -147,8 +180,8 @@ export class ThreeRuntime {
     this.sunLight.position.set(-4, 9, -2);
     this.scene.add(this.ambientLight, this.sunLight, this.sceneryGroup, this.viaductSceneryGroup, this.forgeSceneryGroup, this.canopySceneryGroup, this.archiveSceneryGroup, this.horizonSceneryGroup);
     this.createRoad();
+    this.createAtmosphericStages();
     this.createDenseChapterBackdrops();
-    this.createChapterRoadDetails();
     this.loadPolyhavenScenery();
     this.loadPolyhavenViaductScenery();
     this.loadPolyhavenBossModel();
@@ -195,6 +228,7 @@ export class ThreeRuntime {
     const simulationChanged = simulationKey !== this.lastSimulationKey;
     this.lastSimulationKey = simulationKey;
     if (simulationChanged) {
+      this.syncRoad(snapshot);
       this.syncScenery(snapshot);
       this.syncGates(snapshot);
       this.syncEnemies(snapshot);
@@ -219,7 +253,14 @@ export class ThreeRuntime {
     const isMirrorViaduct = chapterId === 'ch02_viaduct';
     const isForge = chapterId === 'ch03_forge';
     const palette = chapterId === 'ch04_canopy' ? ['#1b3b32', '#356c54', '#5c9b70'] : chapterId === 'ch05_archive' ? ['#101b3d', '#263d70', '#b69a50'] : chapterId === 'ch06_horizon' ? ['#392b4d', '#7a5d9b', '#e0c97a'] : isForge ? ['#3b1e35', '#64334e', '#9a4f3b'] : isMirrorViaduct ? ['#172849', '#243d69', '#31528a'] : ['#173b3a', '#315f4a', '#3d7755'];
+    const atmosphereStyle: BackdropStyle = chapterId === 'ch02_viaduct' ? 'viaduct' : chapterId === 'ch03_forge' ? 'forge' : chapterId === 'ch04_canopy' ? 'canopy' : chapterId === 'ch05_archive' ? 'archive' : chapterId === 'ch06_horizon' ? 'horizon' : 'meadow';
+    const atmosphere = ATMOSPHERE_PALETTES[atmosphereStyle];
     this.renderer.setClearColor(new Color(palette[0]!));
+    this.scene.background = this.getSkyTexture(atmosphereStyle);
+    if (this.scene.fog instanceof FogExp2) {
+      this.scene.fog.color.set(atmosphere.fog);
+      this.scene.fog.density = atmosphereStyle === 'forge' || atmosphereStyle === 'canopy' ? 0.015 : 0.012;
+    }
     this.roadMaterials[0]!.color.set(palette[1]!);
     this.roadMaterials[1]!.color.set(palette[2]!);
     this.ambientLight.color.set(chapterId === 'ch05_archive' ? '#b6b5e6' : chapterId === 'ch06_horizon' ? '#cab7ec' : isForge ? '#ffb39a' : isMirrorViaduct ? '#b9d9ff' : '#b5d3bd');
@@ -250,6 +291,7 @@ export class ThreeRuntime {
   }
 
   public render(): void {
+    this.animateAtmosphere(performance.now() / 1000);
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -299,6 +341,8 @@ export class ThreeRuntime {
     this.horizonSceneryGroup.traverse((child) => {
       if (child instanceof Mesh) this.disposeMesh(child);
     });
+    for (const texture of this.skyTextures.values()) texture.dispose();
+    this.skyTextures.clear();
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
@@ -306,17 +350,258 @@ export class ThreeRuntime {
   private createRoad(): void {
     for (let index = 0; index < 24; index += 1) {
       const segment = new Mesh(this.roadGeometry, this.roadMaterials[index % this.roadMaterials.length]!);
-      segment.position.set(0, -0.1, index * 7 + 3.5);
+      segment.position.set(0, -0.1, index * ROAD_SEGMENT_LENGTH + ROAD_SEGMENT_LENGTH / 2);
       segment.userData.roadIndex = index;
       this.roadMeshes.push(segment);
       this.scene.add(segment);
     }
   }
 
+  private createAtmosphericStages(): void {
+    const stages: ReadonlyArray<readonly [Group, BackdropStyle]> = [
+      [this.sceneryGroup, 'meadow'],
+      [this.viaductSceneryGroup, 'viaduct'],
+      [this.forgeSceneryGroup, 'forge'],
+      [this.canopySceneryGroup, 'canopy'],
+      [this.archiveSceneryGroup, 'archive'],
+      [this.horizonSceneryGroup, 'horizon'],
+    ];
+    for (const [group, style] of stages) this.createAtmosphericStage(group, style);
+  }
+
+  private createAtmosphericStage(targetGroup: Group, style: BackdropStyle): void {
+    const palette = ATMOSPHERE_PALETTES[style];
+    const ground = new Mesh(new BoxGeometry(64, 0.08, 104), new MeshBasicMaterial({ color: palette.ground }));
+    ground.name = `${style}-outer-ground`;
+    ground.position.set(0, -0.19, 37);
+    targetGroup.add(ground);
+
+    const sun = new Mesh(new SphereGeometry(style === 'archive' ? 2.2 : 3.4, 20, 12), new MeshBasicMaterial({ color: palette.glow, transparent: true, opacity: style === 'forge' ? 0.72 : 0.88, fog: false }));
+    sun.name = `${style}-horizon-glow`;
+    sun.position.set(style === 'viaduct' || style === 'archive' ? 9.5 : -10.5, style === 'canopy' ? 8.5 : 7.2, 60);
+    sun.userData.floatBaseY = sun.position.y;
+    sun.userData.floatAmplitude = 0.12;
+    sun.userData.floatSpeed = 0.22;
+    targetGroup.add(sun);
+
+    const ridgeMaterial = new MeshBasicMaterial({ color: palette.ridge, transparent: true, opacity: 0.9 });
+    const ridgeFarMaterial = new MeshBasicMaterial({ color: palette.ridgeFar, transparent: true, opacity: 0.72 });
+    const ridgeXs = [-23, -14, -5, 5, 14, 23] as const;
+    for (const [index, x] of ridgeXs.entries()) {
+      const isFar = index % 2 === 0;
+      const geometry = style === 'viaduct' || style === 'archive'
+        ? new BoxGeometry(7 + (index % 3), 7 + (index % 4) * 1.4, 4)
+        : style === 'horizon'
+          ? new OctahedronGeometry(4.5 + (index % 2), 0)
+          : new ConeGeometry(7 + (index % 3), 8 + (index % 2) * 3, style === 'forge' ? 5 : 7);
+      const ridge = new Mesh(geometry, isFar ? ridgeFarMaterial.clone() : ridgeMaterial.clone());
+      ridge.position.set(x, style === 'horizon' ? 3.6 : style === 'viaduct' || style === 'archive' ? ridge.geometry.boundingBox?.max.y ?? 3.5 : 2.8, isFar ? 68 : 61);
+      if (style === 'horizon') ridge.scale.set(1.35, 1.9, 0.72);
+      ridge.rotation.y = (index % 2 === 0 ? -1 : 1) * 0.18;
+      targetGroup.add(ridge);
+    }
+
+    const cloudMaterial = new MeshBasicMaterial({ color: style === 'forge' ? '#5b3038' : style === 'archive' ? '#8c91b0' : style === 'horizon' ? '#b39cc7' : '#d7e2cf', transparent: true, opacity: style === 'forge' ? 0.28 : 0.34, depthWrite: false, fog: false });
+    for (let index = 0; index < 5; index += 1) {
+      const cloud = new Group();
+      cloud.name = `${style}-cloud-${index}`;
+      const puffCount = style === 'forge' ? 4 : 3;
+      for (let puff = 0; puff < puffCount; puff += 1) {
+        const mesh = new Mesh(new SphereGeometry(1.2 + puff * 0.28, 8, 5), cloudMaterial.clone());
+        mesh.position.set(puff * 1.45, Math.sin(puff) * 0.35, puff % 2 === 0 ? 0 : -0.5);
+        mesh.scale.set(1.8, style === 'forge' ? 1.15 : 0.7, 0.9);
+        cloud.add(mesh);
+      }
+      cloud.position.set(-18 + index * 8.5, 7.5 + (index % 3) * 2.1, 42 + (index % 2) * 11);
+      cloud.userData.cloudBaseX = cloud.position.x;
+      cloud.userData.cloudAmplitude = 1.4 + index * 0.22;
+      cloud.userData.cloudSpeed = 0.06 + index * 0.012;
+      cloud.userData.cloudPhase = index * 0.9;
+      cloud.userData.lowQualityVisible = index % 2 === 0;
+      targetGroup.add(cloud);
+    }
+
+    const moteCount = style === 'meadow' || style === 'canopy' ? 28 : 20;
+    for (let index = 0; index < moteCount; index += 1) {
+      const size = 0.035 + (index % 4) * 0.018;
+      const mote = new Mesh(new SphereGeometry(size, 5, 4), new MeshBasicMaterial({ color: palette.mote, transparent: true, opacity: 0.38 + (index % 3) * 0.16, fog: false }));
+      mote.name = `${style}-mote-${index}`;
+      const side = index % 2 === 0 ? -1 : 1;
+      mote.position.set(side * (6.2 + ((index * 37) % 30) / 10), 0.7 + ((index * 19) % 45) / 10, 4 + ((index * 29) % 570) / 10);
+      mote.userData.floatBaseY = mote.position.y;
+      mote.userData.floatAmplitude = 0.18 + (index % 4) * 0.08;
+      mote.userData.floatSpeed = 0.75 + (index % 5) * 0.14;
+      mote.userData.floatPhase = index * 0.73;
+      mote.userData.atmosphereDetail = true;
+      mote.userData.detailIndex = index;
+      targetGroup.add(mote);
+    }
+
+    this.addChapterEdgeDetails(targetGroup, style, palette);
+  }
+
+  private addChapterEdgeDetails(targetGroup: Group, style: BackdropStyle, palette: AtmospherePalette): void {
+    const placements = [9, 18, 29, 41, 53, 65] as const;
+    for (const [index, z] of placements.entries()) {
+      const detail = new Group();
+      detail.name = `${style}-edge-detail-${index}`;
+      const side = index % 2 === 0 ? -1 : 1;
+      detail.position.set(side * (6.2 + (index % 3) * 0.7), 0, z);
+      detail.userData.worldZ = z;
+      detail.userData.sceneryIndex = targetGroup.children.length;
+      detail.userData.lowQualityVisible = index % 2 === 0;
+
+      if (style === 'meadow') {
+        for (let blade = 0; blade < 7; blade += 1) {
+          const stem = new Mesh(new ConeGeometry(0.045, 0.65 + (blade % 3) * 0.18, 5), new MeshBasicMaterial({ color: blade % 2 === 0 ? '#82ad70' : '#b5c977' }));
+          stem.position.set((blade - 3) * 0.22, 0.34 + (blade % 3) * 0.09, (blade % 2) * 0.2);
+          stem.rotation.z = (blade - 3) * 0.035;
+          detail.add(stem);
+          if (blade % 2 === 0) {
+            const flower = new Mesh(new SphereGeometry(0.1, 6, 4), new MeshBasicMaterial({ color: blade % 4 === 0 ? '#ffd979' : '#f2a9a0' }));
+            flower.position.set(stem.position.x, stem.position.y + 0.37, stem.position.z);
+            detail.add(flower);
+          }
+        }
+        const post = new Mesh(new BoxGeometry(0.18, 1.25, 0.18), new MeshBasicMaterial({ color: '#7d6847' }));
+        post.position.set(side * -0.55, 0.62, 0.25);
+        detail.add(post);
+      } else if (style === 'viaduct' || style === 'forge') {
+        const frame = new Mesh(new TorusGeometry(0.72, 0.09, 6, 18), new MeshBasicMaterial({ color: palette.glow, transparent: true, opacity: 0.7 }));
+        frame.position.y = 1.25;
+        frame.rotation.y = Math.PI / 2;
+        detail.add(frame);
+        const base = new Mesh(new BoxGeometry(0.8, 1.15, 0.8), new MeshBasicMaterial({ color: palette.ridge }));
+        base.position.y = 0.55;
+        detail.add(base);
+      } else if (style === 'canopy') {
+        const trunk = new Mesh(new ConeGeometry(0.42, 2.7, 7), new MeshBasicMaterial({ color: '#345541' }));
+        trunk.position.y = 1.35;
+        detail.add(trunk);
+        for (const [x, y] of [[-0.35, 2.45], [0.3, 2.7], [0.05, 3.15]] as const) {
+          const crown = new Mesh(new SphereGeometry(0.75, 7, 5), new MeshBasicMaterial({ color: x > 0 ? '#4f8a67' : '#396e55' }));
+          crown.position.set(x, y, 0);
+          detail.add(crown);
+        }
+      } else if (style === 'archive') {
+        const pillar = new Mesh(new BoxGeometry(0.8, 3.2, 0.8), new MeshBasicMaterial({ color: palette.ridge }));
+        pillar.position.y = 1.6;
+        detail.add(pillar);
+        const beacon = new Mesh(new OctahedronGeometry(0.34, 0), new MeshBasicMaterial({ color: palette.glow }));
+        beacon.position.y = 3.45;
+        beacon.userData.floatBaseY = beacon.position.y;
+        detail.add(beacon);
+      } else {
+        const shard = new Mesh(new OctahedronGeometry(0.75, 0), new MeshBasicMaterial({ color: index % 2 === 0 ? palette.glow : palette.mote, transparent: true, opacity: 0.78 }));
+        shard.position.y = 1.35;
+        shard.scale.set(0.65, 2.2, 0.65);
+        detail.add(shard);
+        const ring = new Mesh(new TorusGeometry(1.1, 0.06, 6, 22), new MeshBasicMaterial({ color: palette.glow, transparent: true, opacity: 0.55 }));
+        ring.position.y = 1.3;
+        ring.rotation.x = Math.PI / 2;
+        detail.add(ring);
+      }
+      targetGroup.add(detail);
+    }
+  }
+
+  private getSkyTexture(style: BackdropStyle): CanvasTexture {
+    const cached = this.skyTextures.get(style);
+    if (cached !== undefined) return cached;
+    const palette = ATMOSPHERE_PALETTES[style];
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 512;
+    const context = canvas.getContext('2d');
+    if (context === null) throw new Error('無法建立天空背景。');
+    const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, palette.skyTop);
+    gradient.addColorStop(0.58, palette.skyHorizon);
+    gradient.addColorStop(1, palette.skyLow);
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    const glowX = style === 'viaduct' || style === 'archive' ? 760 : 260;
+    const glowY = style === 'canopy' ? 190 : 155;
+    const glowGradient = context.createRadialGradient(glowX, glowY, 8, glowX, glowY, style === 'archive' ? 72 : 108);
+    glowGradient.addColorStop(0, palette.glow);
+    glowGradient.addColorStop(0.34, `${palette.glow}c7`);
+    glowGradient.addColorStop(1, `${palette.glow}00`);
+    context.fillStyle = glowGradient;
+    context.beginPath();
+    context.arc(glowX, glowY, style === 'archive' ? 72 : 108, 0, Math.PI * 2);
+    context.fill();
+
+    const drawRidge = (baseline: number, amplitude: number, color: string, offset: number): void => {
+      context.fillStyle = color;
+      context.beginPath();
+      context.moveTo(0, canvas.height);
+      context.lineTo(0, baseline);
+      for (let x = 0; x <= canvas.width; x += 64) {
+        const peak = Math.sin((x + offset) * 0.018) * amplitude + Math.sin((x + offset) * 0.041) * amplitude * 0.35;
+        context.lineTo(x, baseline - Math.abs(peak));
+      }
+      context.lineTo(canvas.width, canvas.height);
+      context.closePath();
+      context.fill();
+    };
+    drawRidge(330, style === 'viaduct' || style === 'archive' ? 32 : 54, `${palette.ridgeFar}b8`, 37);
+    drawRidge(390, style === 'horizon' ? 86 : 62, palette.ridge, 113);
+
+    context.fillStyle = style === 'forge' ? '#e8a2722c' : '#f5f1d426';
+    for (let index = 0; index < 9; index += 1) {
+      const x = 42 + ((index * 137) % 920);
+      const y = 70 + ((index * 53) % 170);
+      context.beginPath();
+      context.ellipse(x, y, 65 + (index % 3) * 22, 12 + (index % 2) * 7, (index % 2 === 0 ? -1 : 1) * 0.08, 0, Math.PI * 2);
+      context.fill();
+    }
+
+    context.fillStyle = `${palette.mote}8c`;
+    for (let index = 0; index < 48; index += 1) {
+      const x = (index * 83 + 29) % canvas.width;
+      const y = (index * 47 + 21) % 310;
+      const radius = 0.8 + (index % 3) * 0.65;
+      context.beginPath();
+      context.arc(x, y, radius, 0, Math.PI * 2);
+      context.fill();
+    }
+    const texture = new CanvasTexture(canvas);
+    texture.colorSpace = SRGBColorSpace;
+    this.skyTextures.set(style, texture);
+    return texture;
+  }
+
+  private animateAtmosphere(timeSeconds: number): void {
+    const activeGroup = this.themedChapterId === 'ch02_viaduct' ? this.viaductSceneryGroup : this.themedChapterId === 'ch03_forge' ? this.forgeSceneryGroup : this.themedChapterId === 'ch04_canopy' ? this.canopySceneryGroup : this.themedChapterId === 'ch05_archive' ? this.archiveSceneryGroup : this.themedChapterId === 'ch06_horizon' ? this.horizonSceneryGroup : this.sceneryGroup;
+    for (const child of activeGroup.children) {
+      const floatBaseY = child.userData.floatBaseY as number | undefined;
+      if (floatBaseY !== undefined) {
+        const amplitude = (child.userData.floatAmplitude as number | undefined) ?? 0.2;
+        const speed = (child.userData.floatSpeed as number | undefined) ?? 0.8;
+        const phase = (child.userData.floatPhase as number | undefined) ?? 0;
+        child.position.y = floatBaseY + Math.sin(timeSeconds * speed + phase) * amplitude;
+      }
+      const cloudBaseX = child.userData.cloudBaseX as number | undefined;
+      if (cloudBaseX !== undefined) {
+        const amplitude = child.userData.cloudAmplitude as number;
+        const speed = child.userData.cloudSpeed as number;
+        const phase = child.userData.cloudPhase as number;
+        child.position.x = cloudBaseX + Math.sin(timeSeconds * speed + phase) * amplitude;
+        child.visible = this.qualityMode === 'standard' || child.userData.lowQualityVisible === true;
+      }
+      if (child.userData.atmosphereDetail === true) {
+        const detailIndex = child.userData.detailIndex as number;
+        child.visible = this.qualityMode === 'standard' || detailIndex % 3 === 0;
+        child.rotation.y = timeSeconds * (0.18 + (detailIndex % 4) * 0.04);
+      }
+    }
+  }
+
   private createDenseChapterBackdrops(): void {
     const bays: ReadonlyArray<readonly [number, number, number, number]> = [
-      [-2.8, 8, 0.35, 0.12], [3.1, 20, 0.55, -0.16], [-3.6, 32, 0.7, 0.2],
-      [4.2, 44, 0.85, -0.12], [-4.8, 56, 1, 0.16], [5.4, 68, 1.12, -0.2],
+      [-8, 8, 0.35, 0.12], [8.5, 20, 0.55, -0.16], [-9.2, 32, 0.7, 0.2],
+      [9.8, 44, 0.85, -0.12], [-10.4, 56, 1, 0.16], [11, 68, 1.12, -0.2],
     ];
     this.addBackdropBays(this.sceneryGroup, 'ch01-backdrop', 'meadow', bays, '#355f43', '#d6b45a');
     this.addBackdropBays(this.viaductSceneryGroup, 'ch02-backdrop', 'viaduct', bays, '#1d3f70', '#70b8e8');
@@ -324,66 +609,6 @@ export class ThreeRuntime {
     this.addBackdropBays(this.canopySceneryGroup, 'ch04-backdrop', 'canopy', bays, '#214d3d', '#62bea0');
     this.addBackdropBays(this.archiveSceneryGroup, 'ch05-backdrop', 'archive', bays, '#182751', '#d2b85e');
     this.addBackdropBays(this.horizonSceneryGroup, 'ch06-backdrop', 'horizon', bays, '#4b3564', '#e8d88b');
-  }
-
-  private createChapterRoadDetails(): void {
-    this.addRoadDetailBays(this.sceneryGroup, 'ch01-road-detail', 'meadow', '#8ab079', '#e0c56d');
-    this.addRoadDetailBays(this.viaductSceneryGroup, 'ch02-road-detail', 'viaduct', '#4b79ac', '#8ed4f2');
-    this.addRoadDetailBays(this.forgeSceneryGroup, 'ch03-road-detail', 'forge', '#6f3540', '#cf6038');
-    this.addRoadDetailBays(this.canopySceneryGroup, 'ch04-road-detail', 'canopy', '#3d7657', '#66a98c');
-    this.addRoadDetailBays(this.archiveSceneryGroup, 'ch05-road-detail', 'archive', '#334979', '#b49a51');
-    this.addRoadDetailBays(this.horizonSceneryGroup, 'ch06-road-detail', 'horizon', '#725894', '#c8b976');
-  }
-
-  private addRoadDetailBays(targetGroup: Group, name: string, style: BackdropStyle, primaryColor: string, accentColor: string): void {
-    const zNodes = [8, 20, 32, 44, 56, 68] as const;
-    for (const [nodeIndex, z] of zNodes.entries()) {
-      const detail = new Group();
-      detail.name = `${name}:${nodeIndex}`;
-      const panel = new MeshBasicMaterial({ color: primaryColor, transparent: true, opacity: 0.2, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
-      const primary = new MeshBasicMaterial({ color: primaryColor, transparent: true, opacity: 0.78, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
-      const accent = new MeshBasicMaterial({ color: accentColor, transparent: true, opacity: 0.72, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
-      const add = (mesh: Mesh, x: number, localZ: number, rotationY = 0, scaleX = 1, scaleZ = 1): void => {
-        mesh.position.set(x, 0.18, localZ);
-        mesh.rotation.y = rotationY;
-        mesh.scale.set(scaleX, 1, scaleZ);
-        detail.add(mesh);
-      };
-      add(new Mesh(new BoxGeometry(8.6, 0.025, 6.8), panel), 0, 0);
-      add(new Mesh(new BoxGeometry(0.26, 0.04, 10.4), primary), -4.55, 0);
-      add(new Mesh(new BoxGeometry(0.26, 0.04, 10.4), primary), 4.55, 0);
-
-      const direction = nodeIndex % 2 === 0 ? 1 : -1;
-      if (style === 'meadow') {
-        add(new Mesh(new BoxGeometry(1.25, 0.035, 1.8), primary), direction * 3.35, -1.65, direction * 0.18);
-        add(new Mesh(new BoxGeometry(0.8, 0.035, 1.25), accent), -direction * 3.65, 2.1, -direction * 0.25);
-        add(new Mesh(new BoxGeometry(0.15, 0.035, 5.2), accent), direction * 1.85, 0.35, direction * 0.42);
-        add(new Mesh(new BoxGeometry(2.8, 0.035, 0.22), accent), -direction * 0.8, 2.35, -direction * 0.12);
-      } else if (style === 'viaduct') {
-        add(new Mesh(new BoxGeometry(8.3, 0.035, 0.46), accent), 0, -2.25);
-        add(new Mesh(new BoxGeometry(5.4, 0.035, 0.32), primary), 0, 2.25);
-        add(new Mesh(new BoxGeometry(0.18, 0.035, 5.4), accent), direction * 2.15, 0.25, direction * 0.28);
-      } else if (style === 'forge') {
-        add(new Mesh(new BoxGeometry(0.15, 0.035, 4.2), accent), direction * 1.7, 0.1, direction * 0.48);
-        add(new Mesh(new BoxGeometry(0.12, 0.035, 3.2), accent), -direction * 2.45, 1.35, -direction * 0.38);
-      } else if (style === 'canopy') {
-        add(new Mesh(new BoxGeometry(0.22, 0.035, 4.8), primary), direction * 2.7, 0, direction * 0.42);
-        add(new Mesh(new BoxGeometry(0.16, 0.035, 3.4), accent), -direction * 3.1, 1.45, -direction * 0.34);
-      } else if (style === 'archive') {
-        add(new Mesh(new BoxGeometry(7.6, 0.035, 0.38), accent), 0, 0);
-        const star = new Mesh(new OctahedronGeometry(0.28, 0), accent);
-        star.position.set(direction * 2.2, 0.12, 2.1);
-        star.scale.set(1, 0.18, 1);
-        detail.add(star);
-      } else {
-        add(new Mesh(new BoxGeometry(0.14, 0.035, 4.8), accent), direction * 1.15, -0.4, direction * 0.58);
-        add(new Mesh(new BoxGeometry(0.12, 0.035, 3.6), accent), -direction * 2.7, 1.8, -direction * 0.44);
-      }
-      detail.userData.worldZ = z;
-      detail.userData.sceneryIndex = targetGroup.children.length;
-      detail.userData.lowQualityVisible = nodeIndex % 2 === 0;
-      targetGroup.add(detail);
-    }
   }
 
   private addBackdropBays(
@@ -402,7 +627,6 @@ export class ThreeRuntime {
       bay.scale.setScalar(scale);
       bay.userData.worldZ = z;
       bay.userData.sceneryIndex = targetGroup.children.length;
-      bay.userData.sceneryParallax = 0.58;
       bay.userData.lowQualityVisible = placementIndex % 2 === 0;
       targetGroup.add(bay);
     }
@@ -599,7 +823,7 @@ export class ThreeRuntime {
     new GLTFLoader().load(POLYHAVEN_ROCK_URL, (gltf) => {
       if (this.isDisposed) return;
       const placements: ReadonlyArray<readonly [number, number, number, number]> = [
-        [-4.4, 10, 6.5, 0.35], [4.8, 22, 5.8, -0.7], [-5.2, 38, 6.2, 1.15], [5.4, 56, 5.5, -1.55],
+        [-7.4, 10, 6.5, 0.35], [7.6, 22, 5.8, -0.7], [-7.8, 38, 6.2, 1.15], [7.7, 56, 5.5, -1.55],
       ];
       for (const [index, [x, z, scale, rotationY]] of placements.entries()) {
         const rock = gltf.scene.clone(true);
@@ -616,36 +840,36 @@ export class ThreeRuntime {
   private loadPolyhavenBackgroundKit(): void {
     this.loadGltf(POLYHAVEN_GRASS_MEDIUM_URL, 'Poly Haven Grass Medium 02', (scene) => {
       this.addSceneryModels(scene, this.sceneryGroup, 'ch01-grass', [
-        [-3.4, 14, 0.2, 0.38, 0], [3.7, 30, -0.75, 0.34, 0], [-4.2, 46, 0.55, 0.36, 0], [4.6, 62, -1.2, 0.4, 0],
+        [-6.8, 14, 0.2, 0.38, 0], [6.9, 30, -0.75, 0.34, 0], [-7.1, 46, 0.55, 0.36, 0], [7.2, 62, -1.2, 0.4, 0],
       ], '#7aa86c', 0.2);
     });
     this.loadGltf(POLYHAVEN_SHRUB_URL, 'Poly Haven Shrub 02 (meadow and canopy)', (scene) => {
       this.addSceneryModels(scene, this.sceneryGroup, 'ch01-shrub', [
-        [-4.1, 18, 0.2, 0.42, 0], [4.5, 34, -0.6, 0.38, 0], [-4.9, 50, 0.8, 0.45, 0],
+        [-7, 18, 0.2, 0.42, 0], [7.1, 34, -0.6, 0.38, 0], [-7.3, 50, 0.8, 0.45, 0],
       ], '#5f9567', 0.18);
       this.addSceneryModels(scene, this.canopySceneryGroup, 'ch04-shrub', [
-        [6.5, 16, -0.25, 0.42, 0], [-6.5, 30, 0.45, 0.38, 0], [6.5, 54, -0.7, 0.45, 0], [-6.5, 68, 0.15, 0.4, 0],
+        [7.2, 16, -0.25, 0.42, 0], [-7.2, 30, 0.45, 0.38, 0], [7.2, 54, -0.7, 0.45, 0], [-7.2, 68, 0.15, 0.4, 0],
       ], '#4d8f70', 0.22);
     });
     this.loadGltf(POLYHAVEN_AIRDUCT_URL, 'Poly Haven Modular Airduct Circular 01', (scene) => {
       this.addSceneryModels(scene, this.viaductSceneryGroup, 'ch02-airduct', [
-        [-6, 18, Math.PI / 2, 0.55, 2.4], [6, 34, -Math.PI / 2, 0.5, 2.4], [-6, 50, Math.PI / 2, 0.55, 2.4],
+        [-7.2, 18, Math.PI / 2, 0.55, 2.4], [7.2, 34, -Math.PI / 2, 0.5, 2.4], [-7.2, 50, Math.PI / 2, 0.55, 2.4],
       ], '#5e94bf', 0.2);
       this.addSceneryModels(scene, this.forgeSceneryGroup, 'ch03-airduct', [
-        [5.8, 20, -Math.PI / 2, 0.62, 2.1], [-5.8, 42, Math.PI / 2, 0.58, 2.1], [5.8, 64, -Math.PI / 2, 0.62, 2.1],
+        [7.2, 20, -Math.PI / 2, 0.62, 2.1], [-7.2, 42, Math.PI / 2, 0.58, 2.1], [7.2, 64, -Math.PI / 2, 0.62, 2.1],
       ], '#c15d43', 0.25);
       this.addSceneryModels(scene, this.horizonSceneryGroup, 'ch06-airduct', [
-        [-6.2, 22, Math.PI / 2, 0.55, 2.4], [6.2, 46, -Math.PI / 2, 0.5, 2.4],
+        [-7.3, 22, Math.PI / 2, 0.55, 2.4], [7.3, 46, -Math.PI / 2, 0.5, 2.4],
       ], '#a995d4', 0.28);
     });
     this.loadGltf(POLYHAVEN_STEEL_SHELVES_URL, 'Poly Haven Steel Frame Shelves 01', (scene) => {
       this.addSceneryModels(scene, this.archiveSceneryGroup, 'ch05-steel-shelf', [
-        [5.6, 22, -Math.PI / 2, 1.1, 0], [-5.6, 48, Math.PI / 2, 1.05, 0], [5.6, 70, -Math.PI / 2, 1.1, 0],
+        [7.2, 22, -Math.PI / 2, 1.1, 0], [-7.2, 48, Math.PI / 2, 1.05, 0], [7.2, 70, -Math.PI / 2, 1.1, 0],
       ], '#4b6995', 0.28);
     });
     this.loadGltf(POLYHAVEN_CRYSTALLINE_ICEPLANT_URL, 'Poly Haven Crystalline Iceplant', (scene) => {
       this.addSceneryModels(scene, this.horizonSceneryGroup, 'ch06-crystal-groundcover', [
-        [-6.4, 16, 0.2, 0.8, 0.08], [6.4, 34, -0.4, 0.72, 0.08], [-6.4, 52, 0.5, 0.78, 0.08], [6.4, 70, -0.8, 0.68, 0.08],
+        [-7.3, 16, 0.2, 0.8, 0.08], [7.3, 34, -0.4, 0.72, 0.08], [-7.3, 52, 0.5, 0.78, 0.08], [7.3, 70, -0.8, 0.68, 0.08],
       ], '#c4b4ff', 0.38);
     });
   }
@@ -790,7 +1014,7 @@ export class ThreeRuntime {
   private loadPolyhavenViaductScenery(): void {
     this.loadGltf(POLYHAVEN_STREET_LAMP_URL, 'Poly Haven Street Lamp 01', (scene) => {
       const placements: ReadonlyArray<readonly [number, number, number]> = [
-        [-5.1, 12, Math.PI / 2], [5.1, 26, -Math.PI / 2], [-5.1, 40, Math.PI / 2], [5.1, 54, -Math.PI / 2],
+        [-6.8, 12, Math.PI / 2], [6.8, 26, -Math.PI / 2], [-6.8, 40, Math.PI / 2], [6.8, 54, -Math.PI / 2],
       ];
       for (const [x, z, rotationY] of placements) {
         const lamp = scene.clone(true);
@@ -810,7 +1034,7 @@ export class ThreeRuntime {
   private loadPolyhavenViaductProps(): void {
     this.loadGltf(POLYHAVEN_POWER_BOX_URL, 'Poly Haven Power Box 01', (scene) => {
       const placements: ReadonlyArray<readonly [number, number, number]> = [
-        [5.4, 18, -Math.PI / 2], [-5.4, 34, Math.PI / 2], [5.4, 50, -Math.PI / 2],
+        [6.8, 18, -Math.PI / 2], [-6.8, 34, Math.PI / 2], [6.8, 50, -Math.PI / 2],
       ];
       for (const [x, z, rotationY] of placements) {
         const prop = scene.clone(true);
@@ -883,7 +1107,7 @@ export class ThreeRuntime {
           this.attachEnemyModel(enemy, 'melee', 'ch03_forge');
         }
       }
-      const placements: ReadonlyArray<readonly [number, number, number]> = [[-5.4, 16, 0.2], [5.4, 44, -0.4], [-5.5, 62, 0.7]];
+      const placements: ReadonlyArray<readonly [number, number, number]> = [[-6.9, 16, 0.2], [6.9, 44, -0.4], [-7, 62, 0.7]];
       for (const [x, z, rotationY] of placements) {
         const barrel = scene.clone(true);
         barrel.position.set(x, 0.12, z);
@@ -911,7 +1135,7 @@ export class ThreeRuntime {
       this.syncChapterBossModel(this.bossChapterId);
     });
     this.loadGltf(POLYHAVEN_INDUSTRIAL_PIPES_URL, 'Poly Haven Modular Industrial Pipes 01', (scene) => {
-      const placements: ReadonlyArray<readonly [number, number, number, number]> = [[5.9, 10, -Math.PI / 2, 1.2], [-5.9, 30, Math.PI / 2, 1.05], [5.9, 52, -Math.PI / 2, 1.2]];
+      const placements: ReadonlyArray<readonly [number, number, number, number]> = [[7.2, 10, -Math.PI / 2, 1.2], [-7.2, 30, Math.PI / 2, 1.05], [7.2, 52, -Math.PI / 2, 1.2]];
       for (const [x, z, rotationY, scale] of placements) {
         const pipes = scene.clone(true);
         pipes.position.set(x, 0, z);
@@ -945,7 +1169,7 @@ export class ThreeRuntime {
       this.syncChapterBossModel(this.bossChapterId);
     });
     this.loadGltf(POLYHAVEN_TREE_SMALL_URL, 'Poly Haven Tree Small 02', (scene) => {
-      const placements: ReadonlyArray<readonly [number, number, number, number]> = [[-6.2, 12, 0.2, 1.1], [6.2, 38, -0.35, 0.9], [-6.2, 60, 0.4, 1.15]];
+      const placements: ReadonlyArray<readonly [number, number, number, number]> = [[-7.5, 12, 0.2, 1.1], [7.5, 38, -0.35, 0.9], [-7.5, 60, 0.4, 1.15]];
       for (const [x, z, rotationY, scale] of placements) {
         const tree = scene.clone(true);
         tree.position.set(x, 0, z);
@@ -960,7 +1184,7 @@ export class ThreeRuntime {
       }
     });
     this.loadGltf(POLYHAVEN_PINE_ROOTS_URL, 'Poly Haven Pine Roots', (scene) => {
-      const placements: ReadonlyArray<readonly [number, number, number, number]> = [[5.3, 22, -Math.PI / 2, 1.3], [-5.4, 48, Math.PI / 2, 1.15], [5.2, 70, -Math.PI / 2, 1.25]];
+      const placements: ReadonlyArray<readonly [number, number, number, number]> = [[7, 22, -Math.PI / 2, 1.3], [-7, 48, Math.PI / 2, 1.15], [7, 70, -Math.PI / 2, 1.25]];
       for (const [x, z, rotationY, scale] of placements) {
         const roots = scene.clone(true);
         roots.position.set(x, 0, z);
@@ -998,7 +1222,7 @@ export class ThreeRuntime {
     this.loadGltf(POLYHAVEN_MARBLE_BUST_URL, 'Poly Haven Marble Bust 01', (scene) => {
       this.ch05BossModelTemplate = scene;
       this.syncChapterBossModel(this.bossChapterId);
-      const placements: ReadonlyArray<readonly [number, number, number, number]> = [[-5.6, 21, 0.35, 1.35], [5.6, 51, -0.4, 1.2]];
+      const placements: ReadonlyArray<readonly [number, number, number, number]> = [[-7, 21, 0.35, 1.35], [7, 51, -0.4, 1.2]];
       for (const [x, z, rotationY, scale] of placements) {
         const bust = scene.clone(true);
         bust.position.set(x, 0, z);
@@ -1013,7 +1237,7 @@ export class ThreeRuntime {
       }
     });
     this.loadGltf(POLYHAVEN_SHELF_URL, 'Poly Haven Shelf 01', (scene) => {
-      const placements: ReadonlyArray<readonly [number, number, number, number]> = [[-5.6, 10, Math.PI / 2, 1.45], [5.6, 35, -Math.PI / 2, 1.25], [-5.6, 64, Math.PI / 2, 1.4]];
+      const placements: ReadonlyArray<readonly [number, number, number, number]> = [[-7.2, 10, Math.PI / 2, 1.45], [7.2, 35, -Math.PI / 2, 1.25], [-7.2, 64, Math.PI / 2, 1.4]];
       for (const [x, z, rotationY, scale] of placements) {
         const shelf = scene.clone(true);
         shelf.position.set(x, 0, z);
@@ -1047,7 +1271,7 @@ export class ThreeRuntime {
       this.syncChapterBossModel(this.bossChapterId);
     });
     this.loadGltf(POLYHAVEN_INDUSTRIAL_PIPES_URL, 'Poly Haven Industrial Pipes (horizon)', (scene) => {
-      for (const [x, z, rotationY] of [[-5.8, 14, Math.PI / 2], [5.8, 42, -Math.PI / 2], [-5.8, 68, Math.PI / 2]] as const) {
+      for (const [x, z, rotationY] of [[-7.2, 14, Math.PI / 2], [7.2, 42, -Math.PI / 2], [-7.2, 68, Math.PI / 2]] as const) {
         const prop = scene.clone(true);
         prop.position.set(x, 0, z);
         prop.rotation.y = rotationY;
@@ -1192,15 +1416,21 @@ export class ThreeRuntime {
     this.bossMesh.userData.chapterBossAttached = true;
   }
 
+  private syncRoad(snapshot: M1RunSnapshot): void {
+    for (const road of this.roadMeshes) {
+      const roadIndex = road.userData.roadIndex as number;
+      const baseWorldZ = roadIndex * ROAD_SEGMENT_LENGTH + ROAD_SEGMENT_LENGTH / 2;
+      road.position.z = getLoopedWorldZ(baseWorldZ, snapshot.distanceMeters, ROAD_LOOP_START_Z, ROAD_LOOP_LENGTH);
+    }
+  }
+
   private syncScenery(snapshot: M1RunSnapshot): void {
     for (const group of [this.sceneryGroup, this.viaductSceneryGroup, this.forgeSceneryGroup, this.canopySceneryGroup, this.archiveSceneryGroup, this.horizonSceneryGroup]) {
       for (const prop of group.children) {
         const worldZ = prop.userData.worldZ as number | undefined;
         const index = prop.userData.sceneryIndex as number | undefined;
         if (worldZ === undefined || index === undefined) continue;
-        const parallax = (prop.userData.sceneryParallax as number | undefined) ?? 1;
-        const unwrappedZ = worldZ - snapshot.distanceMeters * parallax;
-        const relativeZ = ((unwrappedZ - SCENERY_VISIBLE_START_Z) % SCENERY_LOOP_LENGTH + SCENERY_LOOP_LENGTH) % SCENERY_LOOP_LENGTH + SCENERY_VISIBLE_START_Z;
+        const relativeZ = getLoopedWorldZ(worldZ, snapshot.distanceMeters, SCENERY_VISIBLE_START_Z, SCENERY_LOOP_LENGTH);
         const lowQualityVisible = prop.userData.lowQualityVisible === true || index % 3 === 0;
         prop.position.z = relativeZ;
         prop.visible = relativeZ > SCENERY_VISIBLE_START_Z && relativeZ < SCENERY_VISIBLE_END_Z && (this.qualityMode === 'standard' || lowQualityVisible);
