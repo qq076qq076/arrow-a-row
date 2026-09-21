@@ -130,6 +130,7 @@ export class ThreeRuntime {
   private readonly archiveSceneryGroup = new Group();
   private readonly horizonSceneryGroup = new Group();
   private readonly skyTextures = new Map<BackdropStyle, CanvasTexture>();
+  private readonly forgeRoadTextures = new Map<number, CanvasTexture>();
   private bossModelTemplate: Group | undefined;
   private ch02BossModelTemplate: Group | undefined;
   private ch03BossModelTemplate: Group | undefined;
@@ -183,6 +184,7 @@ export class ThreeRuntime {
     this.createAtmosphericStages();
     this.createDenseChapterBackdrops();
     this.createViaductSetPieces();
+    this.createForgeSetPieces();
     this.loadPolyhavenScenery();
     this.loadPolyhavenViaductScenery();
     this.loadPolyhavenBossModel();
@@ -272,6 +274,10 @@ export class ThreeRuntime {
     this.canopySceneryGroup.visible = chapterId === 'ch04_canopy';
     this.archiveSceneryGroup.visible = chapterId === 'ch05_archive';
     this.horizonSceneryGroup.visible = chapterId === 'ch06_horizon';
+    this.syncRoadModelVisibility(chapterId);
+  }
+
+  private syncRoadModelVisibility(chapterId: M1RunSnapshot['chapterId']): void {
     for (const road of this.roadMeshes) {
       const ch01Model = road.getObjectByName('ch01-road-model');
       const ch02Model = road.getObjectByName('ch02-road-model');
@@ -344,6 +350,8 @@ export class ThreeRuntime {
     });
     for (const texture of this.skyTextures.values()) texture.dispose();
     this.skyTextures.clear();
+    for (const texture of this.forgeRoadTextures.values()) texture.dispose();
+    this.forgeRoadTextures.clear();
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
@@ -581,6 +589,100 @@ export class ThreeRuntime {
     }
   }
 
+  private createForgeSetPieces(): void {
+    const bayPositions = [8, 22, 36, 50, 64] as const;
+    for (const [bayIndex, z] of bayPositions.entries()) {
+      const bay = new Group();
+      bay.name = `ch03-forge-bay-${bayIndex}`;
+      bay.userData.worldZ = z;
+      bay.userData.sceneryIndex = this.forgeSceneryGroup.children.length;
+      bay.userData.lowQualityVisible = bayIndex % 2 === 0;
+      bay.userData.forgeSetPiece = true;
+      bay.userData.pulsePhase = bayIndex * 0.74;
+
+      for (const side of [-1, 1] as const) {
+        const lavaBed = new Mesh(
+          new BoxGeometry(2.9, 0.08, 11.7),
+          new MeshBasicMaterial({ color: '#3b1018' }),
+        );
+        lavaBed.position.set(side * 7.25, -0.12, 0);
+        bay.add(lavaBed);
+
+        const lavaFlow = new Mesh(
+          new BoxGeometry(2.35, 0.035, 11.45),
+          new MeshBasicMaterial({ color: bayIndex % 2 === 0 ? '#ff5b24' : '#e54320', transparent: true, opacity: 0.62, depthWrite: false }),
+        );
+        lavaFlow.position.set(side * 7.25, -0.065, 0);
+        lavaFlow.userData.forgeGlow = true;
+        lavaFlow.userData.baseOpacity = 0.62;
+        bay.add(lavaFlow);
+
+        const basaltLip = new Mesh(new BoxGeometry(0.22, 0.46, 11.8), new MeshBasicMaterial({ color: '#351c28' }));
+        basaltLip.position.set(side * 5.68, 0.13, 0);
+        bay.add(basaltLip);
+
+        const emberRail = new Mesh(
+          new BoxGeometry(0.075, 0.075, 11.65),
+          new MeshBasicMaterial({ color: '#ff9b52', transparent: true, opacity: 0.74 }),
+        );
+        emberRail.position.set(side * 5.56, 0.39, 0);
+        emberRail.userData.forgeGlow = true;
+        emberRail.userData.baseOpacity = 0.74;
+        bay.add(emberRail);
+
+        for (const [columnIndex, localZ] of [-4.6, 4.6].entries()) {
+          const column = new Mesh(new BoxGeometry(0.82, 4.6, 0.82), new MeshBasicMaterial({ color: columnIndex === 0 ? '#452536' : '#55283a' }));
+          column.position.set(side * 8.95, 2.3, localZ);
+          bay.add(column);
+
+          const hotJoint = new Mesh(
+            new TorusGeometry(0.34, 0.085, 6, 18),
+            new MeshBasicMaterial({ color: '#ff7540', transparent: true, opacity: 0.78 }),
+          );
+          hotJoint.position.set(side * 8.49, 2.25, localZ);
+          hotJoint.rotation.y = Math.PI / 2;
+          hotJoint.userData.forgeGlow = true;
+          hotJoint.userData.baseOpacity = 0.78;
+          bay.add(hotJoint);
+        }
+
+        const furnaceWall = new Mesh(new BoxGeometry(2.25, 3.2, 1.05), new MeshBasicMaterial({ color: '#4b2433' }));
+        furnaceWall.position.set(side * 9.35, 1.6, bayIndex % 2 === 0 ? -1.35 : 1.35);
+        bay.add(furnaceWall);
+
+        const furnaceMouth = new Mesh(
+          new TorusGeometry(0.7, 0.14, 6, 20),
+          new MeshBasicMaterial({ color: '#ff6a31', transparent: true, opacity: 0.82 }),
+        );
+        furnaceMouth.position.set(side * 8.76, 1.45, furnaceWall.position.z);
+        furnaceMouth.rotation.y = Math.PI / 2;
+        furnaceMouth.userData.forgeGlow = true;
+        furnaceMouth.userData.baseOpacity = 0.82;
+        bay.add(furnaceMouth);
+
+        const chimney = new Mesh(new BoxGeometry(0.72, 4.4, 0.72), new MeshBasicMaterial({ color: '#2d1a27' }));
+        chimney.position.set(side * 10.15, 4.4, -furnaceWall.position.z);
+        bay.add(chimney);
+
+        for (let sparkIndex = 0; sparkIndex < 3; sparkIndex += 1) {
+          const spark = new Mesh(
+            new SphereGeometry(0.055 + sparkIndex * 0.012, 5, 4),
+            new MeshBasicMaterial({ color: sparkIndex === 1 ? '#ffd06b' : '#ff7a38', transparent: true, opacity: 0.84, fog: false }),
+          );
+          spark.position.set(side * (6.35 + sparkIndex * 0.45), 0.55 + sparkIndex * 0.52, -3.4 + sparkIndex * 3.3 + (bayIndex % 2) * 0.8);
+          spark.userData.forgeSpark = true;
+          spark.userData.sparkBaseY = spark.position.y;
+          spark.userData.sparkSpeed = 0.52 + sparkIndex * 0.12;
+          spark.userData.sparkPhase = bayIndex * 0.58 + sparkIndex * 0.86;
+          spark.userData.baseOpacity = 0.84;
+          bay.add(spark);
+        }
+      }
+
+      this.forgeSceneryGroup.add(bay);
+    }
+  }
+
   private getSkyTexture(style: BackdropStyle): CanvasTexture {
     const cached = this.skyTextures.get(style);
     if (cached !== undefined) return cached;
@@ -678,6 +780,25 @@ export class ThreeRuntime {
           if (!(node instanceof Mesh) || node.userData.viaductGlow !== true) return;
           const material = node.material as MeshBasicMaterial;
           material.opacity = (node.userData.baseOpacity as number) * pulse;
+        });
+      }
+      if (child.userData.forgeSetPiece === true) {
+        const phase = child.userData.pulsePhase as number;
+        const pulse = 0.76 + Math.sin(timeSeconds * 2.05 + phase) * 0.24;
+        child.traverse((node) => {
+          if (!(node instanceof Mesh)) return;
+          if (node.userData.forgeGlow === true) {
+            const material = node.material as MeshBasicMaterial;
+            material.opacity = (node.userData.baseOpacity as number) * pulse;
+          }
+          if (node.userData.forgeSpark === true) {
+            const speed = node.userData.sparkSpeed as number;
+            const sparkPhase = node.userData.sparkPhase as number;
+            const rise = (timeSeconds * speed + sparkPhase) % 2.8;
+            node.position.y = (node.userData.sparkBaseY as number) + rise;
+            const material = node.material as MeshBasicMaterial;
+            material.opacity = (node.userData.baseOpacity as number) * (1 - rise / 3.1);
+          }
         });
       }
     }
@@ -785,6 +906,7 @@ export class ThreeRuntime {
         this.attachCh05RoadModel(road);
         this.attachCh06RoadModel(road);
       }
+      this.syncRoadModelVisibility(this.themedChapterId ?? 'ch01_meadow');
     });
   }
 
@@ -837,14 +959,67 @@ export class ThreeRuntime {
     model.traverse((child) => {
       if (child instanceof Mesh) {
         const material = (child.material as MeshBasicMaterial).clone();
-        material.map = null;
+        material.map = this.getForgeRoadTexture((road.userData.roadIndex as number) % 2);
         material.vertexColors = false;
-        if (material.color !== undefined) material.color.set((road.userData.roadIndex as number) % 2 === 0 ? '#4b2425' : '#63302d');
+        if (material.color !== undefined) material.color.set('#ffffff');
         child.material = material;
       }
     });
     model.visible = false;
     road.add(model);
+  }
+
+  private getForgeRoadTexture(variant: number): CanvasTexture {
+    const cached = this.forgeRoadTextures.get(variant);
+    if (cached !== undefined) return cached;
+    const canvas = document.createElement('canvas');
+    canvas.width = 384;
+    canvas.height = 256;
+    const context = canvas.getContext('2d');
+    if (context === null) throw new Error('無法建立熔庭道路貼圖。');
+
+    context.fillStyle = variant === 0 ? '#3d2028' : '#52272c';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.strokeStyle = '#24151e';
+    context.lineWidth = 5;
+    for (const y of [0, 128, 256]) {
+      context.beginPath();
+      context.moveTo(0, y);
+      context.lineTo(canvas.width, y);
+      context.stroke();
+    }
+    for (const [x, offset] of [[96, 0], [288, 0], [0, 128], [192, 128], [384, 128]] as const) {
+      context.beginPath();
+      context.moveTo(x, offset);
+      context.lineTo(x, offset + 128);
+      context.stroke();
+    }
+
+    for (const side of [-1, 1] as const) {
+      const baseX = side < 0 ? 28 : canvas.width - 28;
+      context.strokeStyle = '#7e3429';
+      context.lineWidth = 7;
+      context.beginPath();
+      context.moveTo(baseX, 0);
+      for (let index = 0; index <= 8; index += 1) {
+        context.lineTo(baseX + side * (((index * 17 + variant * 11) % 19) - 9), index * 32);
+      }
+      context.stroke();
+      context.strokeStyle = '#e7652e';
+      context.lineWidth = 2;
+      context.stroke();
+    }
+
+    context.fillStyle = '#6d3937';
+    for (let index = 0; index < 18; index += 1) {
+      const x = 56 + ((index * 73 + variant * 31) % 270);
+      const y = 18 + ((index * 47 + variant * 19) % 220);
+      context.fillRect(x, y, 3 + index % 4, 2 + index % 3);
+    }
+    const texture = new CanvasTexture(canvas);
+    texture.colorSpace = SRGBColorSpace;
+    this.forgeRoadTextures.set(variant, texture);
+    return texture;
   }
 
   private attachCh04RoadModel(road: Mesh): void {
