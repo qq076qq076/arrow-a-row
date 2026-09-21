@@ -131,6 +131,7 @@ export class ThreeRuntime {
   private readonly horizonSceneryGroup = new Group();
   private readonly skyTextures = new Map<BackdropStyle, CanvasTexture>();
   private readonly forgeRoadTextures = new Map<number, CanvasTexture>();
+  private readonly canopyRoadTextures = new Map<number, CanvasTexture>();
   private bossModelTemplate: Group | undefined;
   private ch02BossModelTemplate: Group | undefined;
   private ch03BossModelTemplate: Group | undefined;
@@ -185,6 +186,7 @@ export class ThreeRuntime {
     this.createDenseChapterBackdrops();
     this.createViaductSetPieces();
     this.createForgeSetPieces();
+    this.createCanopySetPieces();
     this.loadPolyhavenScenery();
     this.loadPolyhavenViaductScenery();
     this.loadPolyhavenBossModel();
@@ -352,6 +354,8 @@ export class ThreeRuntime {
     this.skyTextures.clear();
     for (const texture of this.forgeRoadTextures.values()) texture.dispose();
     this.forgeRoadTextures.clear();
+    for (const texture of this.canopyRoadTextures.values()) texture.dispose();
+    this.canopyRoadTextures.clear();
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
@@ -683,6 +687,107 @@ export class ThreeRuntime {
     }
   }
 
+  private createCanopySetPieces(): void {
+    const bayPositions = [8, 22, 36, 50, 64] as const;
+    for (const [bayIndex, z] of bayPositions.entries()) {
+      const bay = new Group();
+      bay.name = `ch04-canopy-bay-${bayIndex}`;
+      bay.userData.worldZ = z;
+      bay.userData.sceneryIndex = this.canopySceneryGroup.children.length;
+      bay.userData.lowQualityVisible = bayIndex % 2 === 0;
+      bay.userData.canopySetPiece = true;
+      bay.userData.mistPhase = bayIndex * 0.68;
+
+      for (const side of [-1, 1] as const) {
+        const mossBank = new Mesh(
+          new BoxGeometry(3.1, 0.42, 11.7),
+          new MeshBasicMaterial({ color: bayIndex % 2 === 0 ? '#214d3b' : '#295743' }),
+        );
+        mossBank.position.set(side * 7.15, 0.03, 0);
+        bay.add(mossBank);
+
+        const earthBank = new Mesh(
+          new BoxGeometry(3.9, 0.74, 11.75),
+          new MeshBasicMaterial({ color: '#17372f' }),
+        );
+        earthBank.position.set(side * 9.85, -0.06, 0);
+        bay.add(earthBank);
+
+        const rootEdge = new Mesh(
+          new TorusGeometry(0.82, 0.14, 6, 20),
+          new MeshBasicMaterial({ color: '#4f7456' }),
+        );
+        rootEdge.position.set(side * 6.28, 0.44, bayIndex % 2 === 0 ? -2.8 : 2.8);
+        rootEdge.rotation.set(Math.PI / 2, 0, 0);
+        rootEdge.scale.set(0.7, 1.65, 0.7);
+        bay.add(rootEdge);
+
+        const trunk = new Mesh(
+          new ConeGeometry(0.82, 6.8, 7),
+          new MeshBasicMaterial({ color: bayIndex % 2 === 0 ? '#315744' : '#294c3d' }),
+        );
+        trunk.position.set(side * (8.45 + (bayIndex % 2) * 0.55), 3.4, bayIndex % 2 === 0 ? 1.6 : -1.6);
+        trunk.rotation.z = side * (bayIndex % 2 === 0 ? -0.055 : 0.07);
+        bay.add(trunk);
+
+        const branch = new Mesh(new BoxGeometry(3.2, 0.42, 0.52), new MeshBasicMaterial({ color: '#355e49' }));
+        branch.position.set(side * 7.55, 5.25, trunk.position.z);
+        branch.rotation.z = side * 0.32;
+        bay.add(branch);
+
+        for (const [crownIndex, crownY] of [5.65, 6.55].entries()) {
+          const crown = new Mesh(
+            new SphereGeometry(1.42 - crownIndex * 0.12, 8, 5),
+            new MeshBasicMaterial({ color: crownIndex === 0 ? '#3a795b' : '#4b8f6b', transparent: true, opacity: 0.92 }),
+          );
+          crown.position.set(side * (7.55 + crownIndex * 0.82), crownY, trunk.position.z + (crownIndex === 0 ? -0.35 : 0.5));
+          crown.scale.set(1.5, 0.78, 1.05);
+          bay.add(crown);
+        }
+
+        for (let vineIndex = 0; vineIndex < 3; vineIndex += 1) {
+          const vine = new Mesh(
+            new BoxGeometry(0.055, 1.75 + vineIndex * 0.42, 0.055),
+            new MeshBasicMaterial({ color: vineIndex % 2 === 0 ? '#61a87b' : '#477c60', transparent: true, opacity: 0.82 }),
+          );
+          vine.position.set(side * (6.15 + vineIndex * 0.5), 4.45 - vineIndex * 0.2, trunk.position.z + 0.65 - vineIndex * 0.56);
+          vine.rotation.z = side * (0.035 + vineIndex * 0.018);
+          vine.userData.canopyVine = true;
+          vine.userData.vineBaseRotation = vine.rotation.z;
+          vine.userData.vinePhase = bayIndex * 0.72 + vineIndex * 0.85;
+          bay.add(vine);
+        }
+
+        const sideMist = new Mesh(
+          new BoxGeometry(3.6, 1.15, 9.8),
+          new MeshBasicMaterial({ color: '#79bca0', transparent: true, opacity: 0.105, depthWrite: false }),
+        );
+        sideMist.position.set(side * 8.1, 1.05, bayIndex % 2 === 0 ? -0.7 : 0.7);
+        sideMist.userData.canopyMist = true;
+        sideMist.userData.baseOpacity = 0.105;
+        sideMist.userData.mistBaseX = sideMist.position.x;
+        sideMist.userData.mistSide = side;
+        bay.add(sideMist);
+
+        for (let sporeIndex = 0; sporeIndex < 4; sporeIndex += 1) {
+          const spore = new Mesh(
+            new SphereGeometry(0.055 + (sporeIndex % 2) * 0.025, 6, 4),
+            new MeshBasicMaterial({ color: sporeIndex % 2 === 0 ? '#8ff1c8' : '#c0f7d6', transparent: true, opacity: 0.72, fog: false }),
+          );
+          spore.position.set(side * (6.2 + sporeIndex * 0.68), 0.65 + sporeIndex * 0.74, -3.6 + sporeIndex * 2.4 + (bayIndex % 2) * 0.6);
+          spore.userData.canopySpore = true;
+          spore.userData.sporeBaseY = spore.position.y;
+          spore.userData.sporeSpeed = 0.38 + sporeIndex * 0.075;
+          spore.userData.sporePhase = bayIndex * 0.61 + sporeIndex * 0.77;
+          spore.userData.baseOpacity = 0.72;
+          bay.add(spore);
+        }
+      }
+
+      this.canopySceneryGroup.add(bay);
+    }
+  }
+
   private getSkyTexture(style: BackdropStyle): CanvasTexture {
     const cached = this.skyTextures.get(style);
     if (cached !== undefined) return cached;
@@ -796,6 +901,29 @@ export class ThreeRuntime {
             const sparkPhase = node.userData.sparkPhase as number;
             const rise = (timeSeconds * speed + sparkPhase) % 2.8;
             node.position.y = (node.userData.sparkBaseY as number) + rise;
+            const material = node.material as MeshBasicMaterial;
+            material.opacity = (node.userData.baseOpacity as number) * (1 - rise / 3.1);
+          }
+        });
+      }
+      if (child.userData.canopySetPiece === true) {
+        const phase = child.userData.mistPhase as number;
+        child.traverse((node) => {
+          if (!(node instanceof Mesh)) return;
+          if (node.userData.canopyMist === true) {
+            const side = node.userData.mistSide as number;
+            node.position.x = (node.userData.mistBaseX as number) + side * Math.sin(timeSeconds * 0.22 + phase) * 0.28;
+            const material = node.material as MeshBasicMaterial;
+            material.opacity = (node.userData.baseOpacity as number) * (0.78 + Math.sin(timeSeconds * 0.38 + phase) * 0.22);
+          }
+          if (node.userData.canopyVine === true) {
+            node.rotation.z = (node.userData.vineBaseRotation as number) + Math.sin(timeSeconds * 0.6 + (node.userData.vinePhase as number)) * 0.035;
+          }
+          if (node.userData.canopySpore === true) {
+            const speed = node.userData.sporeSpeed as number;
+            const sporePhase = node.userData.sporePhase as number;
+            const rise = (timeSeconds * speed + sporePhase) % 2.6;
+            node.position.y = (node.userData.sporeBaseY as number) + rise;
             const material = node.material as MeshBasicMaterial;
             material.opacity = (node.userData.baseOpacity as number) * (1 - rise / 3.1);
           }
@@ -1031,14 +1159,75 @@ export class ThreeRuntime {
     model.traverse((child) => {
       if (child instanceof Mesh) {
         const material = (child.material as MeshBasicMaterial).clone();
-        material.map = null;
+        material.map = this.getCanopyRoadTexture((road.userData.roadIndex as number) % 2);
         material.vertexColors = false;
-        if (material.color !== undefined) material.color.set((road.userData.roadIndex as number) % 2 === 0 ? '#28604f' : '#35735c');
+        if (material.color !== undefined) material.color.set('#ffffff');
         child.material = material;
       }
     });
     model.visible = false;
     road.add(model);
+  }
+
+  private getCanopyRoadTexture(variant: number): CanvasTexture {
+    const cached = this.canopyRoadTextures.get(variant);
+    if (cached !== undefined) return cached;
+    const canvas = document.createElement('canvas');
+    canvas.width = 384;
+    canvas.height = 256;
+    const context = canvas.getContext('2d');
+    if (context === null) throw new Error('無法建立林海道路貼圖。');
+
+    context.fillStyle = variant === 0 ? '#245744' : '#2d674e';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.strokeStyle = '#173d32';
+    context.lineWidth = 5;
+    for (const y of [0, 128, 256]) {
+      context.beginPath();
+      context.moveTo(0, y);
+      context.lineTo(canvas.width, y);
+      context.stroke();
+    }
+    for (const [x, offset] of [[96, 0], [288, 0], [0, 128], [192, 128], [384, 128]] as const) {
+      context.beginPath();
+      context.moveTo(x, offset);
+      context.lineTo(x, offset + 128);
+      context.stroke();
+    }
+
+    context.strokeStyle = '#709264';
+    context.lineWidth = 4;
+    for (const side of [-1, 1] as const) {
+      const edgeX = side < 0 ? 24 : canvas.width - 24;
+      context.beginPath();
+      context.moveTo(edgeX, 0);
+      for (let index = 0; index <= 8; index += 1) {
+        context.lineTo(edgeX + side * (((index * 13 + variant * 7) % 17) - 8), index * 32);
+      }
+      context.stroke();
+    }
+
+    context.fillStyle = '#4f7c58';
+    for (let index = 0; index < 28; index += 1) {
+      const x = 40 + ((index * 67 + variant * 29) % 300);
+      const y = 12 + ((index * 43 + variant * 17) % 230);
+      context.beginPath();
+      context.ellipse(x, y, 5 + index % 6, 2 + index % 4, (index % 5) * 0.32, 0, Math.PI * 2);
+      context.fill();
+    }
+    context.strokeStyle = '#315d43';
+    context.lineWidth = 3;
+    for (let index = 0; index < 6; index += 1) {
+      const x = 62 + index * 52;
+      context.beginPath();
+      context.moveTo(x, index % 2 === 0 ? 0 : 256);
+      context.bezierCurveTo(x - 18, 72, x + 22, 168, x + (index % 2 === 0 ? 15 : -15), index % 2 === 0 ? 132 : 124);
+      context.stroke();
+    }
+    const texture = new CanvasTexture(canvas);
+    texture.colorSpace = SRGBColorSpace;
+    this.canopyRoadTextures.set(variant, texture);
+    return texture;
   }
 
   private attachCh05RoadModel(road: Mesh): void {
