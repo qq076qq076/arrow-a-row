@@ -182,6 +182,7 @@ export class ThreeRuntime {
     this.createRoad();
     this.createAtmosphericStages();
     this.createDenseChapterBackdrops();
+    this.createViaductSetPieces();
     this.loadPolyhavenScenery();
     this.loadPolyhavenViaductScenery();
     this.loadPolyhavenBossModel();
@@ -386,7 +387,9 @@ export class ThreeRuntime {
 
     const ridgeMaterial = new MeshBasicMaterial({ color: palette.ridge, transparent: true, opacity: 0.9 });
     const ridgeFarMaterial = new MeshBasicMaterial({ color: palette.ridgeFar, transparent: true, opacity: 0.72 });
-    const ridgeXs = [-23, -14, -5, 5, 14, 23] as const;
+    const ridgeXs = style === 'viaduct' || style === 'archive'
+      ? [-26, -18, -10, 10, 18, 26] as const
+      : [-23, -14, -5, 5, 14, 23] as const;
     for (const [index, x] of ridgeXs.entries()) {
       const isFar = index % 2 === 0;
       const geometry = style === 'viaduct' || style === 'archive'
@@ -505,6 +508,79 @@ export class ThreeRuntime {
     }
   }
 
+  private createViaductSetPieces(): void {
+    const bayPositions = [8, 22, 36, 50, 64] as const;
+    for (const [bayIndex, z] of bayPositions.entries()) {
+      const bay = new Group();
+      bay.name = `ch02-viaduct-bay-${bayIndex}`;
+      bay.userData.worldZ = z;
+      bay.userData.sceneryIndex = this.viaductSceneryGroup.children.length;
+      bay.userData.lowQualityVisible = bayIndex % 2 === 0;
+      bay.userData.viaductSetPiece = true;
+      bay.userData.pulsePhase = bayIndex * 0.8;
+
+      for (const side of [-1, 1] as const) {
+        const mirrorWater = new Mesh(
+          new BoxGeometry(7.4, 0.035, 11.6),
+          new MeshBasicMaterial({ color: bayIndex % 2 === 0 ? '#20568a' : '#2d72a6', transparent: true, opacity: 0.58, depthWrite: false }),
+        );
+        mirrorWater.name = 'viaduct-mirror-water';
+        mirrorWater.position.set(side * 9.55, -0.115, 0);
+        bay.add(mirrorWater);
+
+        const innerReflection = new Mesh(
+          new BoxGeometry(1.9, 0.045, 9.5),
+          new MeshBasicMaterial({ color: '#72c9ef', transparent: true, opacity: 0.26, depthWrite: false }),
+        );
+        innerReflection.position.set(side * 7.15, -0.085, bayIndex % 2 === 0 ? -0.65 : 0.65);
+        innerReflection.rotation.y = side * 0.06;
+        innerReflection.userData.viaductGlow = true;
+        innerReflection.userData.baseOpacity = 0.26;
+        bay.add(innerReflection);
+
+        const rail = new Mesh(new BoxGeometry(0.18, 0.42, 11.8), new MeshBasicMaterial({ color: '#274d78' }));
+        rail.position.set(side * 5.82, 0.2, 0);
+        bay.add(rail);
+
+        const lightStrip = new Mesh(
+          new BoxGeometry(0.08, 0.08, 11.7),
+          new MeshBasicMaterial({ color: '#8ce3ff', transparent: true, opacity: 0.78 }),
+        );
+        lightStrip.position.set(side * 5.72, 0.46, 0);
+        lightStrip.userData.viaductGlow = true;
+        lightStrip.userData.baseOpacity = 0.78;
+        bay.add(lightStrip);
+
+        for (const [postIndex, localZ] of [-4.5, 0, 4.5].entries()) {
+          const post = new Mesh(new BoxGeometry(0.34, 2.8, 0.34), new MeshBasicMaterial({ color: postIndex === 1 ? '#315f92' : '#203f68' }));
+          post.position.set(side * 6.45, 1.4, localZ);
+          bay.add(post);
+
+          const beacon = new Mesh(
+            new SphereGeometry(0.18, 8, 6),
+            new MeshBasicMaterial({ color: '#b8efff', transparent: true, opacity: 0.9, fog: false }),
+          );
+          beacon.position.set(side * 6.45, 2.95, localZ);
+          beacon.userData.viaductGlow = true;
+          beacon.userData.baseOpacity = 0.9;
+          bay.add(beacon);
+        }
+
+        const calibrationRing = new Mesh(
+          new TorusGeometry(0.72, 0.075, 6, 24),
+          new MeshBasicMaterial({ color: '#7edbff', transparent: true, opacity: 0.72 }),
+        );
+        calibrationRing.position.set(side * 7.35, 1.55, bayIndex % 2 === 0 ? -2.3 : 2.3);
+        calibrationRing.rotation.y = Math.PI / 2;
+        calibrationRing.userData.viaductGlow = true;
+        calibrationRing.userData.baseOpacity = 0.72;
+        bay.add(calibrationRing);
+      }
+
+      this.viaductSceneryGroup.add(bay);
+    }
+  }
+
   private getSkyTexture(style: BackdropStyle): CanvasTexture {
     const cached = this.skyTextures.get(style);
     if (cached !== undefined) return cached;
@@ -594,6 +670,15 @@ export class ThreeRuntime {
         const detailIndex = child.userData.detailIndex as number;
         child.visible = this.qualityMode === 'standard' || detailIndex % 3 === 0;
         child.rotation.y = timeSeconds * (0.18 + (detailIndex % 4) * 0.04);
+      }
+      if (child.userData.viaductSetPiece === true) {
+        const phase = child.userData.pulsePhase as number;
+        const pulse = 0.82 + Math.sin(timeSeconds * 1.6 + phase) * 0.18;
+        child.traverse((node) => {
+          if (!(node instanceof Mesh) || node.userData.viaductGlow !== true) return;
+          const material = node.material as MeshBasicMaterial;
+          material.opacity = (node.userData.baseOpacity as number) * pulse;
+        });
       }
     }
   }
