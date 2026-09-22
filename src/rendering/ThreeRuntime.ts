@@ -133,6 +133,7 @@ export class ThreeRuntime {
   private readonly forgeRoadTextures = new Map<number, CanvasTexture>();
   private readonly canopyRoadTextures = new Map<number, CanvasTexture>();
   private readonly archiveRoadTextures = new Map<number, CanvasTexture>();
+  private readonly horizonRoadTextures = new Map<number, CanvasTexture>();
   private bossModelTemplate: Group | undefined;
   private ch02BossModelTemplate: Group | undefined;
   private ch03BossModelTemplate: Group | undefined;
@@ -189,6 +190,7 @@ export class ThreeRuntime {
     this.createForgeSetPieces();
     this.createCanopySetPieces();
     this.createArchiveSetPieces();
+    this.createHorizonSetPieces();
     this.loadPolyhavenScenery();
     this.loadPolyhavenViaductScenery();
     this.loadPolyhavenBossModel();
@@ -360,6 +362,8 @@ export class ThreeRuntime {
     this.canopyRoadTextures.clear();
     for (const texture of this.archiveRoadTextures.values()) texture.dispose();
     this.archiveRoadTextures.clear();
+    for (const texture of this.horizonRoadTextures.values()) texture.dispose();
+    this.horizonRoadTextures.clear();
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
@@ -891,6 +895,104 @@ export class ThreeRuntime {
     }
   }
 
+  private createHorizonSetPieces(): void {
+    const bayPositions = [8, 22, 36, 50, 64] as const;
+    for (const [bayIndex, z] of bayPositions.entries()) {
+      const bay = new Group();
+      bay.name = `ch06-horizon-bay-${bayIndex}`;
+      bay.userData.worldZ = z;
+      bay.userData.sceneryIndex = this.horizonSceneryGroup.children.length;
+      bay.userData.lowQualityVisible = bayIndex % 2 === 0;
+      bay.userData.horizonSetPiece = true;
+      bay.userData.horizonPhase = bayIndex * 0.76;
+
+      for (const side of [-1, 1] as const) {
+        const island = new Mesh(
+          new BoxGeometry(3.25, 0.42, 10.8),
+          new MeshBasicMaterial({ color: bayIndex % 2 === 0 ? '#34264f' : '#432e5f' }),
+        );
+        island.position.set(side * 7.24, 0.12, 0);
+        island.rotation.z = side * (bayIndex % 2 === 0 ? 0.022 : -0.028);
+        island.userData.horizonFloat = true;
+        island.userData.floatBaseY = island.position.y;
+        island.userData.floatAmplitude = 0.08;
+        island.userData.floatSpeed = 0.42;
+        island.userData.floatPhase = bayIndex * 0.67 + (side > 0 ? 0.6 : 0);
+        bay.add(island);
+
+        const edgeLight = new Mesh(
+          new BoxGeometry(0.085, 0.085, 11.35),
+          new MeshBasicMaterial({ color: '#fff0a8', transparent: true, opacity: 0.72 }),
+        );
+        edgeLight.position.set(side * 5.58, 0.38, 0);
+        edgeLight.userData.horizonGlow = true;
+        edgeLight.userData.baseOpacity = 0.72;
+        bay.add(edgeLight);
+
+        for (let fragmentIndex = 0; fragmentIndex < 3; fragmentIndex += 1) {
+          const fragment = new Mesh(
+            new OctahedronGeometry(0.65 + fragmentIndex * 0.2, 0),
+            new MeshBasicMaterial({ color: fragmentIndex === 1 ? '#866bb1' : '#644d88', transparent: true, opacity: 0.9 }),
+          );
+          fragment.position.set(side * (8.2 + fragmentIndex * 1.15), 0.85 + fragmentIndex * 0.72, -3.5 + fragmentIndex * 3.45 + (bayIndex % 2) * 0.65);
+          fragment.scale.set(1.25, 0.42 + fragmentIndex * 0.14, 1.05);
+          fragment.rotation.set(0.12 * fragmentIndex, side * (0.3 + fragmentIndex * 0.2), side * 0.16);
+          fragment.userData.horizonFragment = true;
+          fragment.userData.fragmentBaseY = fragment.position.y;
+          fragment.userData.fragmentBaseRotationY = fragment.rotation.y;
+          fragment.userData.fragmentPhase = bayIndex * 0.7 + fragmentIndex * 0.82;
+          bay.add(fragment);
+        }
+
+        const anchor = new Mesh(new OctahedronGeometry(0.82, 0), new MeshBasicMaterial({ color: '#5b427d' }));
+        anchor.position.set(side * 7.25, 2.65, bayIndex % 2 === 0 ? -2.15 : 2.15);
+        anchor.scale.set(0.78, 2.45, 0.78);
+        bay.add(anchor);
+
+        const anchorRing = new Mesh(
+          new TorusGeometry(1.15, 0.075, 6, 28),
+          new MeshBasicMaterial({ color: '#f8e7a0', transparent: true, opacity: 0.62, depthWrite: false }),
+        );
+        anchorRing.position.copy(anchor.position);
+        anchorRing.rotation.x = Math.PI / 2;
+        anchorRing.userData.horizonOrbit = true;
+        anchorRing.userData.orbitBaseRotation = anchorRing.rotation.z;
+        anchorRing.userData.orbitPhase = bayIndex * 0.78 + (side > 0 ? 0.48 : 0);
+        anchorRing.userData.horizonGlow = true;
+        anchorRing.userData.baseOpacity = 0.62;
+        bay.add(anchorRing);
+
+        const tower = new Mesh(new BoxGeometry(0.62, 5.8, 0.72), new MeshBasicMaterial({ color: '#2b2046' }));
+        tower.position.set(side * 9.5, 3.05, -anchor.position.z);
+        bay.add(tower);
+        for (let signalIndex = 0; signalIndex < 3; signalIndex += 1) {
+          const signalBar = new Mesh(
+            new BoxGeometry(0.92 - signalIndex * 0.16, 0.09, 0.09),
+            new MeshBasicMaterial({ color: signalIndex === 0 ? '#fff1ad' : '#c7aef2', transparent: true, opacity: 0.66 }),
+          );
+          signalBar.position.set(side * 9.08, 3.9 + signalIndex * 0.55, tower.position.z);
+          signalBar.userData.horizonGlow = true;
+          signalBar.userData.baseOpacity = 0.66;
+          bay.add(signalBar);
+        }
+
+        for (let boltIndex = 0; boltIndex < 3; boltIndex += 1) {
+          const bolt = new Mesh(
+            new BoxGeometry(0.055, 1.25, 0.055),
+            new MeshBasicMaterial({ color: '#f7edbd', transparent: true, opacity: 0.15, fog: false }),
+          );
+          bolt.position.set(side * (7.8 + boltIndex * 0.55), 5.1 - boltIndex * 0.42, 2.9 - boltIndex * 0.58 + (bayIndex % 2) * 0.7);
+          bolt.rotation.z = side * (boltIndex % 2 === 0 ? 0.52 : -0.48);
+          bolt.userData.horizonBolt = true;
+          bolt.userData.boltPhase = bayIndex * 0.81 + boltIndex * 0.54 + (side > 0 ? 0.35 : 0);
+          bay.add(bolt);
+        }
+      }
+
+      this.horizonSceneryGroup.add(bay);
+    }
+  }
+
   private getSkyTexture(style: BackdropStyle): CanvasTexture {
     const cached = this.skyTextures.get(style);
     if (cached !== undefined) return cached;
@@ -1054,6 +1156,33 @@ export class ThreeRuntime {
             const pagePhase = node.userData.pagePhase as number;
             node.position.y = (node.userData.pageBaseY as number) + Math.sin(timeSeconds * 0.58 + pagePhase) * 0.18;
             node.rotation.y = (node.userData.pageBaseRotationY as number) + Math.sin(timeSeconds * 0.42 + pagePhase) * 0.22;
+          }
+        });
+      }
+      if (child.userData.horizonSetPiece === true) {
+        const phase = child.userData.horizonPhase as number;
+        const pulse = 0.76 + Math.sin(timeSeconds * 1.3 + phase) * 0.24;
+        child.traverse((node) => {
+          if (!(node instanceof Mesh)) return;
+          if (node.userData.horizonGlow === true) {
+            const material = node.material as MeshBasicMaterial;
+            material.opacity = (node.userData.baseOpacity as number) * pulse;
+          }
+          if (node.userData.horizonFloat === true) {
+            node.position.y = (node.userData.floatBaseY as number) + Math.sin(timeSeconds * (node.userData.floatSpeed as number) + (node.userData.floatPhase as number)) * (node.userData.floatAmplitude as number);
+          }
+          if (node.userData.horizonFragment === true) {
+            const fragmentPhase = node.userData.fragmentPhase as number;
+            node.position.y = (node.userData.fragmentBaseY as number) + Math.sin(timeSeconds * 0.48 + fragmentPhase) * 0.18;
+            node.rotation.y = (node.userData.fragmentBaseRotationY as number) + timeSeconds * 0.08;
+          }
+          if (node.userData.horizonOrbit === true) {
+            node.rotation.z = (node.userData.orbitBaseRotation as number) + timeSeconds * 0.24 + (node.userData.orbitPhase as number);
+          }
+          if (node.userData.horizonBolt === true) {
+            const flicker = Math.sin(timeSeconds * 3.1 + (node.userData.boltPhase as number));
+            const material = node.material as MeshBasicMaterial;
+            material.opacity = flicker > 0.72 ? 0.72 : 0.08;
           }
         });
       }
@@ -1450,14 +1579,84 @@ export class ThreeRuntime {
     model.traverse((child) => {
       if (child instanceof Mesh) {
         const material = (child.material as MeshBasicMaterial).clone();
-        material.map = null;
+        material.map = this.getHorizonRoadTexture((road.userData.roadIndex as number) % 2);
         material.vertexColors = false;
-        if (material.color !== undefined) material.color.set((road.userData.roadIndex as number) % 2 === 0 ? '#594178' : '#6a4f8b');
+        if (material.color !== undefined) material.color.set('#ffffff');
         child.material = material;
       }
     });
     model.visible = false;
     road.add(model);
+  }
+
+  private getHorizonRoadTexture(variant: number): CanvasTexture {
+    const cached = this.horizonRoadTextures.get(variant);
+    if (cached !== undefined) return cached;
+    const canvas = document.createElement('canvas');
+    canvas.width = 384;
+    canvas.height = 256;
+    const context = canvas.getContext('2d');
+    if (context === null) throw new Error('無法建立地平道路貼圖。');
+
+    context.fillStyle = variant === 0 ? '#392b55' : '#493462';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.strokeStyle = '#211835';
+    context.lineWidth = 7;
+    for (const y of [0, 128, 256]) {
+      context.beginPath();
+      context.moveTo(0, y);
+      context.lineTo(canvas.width, y);
+      context.stroke();
+    }
+    for (const [x, offset] of [[96, 0], [288, 0], [0, 128], [192, 128], [384, 128]] as const) {
+      context.beginPath();
+      context.moveTo(x, offset);
+      context.lineTo(x, offset + 128);
+      context.stroke();
+    }
+
+    for (const side of [-1, 1] as const) {
+      const edgeX = side < 0 ? 26 : canvas.width - 26;
+      context.strokeStyle = '#fff0ac';
+      context.lineWidth = 4;
+      context.globalAlpha = 0.72;
+      context.beginPath();
+      context.moveTo(edgeX, 0);
+      for (let index = 0; index <= 8; index += 1) {
+        context.lineTo(edgeX + side * (((index * 19 + variant * 13) % 23) - 11), index * 32);
+      }
+      context.stroke();
+    }
+
+    context.strokeStyle = '#c4aff0';
+    context.lineWidth = 2;
+    context.globalAlpha = 0.46;
+    for (let index = 0; index < 7; index += 1) {
+      const startX = 54 + index * 45;
+      const startY = 20 + ((index * 41 + variant * 17) % 196);
+      context.beginPath();
+      context.moveTo(startX, startY);
+      context.lineTo(startX + 19, startY + (index % 2 === 0 ? 20 : -18));
+      context.lineTo(startX + 7, startY + (index % 2 === 0 ? 42 : -38));
+      context.stroke();
+    }
+    context.globalAlpha = 1;
+
+    context.fillStyle = '#80659c';
+    for (let index = 0; index < 24; index += 1) {
+      const x = 38 + ((index * 71 + variant * 23) % 304);
+      const y = 14 + ((index * 43 + variant * 29) % 226);
+      context.beginPath();
+      context.moveTo(x, y - 4);
+      context.lineTo(x + 4, y + 2);
+      context.lineTo(x - 3, y + 5);
+      context.closePath();
+      context.fill();
+    }
+    const texture = new CanvasTexture(canvas);
+    texture.colorSpace = SRGBColorSpace;
+    this.horizonRoadTextures.set(variant, texture);
+    return texture;
   }
 
   private loadPolyhavenScenery(): void {
