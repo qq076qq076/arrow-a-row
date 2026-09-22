@@ -132,6 +132,7 @@ export class ThreeRuntime {
   private readonly skyTextures = new Map<BackdropStyle, CanvasTexture>();
   private readonly forgeRoadTextures = new Map<number, CanvasTexture>();
   private readonly canopyRoadTextures = new Map<number, CanvasTexture>();
+  private readonly archiveRoadTextures = new Map<number, CanvasTexture>();
   private bossModelTemplate: Group | undefined;
   private ch02BossModelTemplate: Group | undefined;
   private ch03BossModelTemplate: Group | undefined;
@@ -187,6 +188,7 @@ export class ThreeRuntime {
     this.createViaductSetPieces();
     this.createForgeSetPieces();
     this.createCanopySetPieces();
+    this.createArchiveSetPieces();
     this.loadPolyhavenScenery();
     this.loadPolyhavenViaductScenery();
     this.loadPolyhavenBossModel();
@@ -356,6 +358,8 @@ export class ThreeRuntime {
     this.forgeRoadTextures.clear();
     for (const texture of this.canopyRoadTextures.values()) texture.dispose();
     this.canopyRoadTextures.clear();
+    for (const texture of this.archiveRoadTextures.values()) texture.dispose();
+    this.archiveRoadTextures.clear();
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
@@ -788,6 +792,105 @@ export class ThreeRuntime {
     }
   }
 
+  private createArchiveSetPieces(): void {
+    const bayPositions = [8, 22, 36, 50, 64] as const;
+    for (const [bayIndex, z] of bayPositions.entries()) {
+      const bay = new Group();
+      bay.name = `ch05-archive-bay-${bayIndex}`;
+      bay.userData.worldZ = z;
+      bay.userData.sceneryIndex = this.archiveSceneryGroup.children.length;
+      bay.userData.lowQualityVisible = bayIndex % 2 === 0;
+      bay.userData.archiveSetPiece = true;
+      bay.userData.archivePhase = bayIndex * 0.71;
+
+      for (const side of [-1, 1] as const) {
+        const plinth = new Mesh(
+          new BoxGeometry(3.2, 0.34, 11.7),
+          new MeshBasicMaterial({ color: bayIndex % 2 === 0 ? '#101b3d' : '#14234b' }),
+        );
+        plinth.position.set(side * 7.18, -0.01, 0);
+        bay.add(plinth);
+
+        const goldRail = new Mesh(
+          new BoxGeometry(0.085, 0.08, 11.65),
+          new MeshBasicMaterial({ color: '#e5c76a', transparent: true, opacity: 0.74 }),
+        );
+        goldRail.position.set(side * 5.58, 0.22, 0);
+        goldRail.userData.archiveGlow = true;
+        goldRail.userData.baseOpacity = 0.74;
+        bay.add(goldRail);
+
+        const pillarZ = bayIndex % 2 === 0 ? -2.9 : 2.9;
+        for (const offsetZ of [-3.9, 3.9] as const) {
+          const pillar = new Mesh(new BoxGeometry(0.72, 5.4, 0.9), new MeshBasicMaterial({ color: '#1a2c59' }));
+          pillar.position.set(side * 8.55, 2.7, offsetZ);
+          bay.add(pillar);
+
+          const cap = new Mesh(new BoxGeometry(1.1, 0.24, 1.25), new MeshBasicMaterial({ color: '#9b8650' }));
+          cap.position.set(side * 8.55, 5.35, offsetZ);
+          bay.add(cap);
+        }
+
+        const archiveCase = new Mesh(new BoxGeometry(1.65, 3.85, 0.78), new MeshBasicMaterial({ color: '#162650' }));
+        archiveCase.position.set(side * 9.15, 1.95, pillarZ);
+        bay.add(archiveCase);
+        for (let shelfIndex = 0; shelfIndex < 3; shelfIndex += 1) {
+          const shelfLight = new Mesh(
+            new BoxGeometry(0.08, 0.14, 0.58),
+            new MeshBasicMaterial({ color: shelfIndex === 1 ? '#f0d77d' : '#b9a25c', transparent: true, opacity: 0.76 }),
+          );
+          shelfLight.position.set(side * 8.28, 1.05 + shelfIndex * 0.9, pillarZ);
+          shelfLight.userData.archiveGlow = true;
+          shelfLight.userData.baseOpacity = 0.76;
+          bay.add(shelfLight);
+        }
+
+        const starMapRing = new Mesh(
+          new TorusGeometry(0.92, 0.065, 6, 28),
+          new MeshBasicMaterial({ color: '#e8ce73', transparent: true, opacity: 0.58, depthWrite: false }),
+        );
+        starMapRing.position.set(side * 6.78, 2.35, -pillarZ * 0.72);
+        starMapRing.rotation.y = Math.PI / 2;
+        starMapRing.userData.archiveOrbit = true;
+        starMapRing.userData.orbitBaseRotation = starMapRing.rotation.z;
+        starMapRing.userData.orbitPhase = bayIndex * 0.83 + (side > 0 ? 0.45 : 0);
+        starMapRing.userData.archiveGlow = true;
+        starMapRing.userData.baseOpacity = 0.58;
+        bay.add(starMapRing);
+
+        for (let starIndex = 0; starIndex < 4; starIndex += 1) {
+          const angle = starIndex * Math.PI * 0.5 + bayIndex * 0.23;
+          const star = new Mesh(
+            new OctahedronGeometry(0.085 + (starIndex % 2) * 0.025, 0),
+            new MeshBasicMaterial({ color: starIndex % 2 === 0 ? '#f4dc88' : '#b9c9ff', transparent: true, opacity: 0.82, fog: false }),
+          );
+          star.position.set(side * (6.45 + Math.cos(angle) * 0.55), 2.35 + Math.sin(angle) * 0.65, -pillarZ * 0.72 + (starIndex - 1.5) * 0.18);
+          star.userData.archiveStar = true;
+          star.userData.starBaseY = star.position.y;
+          star.userData.starPhase = bayIndex * 0.69 + starIndex * 0.9;
+          star.userData.baseOpacity = 0.82;
+          bay.add(star);
+        }
+
+        for (let pageIndex = 0; pageIndex < 3; pageIndex += 1) {
+          const page = new Mesh(
+            new BoxGeometry(0.42, 0.58, 0.025),
+            new MeshBasicMaterial({ color: pageIndex === 1 ? '#efe3ad' : '#c8c3a2', transparent: true, opacity: 0.6, side: 2 }),
+          );
+          page.position.set(side * (6.25 + pageIndex * 0.72), 1.15 + pageIndex * 0.72, -3.25 + pageIndex * 3.15 + (bayIndex % 2) * 0.5);
+          page.rotation.set(0.15 + pageIndex * 0.08, side * (0.25 + pageIndex * 0.12), side * 0.08);
+          page.userData.archivePage = true;
+          page.userData.pageBaseY = page.position.y;
+          page.userData.pageBaseRotationY = page.rotation.y;
+          page.userData.pagePhase = bayIndex * 0.64 + pageIndex * 0.82;
+          bay.add(page);
+        }
+      }
+
+      this.archiveSceneryGroup.add(bay);
+    }
+  }
+
   private getSkyTexture(style: BackdropStyle): CanvasTexture {
     const cached = this.skyTextures.get(style);
     if (cached !== undefined) return cached;
@@ -926,6 +1029,31 @@ export class ThreeRuntime {
             node.position.y = (node.userData.sporeBaseY as number) + rise;
             const material = node.material as MeshBasicMaterial;
             material.opacity = (node.userData.baseOpacity as number) * (1 - rise / 3.1);
+          }
+        });
+      }
+      if (child.userData.archiveSetPiece === true) {
+        const phase = child.userData.archivePhase as number;
+        const pulse = 0.8 + Math.sin(timeSeconds * 1.05 + phase) * 0.2;
+        child.traverse((node) => {
+          if (!(node instanceof Mesh)) return;
+          if (node.userData.archiveGlow === true) {
+            const material = node.material as MeshBasicMaterial;
+            material.opacity = (node.userData.baseOpacity as number) * pulse;
+          }
+          if (node.userData.archiveOrbit === true) {
+            node.rotation.z = (node.userData.orbitBaseRotation as number) + timeSeconds * 0.18 + (node.userData.orbitPhase as number);
+          }
+          if (node.userData.archiveStar === true) {
+            const starPhase = node.userData.starPhase as number;
+            node.position.y = (node.userData.starBaseY as number) + Math.sin(timeSeconds * 0.72 + starPhase) * 0.16;
+            const material = node.material as MeshBasicMaterial;
+            material.opacity = (node.userData.baseOpacity as number) * (0.68 + Math.sin(timeSeconds * 1.35 + starPhase) * 0.32);
+          }
+          if (node.userData.archivePage === true) {
+            const pagePhase = node.userData.pagePhase as number;
+            node.position.y = (node.userData.pageBaseY as number) + Math.sin(timeSeconds * 0.58 + pagePhase) * 0.18;
+            node.rotation.y = (node.userData.pageBaseRotationY as number) + Math.sin(timeSeconds * 0.42 + pagePhase) * 0.22;
           }
         });
       }
@@ -1239,14 +1367,78 @@ export class ThreeRuntime {
     model.traverse((child) => {
       if (child instanceof Mesh) {
         const material = (child.material as MeshBasicMaterial).clone();
-        material.map = null;
+        material.map = this.getArchiveRoadTexture((road.userData.roadIndex as number) % 2);
         material.vertexColors = false;
-        if (material.color !== undefined) material.color.set((road.userData.roadIndex as number) % 2 === 0 ? '#1f2b5c' : '#2b3a70');
+        if (material.color !== undefined) material.color.set('#ffffff');
         child.material = material;
       }
     });
     model.visible = false;
     road.add(model);
+  }
+
+  private getArchiveRoadTexture(variant: number): CanvasTexture {
+    const cached = this.archiveRoadTextures.get(variant);
+    if (cached !== undefined) return cached;
+    const canvas = document.createElement('canvas');
+    canvas.width = 384;
+    canvas.height = 256;
+    const context = canvas.getContext('2d');
+    if (context === null) throw new Error('無法建立遺庫道路貼圖。');
+
+    context.fillStyle = variant === 0 ? '#182653' : '#202f63';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.strokeStyle = '#0e1738';
+    context.lineWidth = 5;
+    for (const y of [0, 128, 256]) {
+      context.beginPath();
+      context.moveTo(0, y);
+      context.lineTo(canvas.width, y);
+      context.stroke();
+    }
+    for (const [x, offset] of [[96, 0], [288, 0], [0, 128], [192, 128], [384, 128]] as const) {
+      context.beginPath();
+      context.moveTo(x, offset);
+      context.lineTo(x, offset + 128);
+      context.stroke();
+    }
+
+    for (const [lineIndex, x] of [42, 118, 192, 266, 342].entries()) {
+      context.strokeStyle = lineIndex === 2 ? '#d9be62' : '#927f47';
+      context.lineWidth = lineIndex === 2 ? 3 : 2;
+      context.globalAlpha = lineIndex === 2 ? 0.68 : 0.44;
+      context.beginPath();
+      context.moveTo(x, 0);
+      context.lineTo(x, canvas.height);
+      context.stroke();
+    }
+    context.globalAlpha = 1;
+
+    context.fillStyle = '#e2ca72';
+    for (let index = 0; index < 18; index += 1) {
+      const x = 28 + ((index * 83 + variant * 31) % 328);
+      const y = 18 + ((index * 47 + variant * 19) % 220);
+      context.globalAlpha = 0.28 + (index % 4) * 0.09;
+      context.beginPath();
+      context.arc(x, y, 1.2 + index % 3, 0, Math.PI * 2);
+      context.fill();
+    }
+    context.globalAlpha = 1;
+    context.strokeStyle = '#756a78';
+    context.lineWidth = 1;
+    for (let index = 0; index < 7; index += 1) {
+      const startX = 34 + index * 52;
+      const startY = 32 + ((index * 39 + variant * 13) % 170);
+      context.beginPath();
+      context.moveTo(startX, startY);
+      context.lineTo(startX + 26, startY + (index % 2 === 0 ? 18 : -16));
+      context.lineTo(startX + 42, startY + 4);
+      context.stroke();
+    }
+    const texture = new CanvasTexture(canvas);
+    texture.colorSpace = SRGBColorSpace;
+    this.archiveRoadTextures.set(variant, texture);
+    return texture;
   }
 
   private attachCh06RoadModel(road: Mesh): void {
